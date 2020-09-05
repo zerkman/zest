@@ -101,6 +101,8 @@ architecture structure of atarist_main is
 			FC		: in std_logic_vector(2 downto 0);
 			IPLn	: out std_logic_vector(2 downto 1);
 			VPAn	: out std_logic;
+			VMAn	: in std_logic;
+			cs6850	: out std_logic;
 
 			MFPCSn	: out std_logic;
 			MFPINTn	: in std_logic;
@@ -228,6 +230,32 @@ architecture structure of atarist_main is
 		);
 	end component;
 
+	component acia6850 is
+	  port (
+	    --
+	    -- CPU Interface signals
+	    --
+	    clk      : in  std_logic;                     -- System Clock
+	    rst      : in  std_logic;                     -- Reset input (active high)
+	    cs       : in  std_logic;                     -- miniUART Chip Select
+	    addr     : in  std_logic;                     -- Register Select
+	    rw       : in  std_logic;                     -- Read / Not Write
+	    data_in  : in  std_logic_vector(7 downto 0);  -- Data Bus In
+	    data_out : out std_logic_vector(7 downto 0);  -- Data Bus Out
+	    irq      : out std_logic;                     -- Interrupt Request out
+	    --
+	    -- RS232 Interface Signals
+	    --
+	    RxC   : in  std_logic;              -- Receive Baud Clock
+	    TxC   : in  std_logic;              -- Transmit Baud Clock
+	    RxD   : in  std_logic;              -- Receive Data
+	    TxD   : out std_logic;              -- Transmit Data
+	    DCD_n : in  std_logic;              -- Data Carrier Detect
+	    CTS_n : in  std_logic;              -- Clear To Send
+	    RTS_n : out std_logic               -- Request To send
+	    );
+	end component;
+
 	signal reset		: std_logic;
 
 	signal enNC1 		: std_logic;
@@ -278,6 +306,7 @@ architecture structure of atarist_main is
 	signal glue_iLDSn	: std_logic;
 	signal glue_DTACKn	: std_logic;
 	signal glue_oD		: std_logic_vector(1 downto 0);
+	signal cs6850		: std_logic;
 	signal vsyncn		: std_logic;
 	signal hsyncn		: std_logic;
 	signal blankn		: std_logic;
@@ -328,6 +357,28 @@ architecture structure of atarist_main is
 	signal mfp_tc		: std_logic;
 	signal mfp_rrn		: std_logic;
 	signal mfp_trn		: std_logic;
+
+	signal acia_ikbd_cs		: std_logic;
+	signal acia_ikbd_od		: std_logic_vector(7 downto 0);
+	signal acia_ikbd_irq	: std_logic;
+	signal acia_ikbd_rxc	: std_logic;
+	signal acia_ikbd_txc	: std_logic;
+	signal acia_ikbd_rxd	: std_logic;
+	signal acia_ikbd_txd	: std_logic;
+	signal acia_ikbd_dcd_n	: std_logic;
+	signal acia_ikbd_cts_n	: std_logic;
+	signal acia_ikbd_rts_n	: std_logic;
+	signal acia_midi_cs		: std_logic;
+	signal acia_midi_od		: std_logic_vector(7 downto 0);
+	signal acia_midi_irq	: std_logic;
+	signal acia_midi_rxc	: std_logic;
+	signal acia_midi_txc	: std_logic;
+	signal acia_midi_rxd	: std_logic;
+	signal acia_midi_txd	: std_logic;
+	signal acia_midi_dcd_n	: std_logic;
+	signal acia_midi_cts_n	: std_logic;
+	signal acia_midi_rts_n	: std_logic;
+	signal acia_irq			: std_logic;
 
 begin
 	reset <= not resetn;
@@ -423,6 +474,8 @@ begin
 		FC => cpu_FC,
 		IPLn => cpu_IPLn(2 downto 1),
 		VPAn => cpu_VPAn,
+		VMAn => cpu_VMAn,
+		cs6850 => cs6850,
 		MFPCSn => mfp_csn,
 		MFPINTn	=> mfp_irqn,
 		IACKn => mfp_iackn,
@@ -525,11 +578,60 @@ begin
 		trn => mfp_trn
 	);
 	mfp_iein <= '0';
-	mfp_ii <= x"ff";
+	mfp_ii <= "111" & acia_irq & "1111";
 	mfp_tai <= '1';
 	mfp_tbi <= sde;
 	mfp_si <= '0';
 	mfp_rc <= '0';
 	mfp_tc <= '0';
+
+	acia_ikbd:acia6850 port map (
+		clk => cpu_E,
+		rst => reset,
+		cs => acia_ikbd_cs,
+		addr => bus_A(1),
+		rw => bus_RWn,
+		data_in => bus_D(15 downto 8),
+		data_out => acia_ikbd_od,
+		irq => acia_ikbd_irq,
+		RxC => acia_ikbd_rxc,
+		TxC => acia_ikbd_txc,
+		RxD => acia_ikbd_rxd,
+		TxD => acia_ikbd_txd,
+		DCD_n => acia_ikbd_dcd_n,
+		CTS_n => acia_ikbd_cts_n,
+		RTS_n => acia_ikbd_rts_n
+	);
+	acia_ikbd_cs <= cs6850 and not bus_A(2);
+	acia_ikbd_rxc <= '0';
+	acia_ikbd_txc <= '0';
+	acia_ikbd_rxd <= '0';
+	acia_ikbd_dcd_n <= '0';
+	acia_ikbd_cts_n <= '0';
+
+	acia_midi:acia6850 port map (
+		clk => cpu_E,
+		rst => reset,
+		cs => acia_midi_cs,
+		addr => bus_A(1),
+		rw => bus_RWn,
+		data_in => bus_D(15 downto 8),
+		data_out => acia_midi_od,
+		irq => acia_midi_irq,
+		RxC => acia_midi_rxc,
+		TxC => acia_midi_txc,
+		RxD => acia_midi_rxd,
+		TxD => acia_midi_txd,
+		DCD_n => acia_midi_dcd_n,
+		CTS_n => acia_midi_cts_n,
+		RTS_n => acia_midi_rts_n
+	);
+	acia_midi_cs <= cs6850 and bus_A(2);
+	acia_midi_rxc <= '0';
+	acia_midi_txc <= '0';
+	acia_midi_rxd <= '0';
+	acia_midi_dcd_n <= '0';
+	acia_midi_cts_n <= '0';
+	acia_irq <= acia_ikbd_irq and acia_midi_irq;
 
 end structure;

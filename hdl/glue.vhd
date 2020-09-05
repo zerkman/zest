@@ -38,6 +38,8 @@ entity glue is
 		FC		: in std_logic_vector(2 downto 0);
 		IPLn	: out std_logic_vector(2 downto 1);
 		VPAn	: out std_logic;
+		VMAn	: in std_logic;
+		cs6850	: out std_logic;
 
 		MFPCSn	: out std_logic;
 		MFPINTn	: in std_logic;
@@ -156,6 +158,8 @@ architecture behavioral of glue is
 	signal shsync2	: std_logic;
 	signal ack_vbl	: std_logic;
 	signal ack_hbl	: std_logic;
+	signal vpa_irqn	: std_logic;
+	signal vpa_acia	: std_logic;
 
 begin
 
@@ -167,9 +171,23 @@ DE <= vde and hde;
 VSYNC <= svsync;
 HSYNC <= shsync;
 irq_mfp <= not MFPINTn;
+VPAn <= vpa_irqn and vpa_acia;
 
 sync_id <= mono & (line_pal and not mono);
 sync <= sync_array(to_integer(sync_id));
+
+-- 8-bit bus (ACIA) signal management
+process(iA,iASn,VMAn)
+begin
+	vpa_acia <= '1';
+	cs6850 <= '0';
+	if iA(23 downto 3)&"000" = x"fffc00" and iASn = '0' then
+		vpa_acia <= '0';
+		if VMAn = '0' then
+			cs6850 <= '1';
+		end if;
+	end if;
+end process;
 
 -- peripheral register access
 process(clk)
@@ -201,8 +219,8 @@ begin
 						hz50 <= iD(1);
 					end if;
 				end if;
-				if cnt = 2 and iA(15 downto 6)&"000000" /= x"fa00" then
-					-- assert DTACKn except for MFP register accesses.
+				if cnt = 2 and iA(15 downto 6)&"000000" /= x"fa00" and iA(15 downto 9) /= "1111110" then
+					-- assert DTACKn except for MFP and ACIA register accesses.
 					DTACKn <= '0';
 				end if;
 				if cnt = 2 and ((iUDSn = '0' and iomap(to_integer(unsigned(iA(15 downto 1)&'0'))) = '0') or (iLDSn = '0' and iomap(to_integer(unsigned(iA(15 downto 1)&'1'))) = '0')) then
@@ -302,13 +320,13 @@ end process;
 -- process(FC,iA,iASn,irq_mfp,irq_vbl,irq_hbl)
 process(FC,iA,iASn)
 begin
-	VPAn <= '1';
+	vpa_irqn <= '1';
 	IACKn <= '1';
 	if FC = "111" and iA(19 downto 16) = "1111" and iASn = '0' then
 		if iA(3 downto 2) = "11" then
 			IACKn <= '0';
 		elsif iA(3 downto 2) = "10" or iA(3 downto 2) = "01" then
-			VPAn <= '0';
+			vpa_irqn <= '0';
 		end if;
 	end if;
 end process;
