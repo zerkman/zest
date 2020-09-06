@@ -400,7 +400,10 @@ begin
 	bus_A <= cpu_A;
 	bus_ASn <= cpu_ASn;
 	bus_RWn <= cpu_RWn;
-	bus_D <= (cpu_oD or (15 downto 0 => cpu_RWn)) and shifter_oD and ram_oD and (x"ff" & (mmu_oD and mfp_oD)) and ("111111" & glue_oD & x"ff");
+	bus_D <= (cpu_oD or (15 downto 0 => cpu_RWn)) and shifter_oD and ram_oD
+			and (x"ff" & (mmu_oD and mfp_oD)) and ("111111" & glue_oD & x"ff")
+			and ((acia_ikbd_od or (7 downto 0 => not acia_ikbd_cs)) & x"ff")
+			and ((acia_midi_od or (7 downto 0 => not acia_midi_cs)) & x"ff");
 	bus_LDSn <= cpu_LDSn;
 	bus_UDSn <= cpu_UDSn;
 	bus_DTACKn <= glue_DTACKn and mfp_dtackn;

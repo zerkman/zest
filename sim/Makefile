@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-TARGETS=display_checker.vhd display_checker.bin hbl_vbl.vhd hbl_vbl.bin mfp.bin mfp.vhd
+TARGETS=display_checker.vhd display_checker.bin \
+	hbl_vbl.vhd hbl_vbl.bin \
+	mfp.bin mfp.vhd \
+	acia.bin acia.vhd \
 
 all: $(TARGETS)
 

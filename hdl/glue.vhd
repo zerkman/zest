@@ -181,9 +181,11 @@ process(iA,iASn,VMAn)
 begin
 	vpa_acia <= '1';
 	cs6850 <= '0';
-	if iA(23 downto 3)&"000" = x"fffc00" and iASn = '0' then
+	if iA(23 downto 9)&"000000000" = x"fffc00" and iASn = '0' then
+		-- accept all addresses in $fffc00 -> $fffdff range
 		vpa_acia <= '0';
-		if VMAn = '0' then
+		if iA(23 downto 3)&"000" = x"fffc00" and VMAn = '0' then
+			-- enable ACIAs only for $fffc00 -> $fffc07 range
 			cs6850 <= '1';
 		end if;
 	end if;
