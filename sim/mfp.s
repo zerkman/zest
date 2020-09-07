@@ -31,10 +31,12 @@
 	move.l	a0,$120.w
 	lea	timer_c(pc),a0
 	move.l	a0,$114.w
+	lea	mono_detect(pc),a0
+	move.l	a0,$13c.w
 	move.b	#$48,$fffffa17.w	; vr
-	move.b	#$21,$fffffa07.w	; iera
+	move.b	#$a1,$fffffa07.w	; iera
 	move.b	#$20,$fffffa09.w	; ierb
-	move.b	#$21,$fffffa13.w	; imra
+	move.b	#$a1,$fffffa13.w	; imra
 	move.b	#$20,$fffffa15.w	; imrb
 	move.b	#$10,$fffffa1f.w	; tadr
 	move.b	#$03,$fffffa19.w	; tacr (2457600/16/16=9600Hz/104.1666us)
@@ -81,4 +83,9 @@ timer_b:
 timer_c:
 	eor	#$070,$ffff8240.w
 	bclr.b	#5,$fffffa11.w		; isrb
+	rte
+
+mono_detect:
+	addq	#1,$8.w
+	move.b	#$7f,$fffffa0f.w	; isra
 	rte

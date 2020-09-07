@@ -137,5 +137,6 @@ begin
 
 	clk <= not clk after 5 ns;		-- 100 MHz
 	resetn <= '0', '1' after 442 ns;
+	monomon <= not monomon after 100 us;
 
 end dut;

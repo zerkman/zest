@@ -123,6 +123,8 @@ architecture behavioral of mc68901 is
 	signal dtackn_irq	: std_logic;
 	signal dtackn_reg	: std_logic;
 
+	signal ii1		: std_logic_vector(7 downto 0);
+
 	-- priority encoder. Return the index of the highest set bit
 	function priority(v : std_logic_vector(15 downto 0))
 		return std_logic_vector is
@@ -138,7 +140,7 @@ architecture behavioral of mc68901 is
 begin
 	addr <= "00" & rs & '1';
 	ieon <= '1';
-	io <= x"11";
+	io <= gpip or not ddr;
 	tao <= tato;
 	tbo <= tbto;
 	tco <= tcto;
@@ -313,7 +315,7 @@ begin
 						if rwn = '1' then
 							-- register read access
 							case addr is
-								when x"01" => od <= gpip;
+								when x"01" => od <= (gpip and ddr) or (ii and not ddr);
 								when x"03" => od <= aer;
 								when x"05" => od <= ddr;
 								when x"07" => od <= iera;
@@ -342,6 +344,16 @@ begin
 						end if;
 						dtackn_reg <= '0';
 					end if;
+
+					ii1 <= ii;
+					if ddr(7) = '0' and ii(7) /= ii1(7) and ii(7) = aer(7) and iera(7) = '1' then ipra(7) <= '1'; end if;
+					if ddr(6) = '0' and ii(6) /= ii1(6) and ii(6) = aer(6) and iera(6) = '1' then ipra(6) <= '1'; end if;
+					if ddr(5) = '0' and ii(5) /= ii1(5) and ii(5) = aer(5) and ierb(7) = '1' then iprb(7) <= '1'; end if;
+					if ddr(4) = '0' and ii(4) /= ii1(4) and ii(4) = aer(4) and ierb(6) = '1' then iprb(6) <= '1'; end if;
+					if ddr(3) = '0' and ii(3) /= ii1(3) and ii(3) = aer(3) and ierb(3) = '1' then iprb(3) <= '1'; end if;
+					if ddr(2) = '0' and ii(2) /= ii1(2) and ii(2) = aer(2) and ierb(2) = '1' then iprb(2) <= '1'; end if;
+					if ddr(1) = '0' and ii(1) /= ii1(1) and ii(1) = aer(1) and ierb(1) = '1' then iprb(1) <= '1'; end if;
+					if ddr(0) = '0' and ii(0) /= ii1(0) and ii(0) = aer(0) and ierb(0) = '1' then iprb(0) <= '1'; end if;
 
 					iackn1 <= iackn;
 					if sirqn = '0' and iackn = '0' and dsn = '0' then
