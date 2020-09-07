@@ -116,6 +116,7 @@ architecture structure of zest_top is
 			hsync : out std_logic;
 			vsync : out std_logic;
 			rgb : out std_logic_vector(8 downto 0);
+			monomon : in std_logic;
 
 			a : out std_logic_vector(23 downto 1);
 			ds : out std_logic_vector(1 downto 0);
@@ -169,6 +170,7 @@ architecture structure of zest_top is
 
 	signal clken_err	: std_logic;
 	signal rgb 			: std_logic_vector(8 downto 0);
+	signal monomon		: std_logic;
 
 	signal ram_A_23		: std_logic_vector(23 downto 1);
 	signal ram_A		: std_logic_vector(31 downto 0);
@@ -215,6 +217,7 @@ begin
 	LCD_DE <= ode;
 	ram_A <= x"00" & ram_A_23 & '0';
 	ram_offvald <= out_reg0(1);
+	monomon <= out_reg0(2);
 	ram_offset <= out_reg1;
 
 	psd:ps_domain_wrapper port map(
@@ -272,6 +275,7 @@ begin
 		hsync => hsync,
 		vsync => vsync,
 		rgb => rgb,
+		monomon => monomon,
 		a => ram_A_23,
 		ds => ram_DS,
 		r => ram_R,

@@ -30,6 +30,7 @@ entity atarist_main is
 		hsync : out std_logic;
 		vsync : out std_logic;
 		rgb : out std_logic_vector(8 downto 0);
+		monomon : in std_logic;
 
 		a : out std_logic_vector(23 downto 1);
 		ds : out std_logic_vector(1 downto 0);
@@ -581,7 +582,7 @@ begin
 		trn => mfp_trn
 	);
 	mfp_iein <= '0';
-	mfp_ii <= "111" & acia_irq & "1111";
+	mfp_ii <= not monomon & "11" & acia_irq & "1111";
 	mfp_tai <= '1';
 	mfp_tbi <= sde;
 	mfp_si <= '0';

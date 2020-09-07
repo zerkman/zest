@@ -36,6 +36,7 @@ architecture dut of zest_sim_top is
 			hsync : out std_logic;
 			vsync : out std_logic;
 			rgb : out std_logic_vector(8 downto 0);
+			monomon : in std_logic;
 
 			a : out std_logic_vector(23 downto 1);
 			ds : out std_logic_vector(1 downto 0);
@@ -81,6 +82,7 @@ architecture dut of zest_sim_top is
 
 	signal clken_err	: std_logic;
 	signal rgb 			: std_logic_vector(8 downto 0);
+	signal monomon		: std_logic := '0';
 
 	signal ram_A		: std_logic_vector(23 downto 1);
 	signal ram_iD		: std_logic_vector(15 downto 0);
@@ -109,6 +111,7 @@ begin
 		hsync => hsync,
 		vsync => vsync,
 		rgb => rgb,
+		monomon => monomon,
 		a => ram_A,
 		ds => ram_DS,
 		r => ram_R,
