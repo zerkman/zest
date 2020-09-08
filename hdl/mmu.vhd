@@ -33,6 +33,8 @@ entity mmu is
 		oD		: out std_logic_vector(7 downto 0);
 		DTACKn	: in std_logic;
 
+		RDATn	: out std_logic;
+
 		-- load request from shifter
 		DCYCn	: in std_logic;
 		-- register request from bus
@@ -82,12 +84,14 @@ begin
 
 	process(mode_bus,mode_bus_ff,iRWn,iA,iUDSn,iLDSn,DCYCn,delay,screen_adr_ptr)
 	begin
+		RDATn <= '1';
 		if mode_bus = '1' or mode_bus_ff = '1' then
 			-- valid RAM/ROM address
 			ram_A <= iA;
 			ram_DS <= not (iUDSn,iLDSn);
 			ram_R <= iRWn;
 			ram_W <= not iRWn;
+			RDATn <= not iRWn;
 		elsif DCYCn = '0' and delay = '0' then
 			-- get shifter data
 			ram_A <= screen_adr_ptr;

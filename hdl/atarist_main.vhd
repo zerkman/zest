@@ -131,6 +131,8 @@ architecture structure of atarist_main is
 			oD		: out std_logic_vector(7 downto 0);
 			DTACKn	: in std_logic;
 
+			RDATn	: out std_logic;
+
 			-- load request from shifter
 			DCYCn	: in std_logic;
 			-- register request from bus
@@ -320,6 +322,7 @@ architecture structure of atarist_main is
 	signal mmu_iUDSn	: std_logic;
 	signal mmu_iLDSn	: std_logic;
 	signal mmu_oD		: std_logic_vector(7 downto 0);
+	signal RDATn		: std_logic;
 
 	signal ram_A		: std_logic_vector(23 downto 1);
 	signal ram_iD		: std_logic_vector(15 downto 0);
@@ -401,7 +404,8 @@ begin
 	bus_A <= cpu_A;
 	bus_ASn <= cpu_ASn;
 	bus_RWn <= cpu_RWn;
-	bus_D <= (cpu_oD or (15 downto 0 => cpu_RWn)) and shifter_oD and ram_oD
+	bus_D <= (cpu_oD or (15 downto 0 => cpu_RWn)) and shifter_oD
+			and (ram_oD or (15 downto 0 => RDATn))
 			and (x"ff" & (mmu_oD and mfp_oD)) and ("111111" & glue_oD & x"ff")
 			and ((acia_ikbd_od or (7 downto 0 => not acia_ikbd_cs)) & x"ff")
 			and ((acia_midi_od or (7 downto 0 => not acia_midi_cs)) & x"ff");
@@ -510,6 +514,8 @@ begin
 		oD => mmu_oD,
 		DTACKn => bus_DTACKn,
 
+		RDATn => RDATn,
+
 		DCYCn => loadn,
 		CMPCSn => shifter_CSn,
 
@@ -545,7 +551,7 @@ begin
 		LOADn => loadn,
 		rgb => rgb
 	);
-	shifter_iD <= bus_D;
+	shifter_iD <= bus_D and ram_oD;
 	shifter_RWn <= bus_RWn;
 	shifter_A <= bus_A(5 downto 1);
 
