@@ -104,6 +104,7 @@ architecture structure of atarist_main is
 			VPAn	: out std_logic;
 			VMAn	: in std_logic;
 			cs6850	: out std_logic;
+			FCSn	: out std_logic;
 
 			MFPCSn	: out std_logic;
 			MFPINTn	: in std_logic;
@@ -260,6 +261,19 @@ architecture structure of atarist_main is
 	    );
 	end component;
 
+	component dma_controller is
+		port (
+			clk		: in std_logic;
+			cken	: in std_logic;
+
+			FCSn	: in std_logic;
+			RWn		: in std_logic;
+			A1		: in std_logic;
+			iD		: in std_logic_vector(15 downto 0);
+			oD		: out std_logic_vector(15 downto 0)
+		);
+	end component;
+
 	signal reset		: std_logic;
 
 	signal enNC1 		: std_logic;
@@ -382,6 +396,10 @@ architecture structure of atarist_main is
 	signal acia_midi_rts_n	: std_logic;
 	signal acia_irq			: std_logic;
 
+	signal dma_fcsn			: std_logic;
+	signal dma_iD			: std_logic_vector(15 downto 0);
+	signal dma_oD			: std_logic_vector(15 downto 0);
+
 begin
 	reset <= not resetn;
 	clken_error <= clken_err;
@@ -406,7 +424,8 @@ begin
 			and (ram_oD or (15 downto 0 => RDATn))
 			and (x"ff" & (mmu_oD and mfp_oD)) and ("111111" & glue_oD & x"ff")
 			and ((acia_ikbd_od or (7 downto 0 => acia_ikbd_cs nand cpu_RWn)) & x"ff")
-			and ((acia_midi_od or (7 downto 0 => acia_midi_cs nand cpu_RWn)) & x"ff");
+			and ((acia_midi_od or (7 downto 0 => acia_midi_cs nand cpu_RWn)) & x"ff")
+			and dma_oD;
 	bus_LDSn <= cpu_LDSn;
 	bus_UDSn <= cpu_UDSn;
 	bus_DTACKn <= glue_DTACKn and mfp_dtackn;
@@ -482,6 +501,7 @@ begin
 		VPAn => cpu_VPAn,
 		VMAn => cpu_VMAn,
 		cs6850 => cs6850,
+		FCSn => dma_fcsn,
 		MFPCSn => mfp_csn,
 		MFPINTn	=> mfp_irqn,
 		IACKn => mfp_iackn,
@@ -637,5 +657,18 @@ begin
 	acia_midi_dcd_n <= '0';
 	acia_midi_cts_n <= '0';
 	acia_irq <= acia_ikbd_irq and acia_midi_irq;
+
+	dma:dma_controller port map (
+		clk => clk,
+		cken => en8rck,
+
+		FCSn => dma_fcsn,
+		RWn => bus_RWn,
+		A1 => bus_A(1),
+		iD => dma_iD,
+		oD => dma_oD
+	);
+	dma_iD <= bus_D;
+
 
 end structure;

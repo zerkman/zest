@@ -40,6 +40,7 @@ entity glue is
 		VPAn	: out std_logic;
 		VMAn	: in std_logic;
 		cs6850	: out std_logic;
+		FCSn	: out std_logic;
 
 		MFPCSn	: out std_logic;
 		MFPINTn	: in std_logic;
@@ -263,6 +264,17 @@ begin
 		MFPCSn <= '1';
 	end if;
 end process;
+
+-- dma registers access
+process(iA,iASn)
+begin
+	if iASn = '0' and iA(23 downto 4)&"0000" = x"ff8600" then
+		FCSn <= '0';
+	else
+		FCSn <= '1';
+	end if;
+end process;
+
 
 -- interrupt control
 process(clk)

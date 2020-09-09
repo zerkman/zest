@@ -60,6 +60,7 @@ architecture behavioral of mmu is
 	signal screen_adr_high	: std_logic_vector(7 downto 0) := x"00";
 	signal screen_adr_mid	: std_logic_vector(7 downto 0) := x"03";
 	signal screen_adr_ptr	: std_logic_vector(23 downto 1) := (others => '0');
+	signal dma_ptr			: std_logic_vector(23 downto 1);
 	signal al				: std_logic_vector(7 downto 0);
 	signal bus_load_ff		: std_logic;
 	signal delay			: std_logic;
@@ -177,6 +178,25 @@ begin
 							when "1000" => memtop <= "0111";	-- 2048 KB
 							when "1001" => memtop <= "1001";	-- 2560 KB
 							when "1010" => memtop <= "1111";	-- 4096 KB
+							when others =>
+						end case;
+					end if;
+				elsif iA(23 downto 4) & "0000" = x"ff8600" and iLDSn = '0' then
+					-- DMA base and counter
+					if iRWn = '1' then
+						-- read
+						case al is
+							when x"09" => oD <= dma_ptr(23 downto 16);
+							when x"0b" => oD <= dma_ptr(15 downto 8);
+							when x"0d" => oD <= dma_ptr(7 downto 1) & '0';
+							when others => oD <= x"ff";
+						end case;
+					elsif iRWn = '0' and cnt = 2 then
+						-- write
+						case al is
+							when x"09" => dma_ptr(23 downto 16) <= iD;
+							when x"0b" => dma_ptr(15 downto 8) <= iD;
+							when x"0d" => dma_ptr(7 downto 1) <= iD(7 downto 1);
 							when others =>
 						end case;
 					end if;
