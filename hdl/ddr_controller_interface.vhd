@@ -218,6 +218,8 @@ architecture implementation of ddr_controller_interface is
 	signal rdone_ff	: std_logic;
 	signal wdone	: std_logic;
 	signal wdone_ff	: std_logic;
+	signal ds_rd	: std_logic_vector(1 downto 0);
+	signal a1_rd	: std_logic;
 
 begin
 
@@ -371,8 +373,8 @@ begin
 	rdone <= (axi_rready and M_AXI_RVALID) or (r and rdone_ff);
 	rod <= ((15 downto 0 => not M_AXI_RVALID) or rdata) and rdata_ff;
 
-	rdata(15 downto 8) <= (7 downto 0 => DS(1)) and ((M_AXI_RDATA(7 downto 0) and (7 downto 0 => not A(1))) or (M_AXI_RDATA(23 downto 16) and (7 downto 0 => A(1))));
-	rdata(7 downto 0) <= (7 downto 0 => DS(0)) and ((M_AXI_RDATA(15 downto 8) and (7 downto 0 => not A(1))) or (M_AXI_RDATA(31 downto 24) and (7 downto 0 => A(1))));
+	rdata(15 downto 8) <= (7 downto 0 => ds_rd(1)) and ((M_AXI_RDATA(7 downto 0) and (7 downto 0 => not a1_rd)) or (M_AXI_RDATA(23 downto 16) and (7 downto 0 => a1_rd)));
+	rdata(7 downto 0) <= (7 downto 0 => ds_rd(0)) and ((M_AXI_RDATA(15 downto 8) and (7 downto 0 => not a1_rd)) or (M_AXI_RDATA(31 downto 24) and (7 downto 0 => a1_rd)));
 
 	process(M_AXI_ACLK)
 	begin
@@ -382,6 +384,8 @@ begin
 				axi_rready <= '0';
 				rdata_ff <= (others => '1');
 				rdone_ff <= '0';
+				ds_rd <= "00";
+				a1_rd <= '0';
 			else
 				axi_arvalid_ff <= axi_arvalid;
 				axi_rready <= axi_rready;
@@ -395,6 +399,10 @@ begin
 					axi_rready <= '0';
 				elsif r = '0' then
 					rdata_ff <= (others => '1');
+				end if;
+				if init_read = '1' then
+					ds_rd <= DS;
+					a1_rd <= A(1);
 				end if;
 			end if;
 		end if;
