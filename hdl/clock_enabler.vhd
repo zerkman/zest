@@ -40,6 +40,7 @@ entity clock_enabler is
 		en4rck		: out std_logic;	-- 4 MHz rising edge
 		en4fck		: out std_logic;	-- 4 MHz falling edge
 		en2_4576	: out std_logic;	-- 2.4576 MHz rising edge
+		ck05		: out std_logic;	-- 500 kHz clock
 		error		: out std_logic		-- time out error
 	);
 end clock_enabler;
@@ -52,6 +53,7 @@ architecture behavioral of clock_enabler is
 
 	signal cnt			: unsigned(CPT_BITS-1 downto 0);
 	signal cnt24		: unsigned(9 downto 0);
+	signal cnt05		: unsigned(3 downto 0);
 	signal delay		: std_logic;
 	signal phase		: std_logic;
 	signal en1			: std_logic;
@@ -71,6 +73,7 @@ begin
 	en4rck <= en1 and not clk_div;
 	en4fck <= en1 and clk_div;
 	en2_4576 <= en24;
+	ck05 <= cnt05(3);
 	error <= err;
 
 	process(phase,enNC1,enNC2,delay,cnt)
@@ -87,8 +90,10 @@ begin
 		if rising_edge(clk) then
 			if reset = '1' then
 				clk_div <= '0';
+				cnt05 <= (others => '0');
 			elsif en1 = '1' then
 				clk_div <= not clk_div;
+				cnt05 <= cnt05 + 1;
 			end if;
 		end if;
 	end process;

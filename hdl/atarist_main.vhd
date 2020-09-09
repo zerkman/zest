@@ -163,6 +163,7 @@ architecture structure of atarist_main is
 			en4rck		: out std_logic;
 			en4fck		: out std_logic;
 			en2_4576	: out std_logic;
+			ck05		: out std_logic;
 			error		: out std_logic
 		);
 	end component;
@@ -269,6 +270,7 @@ architecture structure of atarist_main is
 	signal en4fck 		: std_logic;
 	signal en32ck 		: std_logic;
 	signal en2_4576ck	: std_logic;
+	signal ck05			: std_logic;
 	signal clken_err	: std_logic;
 	signal clken_video	: std_logic;
 	signal clken_bus	: std_logic;
@@ -365,8 +367,6 @@ architecture structure of atarist_main is
 	signal acia_ikbd_cs		: std_logic;
 	signal acia_ikbd_od		: std_logic_vector(7 downto 0);
 	signal acia_ikbd_irq	: std_logic;
-	signal acia_ikbd_rxc	: std_logic;
-	signal acia_ikbd_txc	: std_logic;
 	signal acia_ikbd_rxd	: std_logic;
 	signal acia_ikbd_txd	: std_logic;
 	signal acia_ikbd_dcd_n	: std_logic;
@@ -375,8 +375,6 @@ architecture structure of atarist_main is
 	signal acia_midi_cs		: std_logic;
 	signal acia_midi_od		: std_logic_vector(7 downto 0);
 	signal acia_midi_irq	: std_logic;
-	signal acia_midi_rxc	: std_logic;
-	signal acia_midi_txc	: std_logic;
 	signal acia_midi_rxd	: std_logic;
 	signal acia_midi_txd	: std_logic;
 	signal acia_midi_dcd_n	: std_logic;
@@ -407,8 +405,8 @@ begin
 	bus_D <= (cpu_oD or (15 downto 0 => cpu_RWn)) and shifter_oD
 			and (ram_oD or (15 downto 0 => RDATn))
 			and (x"ff" & (mmu_oD and mfp_oD)) and ("111111" & glue_oD & x"ff")
-			and ((acia_ikbd_od or (7 downto 0 => not acia_ikbd_cs)) & x"ff")
-			and ((acia_midi_od or (7 downto 0 => not acia_midi_cs)) & x"ff");
+			and ((acia_ikbd_od or (7 downto 0 => acia_ikbd_cs nand cpu_RWn)) & x"ff")
+			and ((acia_midi_od or (7 downto 0 => acia_midi_cs nand cpu_RWn)) & x"ff");
 	bus_LDSn <= cpu_LDSn;
 	bus_UDSn <= cpu_UDSn;
 	bus_DTACKn <= glue_DTACKn and mfp_dtackn;
@@ -450,7 +448,7 @@ begin
 	cpu_BGACKn <= '1';
 	cpu_IPLn(0) <= '1';
 
-	clkgen:clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2_4576ck,clken_err);
+	clkgen:clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2_4576ck,ck05,clken_err);
 	enNC1 <= '1';
 	enNC2 <= clken_bus and clken_video;
 	clken_bus <= (ram_R_DONE or ram_W_DONE) or bus_DTACKn or clken_bus2;
@@ -596,7 +594,7 @@ begin
 	mfp_tc <= '0';
 
 	acia_ikbd:acia6850 port map (
-		clk => cpu_E,
+		clk => clk,
 		rst => reset,
 		cs => acia_ikbd_cs,
 		addr => bus_A(1),
@@ -604,8 +602,8 @@ begin
 		data_in => bus_D(15 downto 8),
 		data_out => acia_ikbd_od,
 		irq => acia_ikbd_irq,
-		RxC => acia_ikbd_rxc,
-		TxC => acia_ikbd_txc,
+		RxC => ck05,
+		TxC => ck05,
 		RxD => acia_ikbd_rxd,
 		TxD => acia_ikbd_txd,
 		DCD_n => acia_ikbd_dcd_n,
@@ -613,14 +611,12 @@ begin
 		RTS_n => acia_ikbd_rts_n
 	);
 	acia_ikbd_cs <= cs6850 and not bus_A(2);
-	acia_ikbd_rxc <= '0';
-	acia_ikbd_txc <= '0';
 	acia_ikbd_rxd <= '0';
 	acia_ikbd_dcd_n <= '0';
 	acia_ikbd_cts_n <= '0';
 
 	acia_midi:acia6850 port map (
-		clk => cpu_E,
+		clk => clk,
 		rst => reset,
 		cs => acia_midi_cs,
 		addr => bus_A(1),
@@ -628,8 +624,8 @@ begin
 		data_in => bus_D(15 downto 8),
 		data_out => acia_midi_od,
 		irq => acia_midi_irq,
-		RxC => acia_midi_rxc,
-		TxC => acia_midi_txc,
+		RxC => ck05,
+		TxC => ck05,
 		RxD => acia_midi_rxd,
 		TxD => acia_midi_txd,
 		DCD_n => acia_midi_dcd_n,
@@ -637,8 +633,6 @@ begin
 		RTS_n => acia_midi_rts_n
 	);
 	acia_midi_cs <= cs6850 and bus_A(2);
-	acia_midi_rxc <= '0';
-	acia_midi_txc <= '0';
 	acia_midi_rxd <= '0';
 	acia_midi_dcd_n <= '0';
 	acia_midi_cts_n <= '0';

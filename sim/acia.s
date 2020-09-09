@@ -21,14 +21,11 @@
 
 	lea	$fffffc00.w,a0
 	move.b	#$3,(a0)
-	move.b	#$0,(a0)
-	move.b	(a0),d0
-	move.b	2(a0),d1
-	move.b	(a0),d0
-	move.b	2(a0),d1
-	move.b	4(a0),d2
-	move.b	6(a0),d3
-	move.b	4(a0),d2
-	move.b	6(a0),d3
+	move.b	#$18,(a0)
+
+	move.b	#$96,2(a0)
+ts	move.b	(a0),d0
+	btst	#1,d0
+	beq.s	ts
 
 lp	bra.s	lp
