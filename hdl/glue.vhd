@@ -230,7 +230,7 @@ begin
 					DTACKn <= '1';
 					BEER <= '0';
 				end if;
-			elsif ((unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fe") or unsigned(iA&'0') < 8) and FC(2) = '1' and iRWn = '1' then
+			elsif ((unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fe") or unsigned(iA&'0') < 8) and iRWn = '1' then
 				-- rom access
 				if cnt = 2 then
 					DTACKn <= '0';
