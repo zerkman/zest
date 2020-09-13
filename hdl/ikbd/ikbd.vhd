@@ -21,6 +21,8 @@ use ieee.numeric_std.all;
 entity atari_ikbd is
 	port (
 		clk		: in std_logic;
+		clkren	: in std_logic;
+		clkfen	: in std_logic;
 		reset	: in std_logic;
 		rx		: in std_logic;
 		tx		: out std_logic;
@@ -35,6 +37,8 @@ architecture behavioral of atari_ikbd is
 	component HD63701V0_M6 is
 		port (
 			CLKx2	: in std_logic;
+			clkren	: in std_logic;
+		    clkfen	: in std_logic;
 			RST		: in std_logic;
 			NMI		: in std_logic;
 			IRQ		: in std_logic;
@@ -178,6 +182,8 @@ begin
 
 	hd6301:HD63701V0_M6 port map (
 		CLKx2 => clk,
+		clkren => clkren,
+		clkfen => clkfen,
 		RST => reset,
 		NMI => '0',
 		IRQ => '0',

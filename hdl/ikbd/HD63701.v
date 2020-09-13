@@ -5,6 +5,8 @@
 module HD63701V0_M6
 (
  input 	       CLKx2, // XTAL/EXTAL (200K~2.0MHz)
+ input 	       clkren,	// enable rising edge clock
+ input 	       clkfen,	// enable falling edge clock
 
  input 	       RST, // RES
  input 	       NMI, // NMI
@@ -50,7 +52,7 @@ HD63701_BIRAM biram( CLKx2, ADI, RW, DO, en_biram, biramd );
 // Built-In I/O Ports
 wire		  en_biio;
 wire [7:0] biiod;
-HD63701_IOPort iopt( RST, CLKx2, ADI, RW, DO, en_biio, biiod, PI1, PI2, DI, PI4, PO1, PO2I, PO3, PO4 );
+HD63701_IOPort iopt( RST, CLKx2, clkren, ADI, RW, DO, en_biio, biiod, PI1, PI2, DI, PI4, PO1, PO2I, PO3, PO4 );
 
 
 // Built-In Serial Communication Hardware
@@ -59,14 +61,14 @@ wire		  txd;
 wire		  te;
 wire		  en_bisci;
 wire [7:0] biscid;
-HD63701_SCI sci( RST, CLKx2, ADI, RW, DO, PI2[3], txd, te, irq2_sci, en_bisci, biscid );
+HD63701_SCI sci( RST, CLKx2, clkren, ADI, RW, DO, PI2[3], txd, te, irq2_sci, en_bisci, biscid );
 
 
 // Built-In Timer
 wire		  irq2_tim;
 wire		  en_bitim;
 wire [7:0] bitimd;
-HD63701_Timer timer( RST, CLKx2, ADI, RW, DO, irq2_tim, en_bitim, bitimd );
+HD63701_Timer timer( RST, CLKx2, clkren, clkfen, ADI, RW, DO, irq2_tim, en_bitim, bitimd );
 
 
 // Built-In Devices Data Selector
@@ -85,7 +87,7 @@ HD63701_BIDSEL bidsel
 // Processor Core
 HD63701_Core core
   (
-   .CLKx2(CLKx2),.RST(RST),
+   .CLKx2(CLKx2),.clkfen(clkfen),.RST(RST),
    .NMI(NMI),.IRQ(IRQ),.IRQ2_TIM(irq2_tim),.IRQ2_SCI(irq2_sci),
    .RW(RW),.AD(ADI),.DO(DO),.DI(biddi)
    );
@@ -141,6 +143,7 @@ module HD63701_IOPort
 (
  input 		  mcu_rst,
  input 		  mcu_clx2,
+ input 		  clken,
  input [15:0] 	  mcu_ad,
  input 		  mcu_wr,
  input [7:0] 	  mcu_do,
@@ -184,7 +187,7 @@ always @( posedge mcu_clx2 or posedge mcu_rst ) begin
       // other output registers are undefined after reset
    end
    else begin
-      if (mcu_wr) begin
+      if (clken && mcu_wr) begin
 	 if (mcu_ad==16'h0) DDR1 <= mcu_do;
 	 if (mcu_ad==16'h1) DDR2 <= mcu_do[4:0];
 	 if (mcu_ad==16'h2) PO1R <= mcu_do;
@@ -217,6 +220,7 @@ module HD63701_SCI
 (
  input 	      mcu_rst,
  input 	      mcu_clx2,
+ input 	      clken,
  input [15:0] mcu_ad,
  input 	      mcu_wr,
  input [7:0]  mcu_do,
@@ -266,7 +270,7 @@ module HD63701_SCI
 	 txsr <= 9'h000;
 	 tx <= 1'b1;
       end
-      else begin
+      else if (clken) begin
 
 	 if(en_sci && !mcu_wr) begin
 	    if (mcu_ad==16'h11) {clr_rd, clr_td} <= 2'b11;
@@ -369,6 +373,8 @@ module HD63701_Timer
 (
 	input			 mcu_rst,
 	input			 mcu_clx2,
+	input			 clken,
+	input			 clkfen,
 	input [15:0] mcu_ad,
 	input 		 mcu_wr,
 	input  [7:0] mcu_do,
@@ -394,7 +400,7 @@ always @( posedge mcu_clx2 or posedge mcu_rst ) begin
 		frt <= 0;
 		rmc <= 8'h40;
 	end
-	else begin
+	else if (clken) begin
 		frc <= frc+1;
 		if (mcu_wr) begin
 			case (mcu_ad)
@@ -412,11 +418,11 @@ always @( posedge mcu_clx2 or posedge mcu_rst ) begin
 	end
 end
 
-always @( negedge mcu_clx2 or posedge mcu_rst ) begin
+always @( posedge mcu_clx2 or posedge mcu_rst ) begin
 	if (mcu_rst) begin
 		oci <= 1'b0;
 	end
-	else begin
+	else if (clkfen) begin
 		case (mcu_ad)
 			16'h0B: oci <= 1'b0;
 			16'h0C: oci <= 1'b0;

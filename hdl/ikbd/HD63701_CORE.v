@@ -7,6 +7,7 @@
 module HD63701_Core
 (
 	input					CLKx2,
+	input					clkfen,
 
 	input					RST,
 	input					NMI,
@@ -21,7 +22,7 @@ module HD63701_Core
 );
 
 reg CLK = 0;
-always @( negedge CLKx2 ) CLK <= ~CLK;
+always @( posedge CLKx2 ) if (clkfen) CLK <= ~CLK;
 
 wire `mcwidth mcode;
 wire [7:0] 	  vect;
@@ -36,5 +37,3 @@ HD63701_EXEC EXEC(.CLK(CLK),.RST(RST),.DI(DI),.AD(AD),.RW(RW),.DO(DO),
 						.mcode(mcode),.vect(vect),.inte(inte),.fncu(fncu));
 
 endmodule
-
-

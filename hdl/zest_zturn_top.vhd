@@ -121,7 +121,8 @@ architecture structure of zest_top is
 			vsync : out std_logic;
 			rgb : out std_logic_vector(8 downto 0);
 			monomon : in std_logic;
-			ikbd_clken : out std_logic;
+			ikbd_clkren : out std_logic;
+			ikbd_clkfen : out std_logic;
 			ikbd_rx : in std_logic;
 			ikbd_tx : out std_logic;
 
@@ -139,6 +140,8 @@ architecture structure of zest_top is
 	component atari_ikbd is
 		port (
 			clk		: in std_logic;
+			clkren	: in std_logic;
+			clkfen	: in std_logic;
 			reset	: in std_logic;
 			rx		: in std_logic;
 			tx		: out std_logic;
@@ -190,7 +193,8 @@ architecture structure of zest_top is
 	signal clken_err	: std_logic;
 	signal rgb 			: std_logic_vector(8 downto 0);
 	signal monomon		: std_logic;
-	signal ikbd_clken	: std_logic;
+	signal ikbd_clkren	: std_logic;
+	signal ikbd_clkfen	: std_logic;
 	signal ikbd_clk		: std_logic;
 	signal ikbd_reset	: std_logic;
 	signal ikbd_rx		: std_logic;
@@ -311,7 +315,8 @@ begin
 		vsync => vsync,
 		rgb => rgb,
 		monomon => monomon,
-		ikbd_clken => ikbd_clken,
+		ikbd_clkren => ikbd_clkren,
+		ikbd_clkfen => ikbd_clkfen,
 		ikbd_rx => ikbd_rx,
 		ikbd_tx => ikbd_tx,
 		a => ram_A_23,
@@ -324,13 +329,15 @@ begin
 		id => ram_iD
 	);
 
-	ikbd_clk <= clk and ikbd_clken;
+	ikbd_clk <= clk;
 	ikbd_reset <= not soft_resetn;
 	ikbd_j0 <= out_reg7(26 downto 22);
 	ikbd_j1 <= out_reg7(31 downto 27);
 	ikbd_k <= out_reg6(30 downto 0) & out_reg5 & out_reg4;
 	ikbd:atari_ikbd port map (
 		clk => ikbd_clk,
+		clkren => ikbd_clkren,
+		clkfen => ikbd_clkfen,
 		reset => ikbd_reset,
 		rx => ikbd_tx,
 		tx => ikbd_rx,

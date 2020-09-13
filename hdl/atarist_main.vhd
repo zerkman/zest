@@ -31,7 +31,8 @@ entity atarist_main is
 		vsync : out std_logic;
 		rgb : out std_logic_vector(8 downto 0);
 		monomon : in std_logic;
-		ikbd_clken : out std_logic;
+		ikbd_clkren : out std_logic;
+		ikbd_clkfen : out std_logic;
 		ikbd_rx : in std_logic;
 		ikbd_tx : out std_logic;
 
@@ -407,7 +408,8 @@ begin
 	reset <= not resetn;
 	clken_error <= clken_err;
 	pclken <= en32ck;
-	ikbd_clken <= en4rck;
+	ikbd_clkren <= en4rck;
+	ikbd_clkfen <= en4fck;
 	de <= blankn;
 	hsync <= not hsyncn;
 	vsync <= not vsyncn;
