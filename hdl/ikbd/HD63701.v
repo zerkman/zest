@@ -16,7 +16,7 @@ module HD63701V0_M6
  input [7:0]   DI, //       {PI3}
 
  input [7:0]   PI4, //
- 
+
  input [7:0]   PI1, // Port1 IN
  output [7:0]  PO1, //       OUT
 
@@ -25,17 +25,17 @@ module HD63701V0_M6
 );
 
 // map sci tx onto PO3 if transmitter is enabled
-assign PO2 = te?{PO2I[7:5],txd,PO2I[3:0]}:PO2I;      
+assign PO2 = te?{PO2I[7:5],txd,PO2I[3:0]}:PO2I;
 wire [7:0] 	  PO2I;
-      
+
 wire [15:0] ADI;
-wire [7:0] PO3;   
-wire [7:0] PO4;   
+wire [7:0] PO3;
+wire [7:0] PO4;
 
 // Multiplex PO3 and PO4 onto external AD port in mode 7
-assign AD = (PO2I[7:5] == 3'b111)?{ PO4, PO3 }:ADI;  
-   
-// Built-In Instruction ROM TODO: include mode (POI[7:5]) here
+assign AD = (PO2I[7:5] == 3'b111)?{ PO4, PO3 }:ADI;
+
+// Built-In Instruction ROM - TODO: include mode (POI[7:5]) here
 wire en_birom = (ADI[15:12]==4'b1111);			// $F000-$FFFF
 wire [7:0] biromd;
 MCU_BIROM irom( CLKx2, ADI[11:0], biromd );
@@ -76,7 +76,7 @@ HD63701_BIDSEL bidsel
  biddi,
  en_birom, biromd,
  en_biram, biramd,
- en_biio , biiod, 
+ en_biio , biiod,
  en_bisci, biscid,
  en_bitim, bitimd,
  DI
@@ -89,10 +89,10 @@ HD63701_Core core
    .NMI(NMI),.IRQ(IRQ),.IRQ2_TIM(irq2_tim),.IRQ2_SCI(irq2_sci),
    .RW(RW),.AD(ADI),.DO(DO),.DI(biddi)
    );
-  
+
 endmodule
 
-module HD63701_BIDSEL 
+module HD63701_BIDSEL
 (
  output [7:0] o,
 
@@ -111,7 +111,7 @@ assign o = e0 ? d0 :
 	   e3 ? d3 :
 	   e4 ? d4 :
 	   dx;
-   
+
 endmodule
 
 
@@ -147,7 +147,7 @@ module HD63701_IOPort
 
  output 	  en_io,
  output [7:0] 	  iod,
-	
+
  input [7:0] 	  PI1,
  input [4:0] 	  PI2,
  input [7:0] 	  PI3,
@@ -163,23 +163,23 @@ module HD63701_IOPort
    assign PO2 = ({3'b000, ~DDR2}) | PO2R;
    assign PO3 = (~DDR3) | PO3R;
    assign PO4 = (~DDR4) | PO4R;
-   
+
    reg [7:0] 	  DDR1;
    reg [4:0] 	  DDR2;
    reg [7:0] 	  DDR3;
    reg [7:0] 	  DDR4;
-   
-   reg [7:0] 	  PO1R;   
+
+   reg [7:0] 	  PO1R;
    reg [7:0] 	  PO2R;
-   reg [7:0] 	  PO3R;   
+   reg [7:0] 	  PO3R;
    reg [7:0] 	  PO4R;
-  
+
 always @( posedge mcu_clx2 or posedge mcu_rst ) begin
    if (mcu_rst) begin
       DDR1 <= 8'h00;
-      DDR2 <= 5'h00;      
+      DDR2 <= 5'h00;
       DDR3 <= 8'h00;
-      DDR4 <= 8'h00;      
+      DDR4 <= 8'h00;
       PO2R[7:5] <= PI2[2:0];
       // other output registers are undefined after reset
    end
@@ -196,17 +196,17 @@ always @( posedge mcu_clx2 or posedge mcu_rst ) begin
       end
    end
 end // always @ ( posedge mcu_clx2 or posedge mcu_rst )
-   
+
 // IO from 0x0000 to 0x0007
 assign en_io = (mcu_ad[15:3] == 13'h0);
 // only addresses 2 and 3 return data
-assign iod = 
-	     (mcu_ad==16'h0) ? DDR1 : 
-	     (mcu_ad==16'h1) ? {3'hF,DDR2} : 
-	     (mcu_ad==16'h2) ? PI1 : 
+assign iod =
+	     (mcu_ad==16'h0) ? DDR1 :
+	     (mcu_ad==16'h1) ? {3'hF,DDR2} :
+	     (mcu_ad==16'h2) ? PI1 :
 	     (mcu_ad==16'h3) ? {3'hF,PI2}:
-	     (mcu_ad==16'h4) ? DDR3 : 
-	     (mcu_ad==16'h5) ? DDR4 : 
+	     (mcu_ad==16'h4) ? DDR3 :
+	     (mcu_ad==16'h5) ? DDR4 :
 	     (mcu_ad==16'h6) ? PI3 :
 	     PI4;
 
@@ -230,24 +230,24 @@ module HD63701_SCI
 );
 
    reg [7:0]  RMCR;   // Rate and Mode Control Register
-   reg [7:0]  TRCSR;  // Transmit/Receive Control and Status Register   
+   reg [7:0]  TRCSR;  // Transmit/Receive Control and Status Register
    reg [7:0]  RDR;    // Receive Data Register
-   reg [7:0]  TDR;    // Transmit Data Register 	     
+   reg [7:0]  TDR;    // Transmit Data Register
 
-   reg 	      RDRF;   // receive data register full  
+   reg 	      RDRF;   // receive data register full
    reg 	      TDRE;   // transmit data register empty
    reg 	      ORFE;   // over run framing error
-   
+
    reg 	      last_rx;
 
-   reg [8:0]  rxsr;   // receive shift register    
+   reg [8:0]  rxsr;   // receive shift register
    reg [7:0]  rxcnt;  // 9 bit receive counter
-   
+
    reg [11:0] txcnt;  // 12 bit transmit counter
    reg [8:0]  txsr;
    reg        clr_rd;
    reg        clr_td;
-      
+
    always @( posedge mcu_clx2 or posedge mcu_rst ) begin
       if (mcu_rst) begin
 	 RMCR  <= 8'h00;
@@ -278,12 +278,12 @@ module HD63701_SCI
 	 end
 
 	 if(re) begin
-	 
+
 	    // sync rx clock on first falling data (start bit)
 	    last_rx <= rx;
-	    rxcnt <= rxcnt + 1;	 
+	    rxcnt <= rxcnt + 1;
 	    if((rxsr == 9'h1ff) && last_rx && !rx)
-	       rxcnt <= 8'h00;	    
+	       rxcnt <= 8'h00;
 
 	    // sample serial bit in the middle of the 256 clock
 	    // cycle @ 7812.5 bit/s and shift it into rx buffer
@@ -342,7 +342,7 @@ module HD63701_SCI
 	 end
       end
    end
-   
+
    // bit 0 (wakeup) is cleared by the hardware after seeing 10 1's on RX,
    // we always return 0
    wire [7:0] TRCSR_O = { RDRF, ORFE, TDRE, TRCSR[4:1], 1'b0 };
@@ -354,14 +354,14 @@ module HD63701_SCI
    wire       rie = TRCSR[4];  // receiver interrupt enable
 
    // interrupt on receive or transmit
-   assign mcu_irq2_sci = (rie && (RDRF | ORFE)) || (tie && TDRE); 
-   
+   assign mcu_irq2_sci = (rie && (RDRF | ORFE)) || (tie && TDRE);
+
    assign en_sci = (mcu_ad[15:2] == 14'h004);
    assign iod = (mcu_ad==16'h10) ? RMCR :
 		(mcu_ad==16'h11) ? TRCSR_O :
 		(mcu_ad==16'h12) ? RDR :
 		TDR;
-   
+
 endmodule
 
 
@@ -440,4 +440,3 @@ assign   timerd = (mcu_ad==16'h08) ? {1'b0,oci,2'b10,oce,3'b000}:
 		  8'h0;
 
 endmodule
-
