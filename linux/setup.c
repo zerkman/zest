@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <pthread.h>
 
 #include <linux/i2c-dev.h>
 
@@ -147,6 +148,18 @@ int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines) {
 	return 0;
 }
 
+volatile int thr_kbd_end = 0;
+void * thread_kbd(void * arg) {
+	int y;
+	while (thr_kbd_end == 0) {
+		usleep(1000000);
+		parmreg[4] ^= 0x80;
+		y = (y+1)&3;
+		int yg = y ^ (y>>1);
+		parmreg[7] = 0xfC3fffff | yg << 22 ;
+	}
+	return NULL;
+}
 
 int main(int argc, char **argv) {
 	int Status;
@@ -163,7 +176,7 @@ int main(int argc, char **argv) {
 		printf("Cannot open UIO device\n");
 		return 1;
 	}
-	parmreg = mmap(0,0x10,PROT_READ|PROT_WRITE,MAP_SHARED,uiofd,0);
+	parmreg = mmap(0,0x20,PROT_READ|PROT_WRITE,MAP_SHARED,uiofd,0);
 	if (parmreg == MAP_FAILED) {
 		printf("Cannot map UIO device\n");
 		return 1;
@@ -193,12 +206,18 @@ int main(int argc, char **argv) {
 	memset(mem_array+0xfa0000,0xff,0x20000);
 	int cfg = 3;		/* end reset */
 	int c;
+	pthread_t kbd_thr;
+	pthread_create(&kbd_thr,NULL,thread_kbd,NULL);
 	do {
 		memset(mem_array,0,0x20000);
 		FILE *bootfd = fopen(binfilename,"rb");
 		fread(mem_array+0xfc0000,1,0x30000,bootfd);
 		fclose(bootfd);
 		memcpy(mem_array,mem_array+0xfc0000,8);
+		int i;
+		for (i=4; i<8; ++i) {
+			parmreg[i] = 0xffffffff;
+		}
 
 		parmreg[0] = cfg;
 		c = getchar();
@@ -207,6 +226,8 @@ int main(int argc, char **argv) {
 		usleep(10000);
 		cfg = 4^cfg;
 	} while (c!='q');
+	thr_kbd_end = 1;
+	pthread_join(kbd_thr,NULL);
 
 	return 0;
 }
