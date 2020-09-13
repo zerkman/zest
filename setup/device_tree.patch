@@ -11,10 +11,19 @@
  	};
 --- system-top.dts.orig	2020-07-02 23:11:52.308878289 +0200
 +++ system-top.dts	2020-07-02 23:13:58.430652235 +0200
-@@ -24,4 +24,12 @@
+@@ -24,4 +24,22 @@
  		device_type = "memory";
  		reg = <0x0 0x40000000>;
  	};
++	phy0 {
++		compatible = "ulpi-phy";
++		#phy-cells = <0x0>;
++		reg = <0xe0002000 0x1000>;
++		view-port = <0x170>;
++		drv-vbus;
++		linux,phandle = <0x6>;
++		phandle = <0x6>;
++	};
 +	reserved-memory {
 +		#address-cells = <1>;
 +		#size-cells = <1>;
@@ -24,3 +33,23 @@
 +		};
 +	};
  };
++
+--- zynq-7000.dtsi.orig	2020-09-13 23:24:06.161284730 +0200
++++ zynq-7000.dtsi	2020-09-13 23:35:09.814123553 +0200
+@@ -401,12 +401,15 @@
+ 
+ 		usb0: usb@e0002000 {
+ 			compatible = "xlnx,zynq-usb-2.20a", "chipidea,usb2";
+-			status = "disabled";
++			status = "okay";
+ 			clocks = <&clkc 28>;
+ 			interrupt-parent = <&intc>;
+ 			interrupts = <0 21 4>;
+ 			reg = <0xe0002000 0x1000>;
+ 			phy_type = "ulpi";
++			usb-reset = <0x7 0x7 0x0>;
++			dr_mode = "host";
++			usb-phy = <0x6>;
+ 		};
+ 
+ 		usb1: usb@e0003000 {
