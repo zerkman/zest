@@ -111,12 +111,15 @@ architecture structure of zest_top is
 
 			clken_error : out std_logic;
 
-			clken : out std_logic;
+			pclken : out std_logic;
 			de : out std_logic;
 			hsync : out std_logic;
 			vsync : out std_logic;
 			rgb : out std_logic_vector(8 downto 0);
 			monomon : in std_logic;
+			ikbd_clken : out std_logic;
+			ikbd_rx : in std_logic;
+			ikbd_tx : out std_logic;
 
 			a : out std_logic_vector(23 downto 1);
 			ds : out std_logic_vector(1 downto 0);
@@ -126,6 +129,18 @@ architecture structure of zest_top is
 			w_done : in std_logic;
 			od : in std_logic_vector(15 downto 0);
 			id : out std_logic_vector(15 downto 0)
+		);
+	end component;
+
+	component atari_ikbd is
+		port (
+			clk		: in std_logic;
+			reset	: in std_logic;
+			rx		: in std_logic;
+			tx		: out std_logic;
+			j0		: in std_logic_vector(4 downto 0);
+			j1		: in std_logic_vector(4 downto 0);
+			k		: in std_logic_vector(94 downto 0)
 		);
 	end component;
 
@@ -171,6 +186,14 @@ architecture structure of zest_top is
 	signal clken_err	: std_logic;
 	signal rgb 			: std_logic_vector(8 downto 0);
 	signal monomon		: std_logic;
+	signal ikbd_clken	: std_logic;
+	signal ikbd_clk		: std_logic;
+	signal ikbd_reset	: std_logic;
+	signal ikbd_rx		: std_logic;
+	signal ikbd_tx		: std_logic;
+	signal ikbd_j0		: std_logic_vector(4 downto 0);
+	signal ikbd_j1		: std_logic_vector(4 downto 0);
+	signal ikbd_k		: std_logic_vector(94 downto 0);
 
 	signal ram_A_23		: std_logic_vector(23 downto 1);
 	signal ram_A		: std_logic_vector(31 downto 0);
@@ -270,12 +293,15 @@ begin
 		clk => clk,
 		resetn => soft_resetn,
 		clken_error => clken_err,
-		clken => pclken,
+		pclken => pclken,
 		de => de,
 		hsync => hsync,
 		vsync => vsync,
 		rgb => rgb,
 		monomon => monomon,
+		ikbd_clken => ikbd_clken,
+		ikbd_rx => ikbd_rx,
+		ikbd_tx => ikbd_tx,
 		a => ram_A_23,
 		ds => ram_DS,
 		r => ram_R,
@@ -284,6 +310,21 @@ begin
 		w_done => ram_W_DONE,
 		od => ram_oD,
 		id => ram_iD
+	);
+
+	ikbd_clk <= clk and ikbd_clken;
+	ikbd_reset <= not soft_resetn;
+	ikbd_j0 <= (others => '1');
+	ikbd_j1 <= (others => '1');
+	ikbd_k <= (others => '1');
+	ikbd:atari_ikbd port map (
+		clk => ikbd_clk,
+		reset => ikbd_reset,
+		rx => ikbd_tx,
+		tx => ikbd_rx,
+		j0 => ikbd_j0,
+		j1 => ikbd_j1,
+		k => ikbd_k
 	);
 
 	pix <= rgb(8 downto 6) & "00" & rgb(5 downto 3) & "000" & rgb(2 downto 0) & "00";

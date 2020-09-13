@@ -25,12 +25,15 @@ entity atarist_main is
 
 		clken_error : out std_logic;
 
-		clken : out std_logic;
+		pclken : out std_logic;
 		de : out std_logic;
 		hsync : out std_logic;
 		vsync : out std_logic;
 		rgb : out std_logic_vector(8 downto 0);
 		monomon : in std_logic;
+		ikbd_clken : out std_logic;
+		ikbd_rx : in std_logic;
+		ikbd_tx : out std_logic;
 
 		a : out std_logic_vector(23 downto 1);
 		ds : out std_logic_vector(1 downto 0);
@@ -403,7 +406,8 @@ architecture structure of atarist_main is
 begin
 	reset <= not resetn;
 	clken_error <= clken_err;
-	clken <= en32ck;
+	pclken <= en32ck;
+	ikbd_clken <= en4rck;
 	de <= blankn;
 	hsync <= not hsyncn;
 	vsync <= not vsyncn;
@@ -631,7 +635,8 @@ begin
 		RTS_n => acia_ikbd_rts_n
 	);
 	acia_ikbd_cs <= cs6850 and not bus_A(2);
-	acia_ikbd_rxd <= '0';
+	acia_ikbd_rxd <= ikbd_rx;
+	ikbd_tx <= acia_ikbd_txd;
 	acia_ikbd_dcd_n <= '0';
 	acia_ikbd_cts_n <= '0';
 
