@@ -167,6 +167,8 @@ architecture structure of atarist_main is
 			en32ck		: out std_logic;
 			en4rck		: out std_logic;
 			en4fck		: out std_logic;
+			en2rck		: out std_logic;
+			en2fck		: out std_logic;
 			en2_4576	: out std_logic;
 			ck05		: out std_logic;
 			error		: out std_logic
@@ -286,6 +288,8 @@ architecture structure of atarist_main is
 	signal en8fck 		: std_logic;
 	signal en4rck 		: std_logic;
 	signal en4fck 		: std_logic;
+	signal en2rck 		: std_logic;
+	signal en2fck 		: std_logic;
 	signal en32ck 		: std_logic;
 	signal en2_4576ck	: std_logic;
 	signal ck05			: std_logic;
@@ -408,8 +412,8 @@ begin
 	reset <= not resetn;
 	clken_error <= clken_err;
 	pclken <= en32ck;
-	ikbd_clkren <= en4rck;
-	ikbd_clkfen <= en4fck;
+	ikbd_clkren <= en2rck;
+	ikbd_clkfen <= en2fck;
 	de <= blankn;
 	hsync <= not hsyncn;
 	vsync <= not vsyncn;
@@ -473,7 +477,7 @@ begin
 	cpu_BGACKn <= '1';
 	cpu_IPLn(0) <= '1';
 
-	clkgen:clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2_4576ck,ck05,clken_err);
+	clkgen:clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2rck,en2fck,en2_4576ck,ck05,clken_err);
 	enNC1 <= '1';
 	enNC2 <= clken_bus and clken_video;
 	clken_bus <= (ram_R_DONE or ram_W_DONE) or bus_DTACKn or clken_bus2;

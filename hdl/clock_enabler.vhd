@@ -39,6 +39,8 @@ entity clock_enabler is
 		en32ck		: out std_logic;	-- 32 MHz rising edge
 		en4rck		: out std_logic;	-- 4 MHz rising edge
 		en4fck		: out std_logic;	-- 4 MHz falling edge
+		en2rck		: out std_logic;	-- 2 MHz rising edge
+		en2fck		: out std_logic;	-- 2 MHz falling edge
 		en2_4576	: out std_logic;	-- 2.4576 MHz rising edge
 		ck05		: out std_logic;	-- 500 kHz clock
 		error		: out std_logic		-- time out error
@@ -58,11 +60,11 @@ architecture behavioral of clock_enabler is
 	signal phase		: std_logic;
 	signal en1			: std_logic;
 	signal en2			: std_logic;
+	signal en4			: std_logic;
 	signal en32			: std_logic;
 	signal en24			: std_logic;
 	signal err			: std_logic;
 	signal new_phase	: std_logic;
-	signal clk_div		: std_logic;
 
 begin
 	-- TODO remove the 1 cycle delay between enNC and enPhi
@@ -70,8 +72,11 @@ begin
 	en8rck <= en1;
 	en8fck <= en2;
 	en32ck <= en32;
-	en4rck <= en1 and not clk_div;
-	en4fck <= en1 and clk_div;
+	en4 <= en1 and not cnt05(0);
+	en4rck <= en4;
+	en4fck <= en1 and cnt05(0);
+	en2rck <= en4 and not cnt05(1);
+	en2fck <= en4 and cnt05(1);
 	en2_4576 <= en24;
 	ck05 <= cnt05(3);
 	error <= err;
@@ -89,10 +94,8 @@ begin
 	begin
 		if rising_edge(clk) then
 			if reset = '1' then
-				clk_div <= '0';
 				cnt05 <= (others => '0');
 			elsif en1 = '1' then
-				clk_div <= not clk_div;
 				cnt05 <= cnt05 + 1;
 			end if;
 		end if;
