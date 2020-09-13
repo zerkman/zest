@@ -23,13 +23,17 @@ entity configurator is
 		-- Width of S_AXI data bus
 		C_S_AXI_DATA_WIDTH	: integer	:= 32;
 		-- Width of S_AXI address bus
-		C_S_AXI_ADDR_WIDTH	: integer	:= 4
+		C_S_AXI_ADDR_WIDTH	: integer	:= 5
 	);
 	port (
 		out_reg0	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 		out_reg1	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 		out_reg2	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 		out_reg3	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		out_reg4	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		out_reg5	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		out_reg6	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		out_reg7	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 
 		in_reg0		: in std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 		in_reg1		: in std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
@@ -117,15 +121,13 @@ architecture arch_imp of configurator is
 	-- ADDR_LSB = 2 for 32 bits (n downto 2)
 	-- ADDR_LSB = 3 for 64 bits (n downto 3)
 	constant ADDR_LSB	: integer := (C_S_AXI_DATA_WIDTH/32)+ 1;
-	constant OPT_MEM_ADDR_BITS : integer := 1;
+	constant OPT_MEM_ADDR_BITS : integer := 2;
 	------------------------------------------------
 	---- Signals for user logic register space example
 	--------------------------------------------------
 	---- Number of Slave Registers 4
-	signal slv_reg0	: std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal slv_reg1	: std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal slv_reg2	: std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal slv_reg3	: std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+	type slv_reg_t is array (0 to 2**(OPT_MEM_ADDR_BITS+1)-1) of std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+	signal slv_reg : slv_reg_t;
 	signal slv_reg_rden	: std_logic;
 	signal slv_reg_wren	: std_logic;
 	signal reg_data_out	: std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
@@ -134,10 +136,14 @@ architecture arch_imp of configurator is
 
 begin
 	-- I/O Connections assignments
-	out_reg0	<= slv_reg0;
-	out_reg1	<= slv_reg1;
-	out_reg2	<= slv_reg2;
-	out_reg3	<= slv_reg3;
+	out_reg0	<= slv_reg(0);
+	out_reg1	<= slv_reg(1);
+	out_reg2	<= slv_reg(2);
+	out_reg3	<= slv_reg(3);
+	out_reg4	<= slv_reg(4);
+	out_reg5	<= slv_reg(5);
+	out_reg6	<= slv_reg(6);
+	out_reg7	<= slv_reg(7);
 
 	S_AXI_AWREADY	<= axi_awready;
 	S_AXI_WREADY	<= axi_wready;
@@ -232,52 +238,17 @@ begin
 	begin
 		if rising_edge(S_AXI_ACLK) then
 			if S_AXI_ARESETN = '0' then
-				slv_reg0 <= (others => '0');
-				slv_reg1 <= (others => '0');
-				slv_reg2 <= (others => '0');
-				slv_reg3 <= (others => '0');
+				slv_reg <= (others => (others => '0'));
 			else
 				loc_addr := axi_awaddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
 				if (slv_reg_wren = '1') then
-				case loc_addr is
-					when b"00" =>
-						for byte_index in 0 to (C_S_AXI_DATA_WIDTH/8-1) loop
-							if ( S_AXI_WSTRB(byte_index) = '1' ) then
-							-- Respective byte enables are asserted as per write strobes
-							-- slave registor 0
-							slv_reg0(byte_index*8+7 downto byte_index*8) <= S_AXI_WDATA(byte_index*8+7 downto byte_index*8);
-							end if;
-						end loop;
-					when b"01" =>
-						for byte_index in 0 to (C_S_AXI_DATA_WIDTH/8-1) loop
-							if ( S_AXI_WSTRB(byte_index) = '1' ) then
-							-- Respective byte enables are asserted as per write strobes
-							-- slave registor 1
-							slv_reg1(byte_index*8+7 downto byte_index*8) <= S_AXI_WDATA(byte_index*8+7 downto byte_index*8);
-							end if;
-						end loop;
-					when b"10" =>
-						for byte_index in 0 to (C_S_AXI_DATA_WIDTH/8-1) loop
-							if ( S_AXI_WSTRB(byte_index) = '1' ) then
-							-- Respective byte enables are asserted as per write strobes
-							-- slave registor 2
-							slv_reg2(byte_index*8+7 downto byte_index*8) <= S_AXI_WDATA(byte_index*8+7 downto byte_index*8);
-							end if;
-						end loop;
-					when b"11" =>
-						for byte_index in 0 to (C_S_AXI_DATA_WIDTH/8-1) loop
-							if ( S_AXI_WSTRB(byte_index) = '1' ) then
-							-- Respective byte enables are asserted as per write strobes
-							-- slave registor 3
-							slv_reg3(byte_index*8+7 downto byte_index*8) <= S_AXI_WDATA(byte_index*8+7 downto byte_index*8);
-							end if;
-						end loop;
-					when others =>
-						slv_reg0 <= slv_reg0;
-						slv_reg1 <= slv_reg1;
-						slv_reg2 <= slv_reg2;
-						slv_reg3 <= slv_reg3;
-					end case;
+					for byte_index in 0 to (C_S_AXI_DATA_WIDTH/8-1) loop
+						if ( S_AXI_WSTRB(byte_index) = '1' ) then
+						-- Respective byte enables are asserted as per write strobes
+						-- slave registor 0
+						slv_reg(to_integer(unsigned(loc_addr)))(byte_index*8+7 downto byte_index*8) <= S_AXI_WDATA(byte_index*8+7 downto byte_index*8);
+						end if;
+					end loop;
 				end if;
 			end if;
 		end if;
@@ -364,23 +335,18 @@ begin
 	-- and the slave is ready to accept the read address.
 	slv_reg_rden <= axi_arready and S_AXI_ARVALID and (not axi_rvalid) ;
 
-	process (in_reg0, in_reg1, slv_reg1, slv_reg2, slv_reg3, axi_araddr, S_AXI_ARESETN, slv_reg_rden)
+	process (in_reg0, in_reg1, slv_reg, axi_araddr, S_AXI_ARESETN, slv_reg_rden)
 	variable loc_addr :std_logic_vector(OPT_MEM_ADDR_BITS downto 0);
 	begin
 		-- Address decoding for reading registers
 		loc_addr := axi_araddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
-		case loc_addr is
-			when b"00" =>
-				reg_data_out <= in_reg0;
-			when b"01" =>
-				reg_data_out <= in_reg1;
-			when b"10" =>
-				reg_data_out <= slv_reg2;
-			when b"11" =>
-				reg_data_out <= slv_reg3;
-			when others =>
-				reg_data_out <= (others => '0');
-		end case;
+		if unsigned(loc_addr) = 0 then
+			reg_data_out <= in_reg0;
+		elsif unsigned(loc_addr) = 1 then
+			reg_data_out <= in_reg1;
+		else
+			reg_data_out <= slv_reg(to_integer(unsigned(loc_addr)));
+		end if;
 	end process;
 
 	-- Output register or memory read data

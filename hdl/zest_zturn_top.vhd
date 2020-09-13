@@ -99,6 +99,10 @@ architecture structure of zest_top is
 			out_reg1_0 : out STD_LOGIC_VECTOR ( 31 downto 0 );
 			out_reg2_0 : out STD_LOGIC_VECTOR ( 31 downto 0 );
 			out_reg3_0 : out STD_LOGIC_VECTOR ( 31 downto 0 );
+			out_reg4_0 : out STD_LOGIC_VECTOR ( 31 downto 0 );
+			out_reg5_0 : out STD_LOGIC_VECTOR ( 31 downto 0 );
+			out_reg6_0 : out STD_LOGIC_VECTOR ( 31 downto 0 );
+			out_reg7_0 : out STD_LOGIC_VECTOR ( 31 downto 0 );
 			resetn : out STD_LOGIC;
 			vid_clk : out STD_LOGIC
 		);
@@ -214,6 +218,10 @@ architecture structure of zest_top is
 	signal out_reg1		: std_logic_vector(31 downto 0);
 	signal out_reg2		: std_logic_vector(31 downto 0);
 	signal out_reg3		: std_logic_vector(31 downto 0);
+	signal out_reg4		: std_logic_vector(31 downto 0);
+	signal out_reg5		: std_logic_vector(31 downto 0);
+	signal out_reg6		: std_logic_vector(31 downto 0);
+	signal out_reg7		: std_logic_vector(31 downto 0);
 
 	signal pclken		: std_logic;
 	signal de			: std_logic;
@@ -274,6 +282,10 @@ begin
 		out_reg1_0 => out_reg1,
 		out_reg2_0 => out_reg2,
 		out_reg3_0 => out_reg3,
+		out_reg4_0 => out_reg4,
+		out_reg5_0 => out_reg5,
+		out_reg6_0 => out_reg6,
+		out_reg7_0 => out_reg7,
 		resetn => resetn,
 		vid_clk => pclk,
 		OFFSET_0 => ram_offset,
@@ -314,9 +326,9 @@ begin
 
 	ikbd_clk <= clk and ikbd_clken;
 	ikbd_reset <= not soft_resetn;
-	ikbd_j0 <= (others => '1');
-	ikbd_j1 <= (others => '1');
-	ikbd_k <= (others => '1');
+	ikbd_j0 <= out_reg7(26 downto 22);
+	ikbd_j1 <= out_reg7(31 downto 27);
+	ikbd_k <= out_reg6(30 downto 0) & out_reg5 & out_reg4;
 	ikbd:atari_ikbd port map (
 		clk => ikbd_clk,
 		reset => ikbd_reset,
