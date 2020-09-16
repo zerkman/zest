@@ -31,12 +31,16 @@ architecture dut of zest_sim_top is
 
 			clken_error : out std_logic;
 
-			clken : out std_logic;
+			pclken : out std_logic;
 			de : out std_logic;
 			hsync : out std_logic;
 			vsync : out std_logic;
 			rgb : out std_logic_vector(8 downto 0);
 			monomon : in std_logic;
+			ikbd_clkren : out std_logic;
+			ikbd_clkfen : out std_logic;
+			ikbd_rx : in std_logic;
+			ikbd_tx : out std_logic;
 
 			a : out std_logic_vector(23 downto 1);
 			ds : out std_logic_vector(1 downto 0);
@@ -100,18 +104,20 @@ architecture dut of zest_sim_top is
 	signal de			: std_logic;
 	signal vsync		: std_logic;
 	signal hsync		: std_logic;
+	signal ikbd_rx		: std_logic := '1';
 
 begin
 	atarist:atarist_main port map(
 		clk => clk,
 		resetn => resetn,
 		clken_error => clken_err,
-		clken => pclken,
+		pclken => pclken,
 		de => de,
 		hsync => hsync,
 		vsync => vsync,
 		rgb => rgb,
 		monomon => monomon,
+		ikbd_rx => ikbd_rx,
 		a => ram_A,
 		ds => ram_DS,
 		r => ram_R,
@@ -137,6 +143,15 @@ begin
 
 	clk <= not clk after 5 ns;		-- 100 MHz
 	resetn <= '0', '1' after 442 ns;
-	monomon <= not monomon after 100 us;
 
+	-- send byte $35 - [/] key
+	ikbd_rx <= '1',
+		'0' after 1000 us,
+		'1' after 1128 us,
+		'0' after 1256 us,
+		'1' after 1384 us,
+		'0' after 1512 us,
+		'1' after 1640 us,
+		'0' after 1896 us,
+		'1' after 2152 us;
 end dut;

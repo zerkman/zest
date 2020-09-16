@@ -19,13 +19,28 @@
 
 	move.w	#$2700,sr
 
+	move.l	sp,d0
+	lsr.w	#8,d0
+	move.l	d0,$ffff8200.w
+
+	move.b	#$00,$fffffa03.w	; aer
+	move.b	#$00,$fffffa05.w	; ddr
+	move.b  #$48,$fffffa17.w        ; vr
+	move.b  #$40,$fffffa09.w        ; ierb
+	move.b  #$40,$fffffa15.w        ; imrb
+
+	lea	acia_itr(pc),a0
+	move.l	a0,$118.w
+
 	lea	$fffffc00.w,a0
 	move.b	#$3,(a0)
-	move.b	#$18,(a0)
+	move.b	#$96,(a0)
 
-	move.b	#$96,2(a0)
-ts	move.b	(a0),d0
-	btst	#1,d0
-	beq.s	ts
+	move.w	#$2500,sr
 
 lp	bra.s	lp
+
+acia_itr:
+	move.b	$fffffc02.w,8.w
+	move.b	#$bf,$fffffa11.w	; isrb
+	rte
