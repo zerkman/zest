@@ -27,7 +27,11 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <pthread.h>
+#include <dirent.h>
+#include <poll.h>
+#include <sys/time.h>
 
+#include <linux/input-event-codes.h>
 #include <linux/i2c-dev.h>
 
 /*
@@ -148,15 +152,92 @@ int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines) {
 	return 0;
 }
 
+struct input_event {
+	struct timeval time;
+	unsigned short type;
+	unsigned short code;
+	unsigned int value;
+};
+
 volatile int thr_kbd_end = 0;
 void * thread_kbd(void * arg) {
-	int y;
+	unsigned int mx=0,my=0;
+	int dx=0,dy=0;
+	struct pollfd pfd[256];
+	DIR *dd = opendir("/dev/input");
+	int nfds = 0;
+	struct dirent *e;
+
+	while ((e=readdir(dd))!=NULL) {
+		if (strncmp(e->d_name,"event",5)==0) {
+			char buf[267];
+			sprintf(buf,"/dev/input/%s",e->d_name);
+			pfd[nfds].fd = open(buf,O_RDONLY);
+			pfd[nfds].events = POLLIN;
+			++nfds;
+		}
+	}
+
+	static const char *ev_type_names[] = { "EV_SYN", "EV_KEY", "EV_REL", "EV_ABS", "EV_MSC", "EV_SW" };
+
 	while (thr_kbd_end == 0) {
-		usleep(1000000);
-		parmreg[4] ^= 0x80;
-		y = (y+1)&3;
-		int yg = y ^ (y>>1);
-		parmreg[7] = 0xfC3fffff | yg << 22 ;
+		int retval = poll(pfd,nfds,1);
+		if (retval == -1) {
+			break;
+		} else if (retval>0) {
+			int i;
+			for (i=0; i<nfds; ++i) {
+				if ((pfd[i].revents&POLLIN) != 0) {
+					struct input_event ie[256];
+					ssize_t sz = read(pfd[i].fd,ie,sizeof(ie));
+					int count = sz/sizeof(struct input_event);
+					int e;
+					for (e=0; e<count; ++e) {
+						struct input_event *ev = &ie[e];
+						char buf[64];
+						const char *type;
+						if (ev->type<=5) {
+							type = ev_type_names[ev->type];
+						} else {
+							sprintf(buf,"%d",ev->type);
+							type = buf;
+						}
+						printf("Type:%s code:%d val:%d\n",type,(int)ev->code,(int)ev->value);
+					}
+					for (e=0; e<count; ++e) {
+						int val = (int)ie[e].value;
+						int key;
+						switch (ie[e].type) {
+						case EV_REL:
+							if (ie[e].code == 0) {
+								dx -= val;
+							} else {
+								dy -= val;
+							}
+							break;
+						case EV_KEY:
+							key = -1;
+							switch (ie[e].code) {
+								case BTN_LEFT: key = 122; break;
+								case BTN_RIGHT: key = 127; break;
+							}
+							if (key!=-1) {
+								parmreg[4+key/32] = (parmreg[4+key/32] & ~(1<<key%32)) | (!val)<<(key%32);
+							}
+						}
+					}
+				}
+			}
+		} else {
+			// timeout
+			if (dx>=2) { mx=(mx+1)&3; dx-=2; }
+			if (dx<=-2) { mx=(mx+3)&3; dx+=2; }
+			if (dy>=2) { my=(my+1)&3; dy-=2; }
+			if (dy<=-2) { my=(my+3)&3; dy+=2; }
+			int x = (mx>>1)^mx;
+			int y = (my>>1)^my;
+			parmreg[7] = (parmreg[7] & 0xfc3fffff) | x<<22 | y<<24;
+		}
 	}
 	return NULL;
 }
