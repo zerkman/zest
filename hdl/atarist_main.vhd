@@ -667,7 +667,7 @@ begin
 	acia_midi_rxd <= '0';
 	acia_midi_dcd_n <= '0';
 	acia_midi_cts_n <= '0';
-	acia_irq <= acia_ikbd_irq and acia_midi_irq;
+	acia_irq <= acia_ikbd_irq nor acia_midi_irq;
 
 	dma:dma_controller port map (
 		clk => clk,

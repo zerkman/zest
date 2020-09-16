@@ -52,10 +52,10 @@ architecture arch_imp of simple_ram is
 	type testmem is array(0 to MEM_SIZE/2-1) of std_logic_vector(15 downto 0);
 	signal mem	: testmem := (
 		x"0000",x"0300",x"0000",x"0008",x"46fc",x"2700",x"200f",x"e048",
-		x"21c0",x"8200",x"11fc",x"0000",x"fa03",x"11fc",x"0000",x"fa05",
-		x"11fc",x"0048",x"fa17",x"11fc",x"0040",x"fa09",x"11fc",x"0040",
-		x"fa15",x"41fa",x"0018",x"21c8",x"0118",x"41f8",x"fc00",x"10bc",
-		x"0003",x"10bc",x"0096",x"46fc",x"2500",x"60fe",x"11f8",x"fc02",
+		x"21c0",x"8200",x"41f8",x"fc00",x"10bc",x"0003",x"10bc",x"0096",
+		x"11fc",x"0000",x"fa03",x"11fc",x"0000",x"fa05",x"11fc",x"0048",
+		x"fa17",x"11fc",x"0040",x"fa09",x"11fc",x"0040",x"fa15",x"41fa",
+		x"000c",x"21c8",x"0118",x"46fc",x"2500",x"60fe",x"11f8",x"fc02",
 		x"0008",x"11fc",x"00bf",x"fa11",x"4e73",
 		others => x"0000"
 	);

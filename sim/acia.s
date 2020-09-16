@@ -23,6 +23,10 @@
 	lsr.w	#8,d0
 	move.l	d0,$ffff8200.w
 
+	lea	$fffffc00.w,a0
+	move.b	#$3,(a0)
+	move.b	#$96,(a0)
+
 	move.b	#$00,$fffffa03.w	; aer
 	move.b	#$00,$fffffa05.w	; ddr
 	move.b  #$48,$fffffa17.w        ; vr
@@ -31,10 +35,6 @@
 
 	lea	acia_itr(pc),a0
 	move.l	a0,$118.w
-
-	lea	$fffffc00.w,a0
-	move.b	#$3,(a0)
-	move.b	#$96,(a0)
 
 	move.w	#$2500,sr
 
