@@ -194,6 +194,7 @@ void * thread_kbd(void * arg) {
 					int e;
 					for (e=0; e<count; ++e) {
 						struct input_event *ev = &ie[e];
+						if (ev->type==EV_SYN || ev->type==EV_KEY || ev->type==EV_REL || ev->type==EV_MSC) continue;
 						char buf[64];
 						const char *type;
 						if (ev->type<=5) {
@@ -218,8 +219,107 @@ void * thread_kbd(void * arg) {
 						case EV_KEY:
 							key = -1;
 							switch (ie[e].code) {
+								case KEY_F1:
+								case KEY_F2:
+								case KEY_F3:
+								case KEY_F4:
+								case KEY_F5:
+								case KEY_F6:
+								case KEY_F7:
+								case KEY_F8:
+								case KEY_F9:
+								case KEY_F10: key = ie[e].code-KEY_F1; break;
+								case KEY_F11: key = 10; break;		// help
+								case KEY_F12: key = 11; break;		// undo
+								// key 12 - numeric pad [(] not mapped
+								case KEY_KPSLASH: key = 13; break;
+								case KEY_ESC: key = 14; break;
+								case KEY_2: key = 15; break;
+								case KEY_4: key = 16; break;
+								case KEY_6: key = 17; break;
+								case KEY_8: key = 18; break;
+								case KEY_0: key = 19; break;
+								case KEY_EQUAL: key = 20; break;
+								case KEY_BACKSPACE: key = 21; break;
+								case KEY_UP: key = 22; break;
+								// key 23 - numeric pad [)] not mapped
+								case KEY_KPASTERISK: key = 24; break;
+								case KEY_1: key = 25; break;
+								case KEY_3: key = 26; break;
+								case KEY_5: key = 27; break;
+								case KEY_7: key = 28; break;
+								case KEY_9: key = 29; break;
+								case KEY_MINUS: key = 30; break;
+								case KEY_GRAVE: key = 31; break;
+								case KEY_DELETE: key = 32; break;
+								case KEY_HOME: key = 33; break;
+								case KEY_KP7: key = 34; break;
+								case KEY_KP9: key = 35; break;
+								case KEY_TAB: key = 36; break;
+								case KEY_W: key = 37; break;
+								case KEY_R: key = 38; break;
+								case KEY_Y: key = 39; break;
+								case KEY_U: key = 40; break;
+								case KEY_O: key = 41; break;
+								case KEY_LEFTBRACE: key = 42; break;
+								case KEY_INSERT: key = 43; break;
+								case KEY_LEFT: key = 44; break;
+								case KEY_KP8: key = 45; break;
+								case KEY_KPMINUS: key = 46; break;
+								case KEY_LEFTCTRL:
+								case KEY_RIGHTCTRL: key = 47; break;
+								case KEY_Q: key = 48; break;
+								case KEY_E: key = 49; break;
+								case KEY_T: key = 50; break;
+								case KEY_G: key = 51; break;
+								case KEY_I: key = 52; break;
+								case KEY_P: key = 53; break;
+								case KEY_RIGHTBRACE: key = 54; break;
+								case KEY_BACKSLASH: key = 55; break;
+								case KEY_DOWN: key = 56; break;
+								case KEY_KP4: key = 57; break;
+								case KEY_KP6: key = 58; break;
+								case KEY_LEFTSHIFT: key = 59; break;
+								case KEY_A: key = 60; break;
+								case KEY_S: key = 61; break;
+								case KEY_F: key = 62; break;
+								case KEY_H: key = 63; break;
+								case KEY_J: key = 64; break;
+								case KEY_L: key = 65; break;
+								case KEY_SEMICOLON: key = 66; break;
+								case KEY_ENTER: key = 67; break;
+								case KEY_RIGHT: key = 68; break;
+								case KEY_KP5: key = 69; break;
+								case KEY_KPPLUS: key = 70; break;
+								case KEY_LEFTALT:
+								case KEY_RIGHTALT: key = 71; break;
+								case KEY_102ND: key = 72; break;
+								case KEY_D: key = 73; break;
+								case KEY_C: key = 74; break;
+								case KEY_B: key = 75; break;
+								case KEY_K: key = 76; break;
+								case KEY_COMMA: key = 77; break;
+								case KEY_DOT: key = 78; break;
+								case KEY_APOSTROPHE: key = 79; break;
+								case KEY_KP1: key = 80; break;
+								case KEY_KP2: key = 81; break;
+								case KEY_KP3: key = 82; break;
+								case KEY_RIGHTSHIFT: key = 83; break;
+								case KEY_Z: key = 84; break;
+								case KEY_X: key = 85; break;
+								case KEY_V: key = 86; break;
+								case KEY_N: key = 87; break;
+								case KEY_M: key = 88; break;
+								case KEY_SPACE: key = 89; break;
+								case KEY_CAPSLOCK: key = 90; break;
+								case KEY_SLASH: key = 91; break;
+								case KEY_KP0: key = 92; break;
+								case KEY_KPDOT: key = 93; break;
+								case KEY_KPENTER: key = 94; break;
 								case BTN_LEFT: key = 122; break;
 								case BTN_RIGHT: key = 127; break;
+								// default:
+								// 	printf("Key code:%d val:%d\n",(int)ie[e].code,(int)ie[e].value);
 							}
 							if (key!=-1) {
 								parmreg[4+key/32] = (parmreg[4+key/32] & ~(1<<key%32)) | (!val)<<(key%32);
