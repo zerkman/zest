@@ -162,7 +162,8 @@ struct input_event {
 volatile int thr_kbd_end = 0;
 void * thread_kbd(void * arg) {
 	unsigned int mx=0,my=0;
-	int dx=0,dy=0;
+	int dx=0,dy=0,ox=0,oy=0;
+	int timeout = 100;
 	struct pollfd pfd[256];
 	DIR *dd = opendir("/dev/input");
 	int nfds = 0;
@@ -181,7 +182,7 @@ void * thread_kbd(void * arg) {
 	static const char *ev_type_names[] = { "EV_SYN", "EV_KEY", "EV_REL", "EV_ABS", "EV_MSC", "EV_SW" };
 
 	while (thr_kbd_end == 0) {
-		int retval = poll(pfd,nfds,1);
+		int retval = poll(pfd,nfds,timeout);
 		if (retval == -1) {
 			break;
 		} else if (retval>0) {
@@ -215,6 +216,7 @@ void * thread_kbd(void * arg) {
 							} else {
 								dy -= val;
 							}
+							timeout = 0;
 							break;
 						case EV_KEY:
 							key = -1;
@@ -330,10 +332,55 @@ void * thread_kbd(void * arg) {
 			}
 		} else {
 			// timeout
-			if (dx>=2) { mx=(mx+1)&3; dx-=2; }
-			if (dx<=-2) { mx=(mx+3)&3; dx+=2; }
-			if (dy>=2) { my=(my+1)&3; dy-=2; }
-			if (dy<=-2) { my=(my+3)&3; dy+=2; }
+			timeout = 100;
+			if (dx>=2) {
+				if (ox==1 && dx>=4) {
+					mx = (mx+2)&3;
+					dx -= 4;
+				}
+				else {
+					mx = (mx+1)&3;
+					dx -= 2;
+					ox = 1;
+				}
+				timeout = 1;
+			}
+			if (dx<=-2) {
+				if (ox==-1 && dx<=-4) {
+					mx = (mx+2)&3;
+					dx += 4;
+				}
+				else {
+					mx = (mx+3)&3;
+					dx += 2;
+					ox = -1;
+				}
+				timeout = 1;
+			}
+			if (dy>=2) {
+				if (oy==1 && dy>=4) {
+					my = (my+2)&3;
+					dy -= 4;
+				}
+				else {
+					my = (my+1)&3;
+					dy -= 2;
+					oy = 1;
+				}
+				timeout = 1;
+			}
+			if (dy<=-2) {
+				if (oy==-1 && dy<=-4) {
+					my = (my+2)&3;
+					dy += 4;
+				}
+				else {
+					my = (my+3)&3;
+					dy += 2;
+					oy = -1;
+				}
+				timeout = 1;
+			}
 			int x = (mx>>1)^mx;
 			int y = (my>>1)^my;
 			parmreg[7] = (parmreg[7] & 0xfc3fffff) | x<<22 | y<<24;
