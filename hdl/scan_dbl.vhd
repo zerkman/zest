@@ -65,15 +65,6 @@ begin
 	OUT_DE <= ode;
 	OUT_DATA <= odata;
 
-	process(oxcnt)
-	begin
-		if oxcnt<HSWIDTH then
-			OUT_HSYNC <= '1';
-		else
-			OUT_HSYNC <= '0';
-		end if;
-	end process;
-
 	process(clk)
 	begin
 		if rising_edge(clk) then
@@ -116,6 +107,7 @@ begin
 				if (IN_HSYNC = '1' and ihsync = '0') or ixcnt = xres/2-1 then
 					oxcnt <= (others => '0');
 					opixcnt <= (others => '0');
+					OUT_HSYNC <= '1';
 				else
 					if odraw = '1' and oxcnt+1 >= HBORDER and oxcnt+1 < HBORDER+HCOLUMNS then
 						ode <= '1';
@@ -129,6 +121,11 @@ begin
 						ode <= '0';
 					end if;
 					oxcnt <= oxcnt + 1;
+					if oxcnt+1<HSWIDTH then
+						OUT_HSYNC <= '1';
+					else
+						OUT_HSYNC <= '0';
+					end if;
 				end if;
 			end if;
 		end if;
