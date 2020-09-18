@@ -29,6 +29,7 @@ entity scan_dbl is
 	port (
 		clk : in std_logic;
 		resetn : in std_logic;
+		passthru : in std_logic;
 		IN_DATA : in std_logic_vector(15 downto 0);
 		IN_VSYNC : in std_logic;
 		IN_HSYNC : in std_logic;
@@ -81,6 +82,12 @@ begin
 				ovsync <= '0';
 				ode <= '0';
 			else
+				if passthru = '1' then
+					odata <= IN_DATA;
+					ovsync <= IN_VSYNC;
+					OUT_HSYNC <= IN_HSYNC;
+					ode <= IN_DE;
+				else
 				ihsync <= IN_HSYNC;
 				if IN_HSYNC = '1' and ihsync = '0' then
 					-- new input line
@@ -126,6 +133,7 @@ begin
 					else
 						OUT_HSYNC <= '0';
 					end if;
+				end if;
 				end if;
 			end if;
 		end if;

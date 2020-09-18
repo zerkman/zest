@@ -174,6 +174,7 @@ architecture structure of zest_top is
 		port (
 			clk 	: in std_logic;
 			resetn 	: in std_logic;
+			passthru : in std_logic;
 			IN_DATA : in std_logic_vector(15 downto 0);
 			IN_VSYNC : in std_logic;
 			IN_HSYNC : in std_logic;
@@ -365,6 +366,7 @@ begin
 	scandbl:scan_dbl port map (
 		clk => pclk,
 		resetn => soft_resetn,
+		passthru => monomon,
 		IN_DATA => ppix,
 		IN_VSYNC => pvsync,
 		IN_HSYNC => phsync,
