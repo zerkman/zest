@@ -200,6 +200,15 @@ begin
 		cnt <= "00";
 	elsif enPhi2 = '1' then
 		cnt <= cnt + 1;
+		if FC /= "111" and iASn = '0' and iUDSn = '0' and iA(23 downto 8) = x"ff82" and FC(2) = '1' and wt_reg then
+			if iA(7 downto 1)&'0' = x"60" then
+				-- resolution (write only - Read is managed by Shifter.)
+				mono <= iD(1);
+			end if;
+			if iA(7 downto 1)&'0' = x"0a" then
+				hz50 <= iD(1);
+			end if;
+		end if;
 	elsif enPhi1 = '1' then
 		oD <= (others => '1');
 		if cnt = 0 then
@@ -209,16 +218,8 @@ begin
 		if FC /= "111" and iASn = '0' and (cnt = 1 or cnt = 2) then
 			if iA(23 downto 15) = "111111111" and FC(2) = '1' then
 				-- hardware registers
-				if iUDSn = '0' and iA(15 downto 1)&'0' = x"8260" and wt_reg then
-					-- resolution (write only - Read is managed by Shifter.)
-					mono <= iD(1);
-				end if;
-				if iUDSn = '0' and iA(15 downto 1)&'0' = x"820a" then
-					if rd_reg then
-						oD <= hz50&'0';
-					elsif wt_reg then
-						hz50 <= iD(1);
-					end if;
+				if iUDSn = '0' and iA(15 downto 1)&'0' = x"820a" and rd_reg then
+					oD <= hz50&'0';
 				end if;
 				if cnt = 2 and iA(15 downto 6)&"000000" /= x"fa00" and iA(15 downto 9) /= "1111110" then
 					-- assert DTACKn except for MFP and ACIA register accesses.

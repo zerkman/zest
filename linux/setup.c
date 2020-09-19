@@ -389,15 +389,28 @@ void * thread_kbd(void * arg) {
 	return NULL;
 }
 
+void usage(const char *progname) {
+	printf("usage: %s [--mono] boot68k.bin\n",progname);
+}
+
 int main(int argc, char **argv) {
 	int Status;
+	int cfg = 3;		/* end reset */
 
 	printf("Shifter + HDMI + DDR + CPU test\n");
-	if (argc != 2) {
-		printf("usage: %s boot68k.bin\n",argv[0]);
-		return 1;
+	const char *binfilename = NULL;
+	int a = 0;
+	while (++a<argc) {
+		const char *arg = argv[a];
+		if (!strcmp(arg,"--mono")) {
+			cfg |= 4;
+		} else if (binfilename == NULL) {
+			binfilename = arg;
+		} else {
+			usage(argv[0]);
+			return 1;
+		}
 	}
-	const char *binfilename = argv[1];
 
 	int uiofd = open("/dev/uio0",O_RDWR);
 	if (uiofd < 0) {
@@ -432,7 +445,6 @@ int main(int argc, char **argv) {
 
 	printf("HDMI setup successful\n");
 	memset(mem_array+0xfa0000,0xff,0x20000);
-	int cfg = 3;		/* end reset */
 	int c;
 	pthread_t kbd_thr;
 	pthread_create(&kbd_thr,NULL,thread_kbd,NULL);
@@ -452,7 +464,6 @@ int main(int argc, char **argv) {
 		printf("new reset\n");
 		parmreg[0] = 0;
 		usleep(10000);
-		cfg = 4^cfg;
 	} while (c!='q');
 	thr_kbd_end = 1;
 	pthread_join(kbd_thr,NULL);
