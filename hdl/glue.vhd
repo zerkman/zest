@@ -132,8 +132,7 @@ architecture behavioral of glue is
 		others => '0');
 
 	-- resolution
-	signal res		: std_logic_vector(1 downto 0) := "00";
-	signal mono		: std_logic;
+	signal mono		: std_logic := '0';
 	-- 0 -> 60 Hz, 1 -> 50 Hz
 	signal hz50		: std_logic := '1';
 
@@ -166,7 +165,6 @@ begin
 
 rd_reg <= (iRWn = '1' and cnt = 1) or cnt = 2;
 wt_reg <= iRWn = '0' and cnt = 2;
-mono <= res(1);
 BLANKn <= vblank nor hblank;
 DE <= vde and hde;
 VSYNC <= svsync;
@@ -213,7 +211,7 @@ begin
 				-- hardware registers
 				if iUDSn = '0' and iA(15 downto 1)&'0' = x"8260" and wt_reg then
 					-- resolution (write only - Read is managed by Shifter.)
-					res <= iD;
+					mono <= iD(1);
 				end if;
 				if iUDSn = '0' and iA(15 downto 1)&'0' = x"820a" then
 					if rd_reg then
