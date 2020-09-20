@@ -436,8 +436,13 @@ int main(int argc, char **argv) {
 	// Status = hdmi_init(14850,5000,2200,1350);
 	/* 1080p60 */
 	// Status = hdmi_init(14850,6000,2200,1125);
-	/* 576p */
-	Status = hdmi_init(3200,5000,1024,625);
+	if (cfg & 4) {
+		/* Mono */
+		Status = hdmi_init(3200,7129,896,501);
+	} else {
+		/* 576p */
+		Status = hdmi_init(3200,5000,1024,625);
+	}
 	if (Status != 0) {
 		printf("HDMI setup Failed\n");
 		return 1;

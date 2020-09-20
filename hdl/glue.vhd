@@ -70,7 +70,7 @@ architecture behavioral of glue is
 	end record;
 	constant sync_50	: sync_t := (512,313,34,63,263,310,28,56,376,450);
 	constant sync_60	: sync_t := (508,263,5,34,234,260,24,52,372,450);
-	constant sync_hi	: sync_t := (224,501,34,34,434,500,28,4,164,184);
+	constant sync_hi	: sync_t := (224,501,34,34,434,434,28,4,164,184);
 
 	type sync_array_t is array (0 to 2) of sync_t;
 	constant sync_array : sync_array_t := (sync_60,sync_50,sync_hi);
@@ -363,6 +363,9 @@ begin
 			if hcnt+1 = 4 and mono = '1' then
 				hde <= '1';
 			end if;
+			if hcnt+1 = 21 and mono = '1' then
+				hblank <= '0';
+			end if;
 			if hcnt+1 = 24 and mono = '0' and hz50 = '0' then
 				hblank <= '0';
 			end if;
@@ -381,8 +384,14 @@ begin
 			if hcnt+1 = 164 and mono = '1' then
 				hde <= '0';
 			end if;
-			if hcnt+1 = 184 and mono = '1' then
+			if hcnt+1 = 181 and mono = '1' then
 				hblank <= '1';
+			end if;
+			if hcnt+1 = 192 and mono = '1' then
+				shsync <= '0';
+			end if;
+			if hcnt+1 = 220 and mono = '1' then
+				shsync <= '1';
 			end if;
 			if hcnt+1 = 372 and mono = '0' and hz50 = '0' then
 				hde <= '0';
