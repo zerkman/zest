@@ -579,7 +579,7 @@ begin
 		LOADn => loadn,
 		rgb => rgb
 	);
-	shifter_iD <= bus_D and ram_oD;
+	shifter_iD <= (bus_D or (15 downto 0 => shifter_CSn)) and ram_oD;
 	shifter_RWn <= bus_RWn;
 	shifter_A <= bus_A(5 downto 1);
 
