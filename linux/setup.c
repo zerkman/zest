@@ -159,6 +159,28 @@ struct input_event {
 	unsigned int value;
 };
 
+int uiofd;
+void * thread_uio(void * arg) {
+	uint32_t n;
+	int s;
+	do {
+		// unmask interrupt
+		uint32_t unmask = 1;
+		ssize_t rv = write(uiofd, &unmask, sizeof(unmask));
+		if (rv != (ssize_t)sizeof(unmask)) {
+			perror("unmask interrupt");
+		}
+		s = read(uiofd,&n,4);
+		if (s==0) {
+			printf("nok\n");
+		} else {
+			printf("ok %d\n",(int)n);
+		}
+	} while (s!=0);
+	printf("out\n");
+	return NULL;
+}
+
 volatile int thr_kbd_end = 0;
 void * thread_kbd(void * arg) {
 	unsigned int mx=0,my=0;
@@ -412,7 +434,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	int uiofd = open("/dev/uio0",O_RDWR);
+	uiofd = open("/dev/uio0",O_RDWR);
 	if (uiofd < 0) {
 		printf("Cannot open UIO device\n");
 		return 1;
@@ -453,6 +475,8 @@ int main(int argc, char **argv) {
 	int c;
 	pthread_t kbd_thr;
 	pthread_create(&kbd_thr,NULL,thread_kbd,NULL);
+	pthread_t uio_thr;
+	pthread_create(&uio_thr,NULL,thread_uio,NULL);
 	do {
 		memset(mem_array,0,0x20000);
 		FILE *bootfd = fopen(binfilename,"rb");

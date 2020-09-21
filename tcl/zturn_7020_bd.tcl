@@ -235,6 +235,10 @@ proc create_root_design { parentCell } {
   set A_0 [ create_bd_port -dir I -from 31 -to 0 A_0 ]
   set DS_0 [ create_bd_port -dir I -from 1 -to 0 DS_0 ]
   set ERROR_0 [ create_bd_port -dir O ERROR_0 ]
+  set IRQ_F2P_0 [ create_bd_port -dir I -from 0 -to 0 -type intr IRQ_F2P_0 ]
+  set_property -dict [ list \
+   CONFIG.PortWidth {1} \
+ ] $IRQ_F2P_0
   set OFFSET_0 [ create_bd_port -dir I -from 31 -to 0 OFFSET_0 ]
   set OFFVALD_0 [ create_bd_port -dir I OFFVALD_0 ]
   set R_0 [ create_bd_port -dir I R_0 ]
@@ -771,6 +775,7 @@ proc create_root_design { parentCell } {
    CONFIG.PCW_USB1_RESET_ENABLE {0} \
    CONFIG.PCW_USB_RESET_ENABLE {1} \
    CONFIG.PCW_USB_RESET_SELECT {Share reset pin} \
+   CONFIG.PCW_USE_FABRIC_INTERRUPT {1} \
    CONFIG.PCW_USE_M_AXI_GP0 {1} \
    CONFIG.PCW_USE_M_AXI_GP1 {0} \
    CONFIG.PCW_USE_S_AXI_HP0 {1} \
@@ -787,6 +792,7 @@ proc create_root_design { parentCell } {
   # Create port connections
   connect_bd_net -net A_0_1 [get_bd_ports A_0] [get_bd_pins ddr_controller_inter_0/A]
   connect_bd_net -net DS_0_1 [get_bd_ports DS_0] [get_bd_pins ddr_controller_inter_0/DS]
+  connect_bd_net -net IRQ_F2P_0_1 [get_bd_ports IRQ_F2P_0] [get_bd_pins processing_system7_0/IRQ_F2P]
   connect_bd_net -net OFFSET_0_1 [get_bd_ports OFFSET_0] [get_bd_pins ddr_controller_inter_0/OFFSET]
   connect_bd_net -net OFFVALD_0_1 [get_bd_ports OFFVALD_0] [get_bd_pins ddr_controller_inter_0/OFFVALD]
   connect_bd_net -net R_0_1 [get_bd_ports R_0] [get_bd_pins ddr_controller_inter_0/R]

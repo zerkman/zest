@@ -84,6 +84,7 @@ architecture structure of zest_top is
 			FIXED_IO_ps_srstb : inout STD_LOGIC;
 			IIC_0_0_scl_io : inout STD_LOGIC;
 			IIC_0_0_sda_io : inout STD_LOGIC;
+			IRQ_F2P_0 : in STD_LOGIC_VECTOR ( 0 to 0 );
 			OFFSET_0 : in STD_LOGIC_VECTOR ( 31 downto 0 );
 			OFFVALD_0 : in STD_LOGIC;
 			R_0 : in STD_LOGIC;
@@ -190,6 +191,7 @@ architecture structure of zest_top is
 	signal resetn		: std_logic;
 	signal pclk			: std_logic;
 	signal soft_resetn	: std_logic;
+	signal irq_f2p		: std_logic_vector(0 downto 0);
 
 	signal clken_err	: std_logic;
 	signal rgb 			: std_logic_vector(8 downto 0);
@@ -255,6 +257,7 @@ begin
 	ram_offvald <= out_reg0(1);
 	monomon <= out_reg0(2);
 	ram_offset <= out_reg1;
+	irq_f2p <= "0";
 
 	psd:ps_domain_wrapper port map(
 		DDR_addr => DDR_addr,
@@ -280,6 +283,7 @@ begin
 		FIXED_IO_ps_srstb => FIXED_IO_ps_srstb,
 		IIC_0_0_scl_io => I2C0_SCL,
 		IIC_0_0_sda_io => I2C0_SDA,
+		IRQ_F2P_0 => irq_f2p,
 		clk => clk,
 		in_reg0_0 => (others => '0'),
 		in_reg1_0 => (others => '0'),

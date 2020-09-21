@@ -1,11 +1,13 @@
 --- pl.dtsi.orig	2020-07-02 23:04:54.106995932 +0200
 +++ pl.dtsi	2020-07-01 23:51:29.000000000 +0200
-@@ -15,7 +15,7 @@
+@@ -15,7 +15,9 @@
  			/* This is a place holder node for a custom IP, user may need to update the entries */
  			clock-names = "S_AXI_ACLK";
  			clocks = <&clkc 15>;
 -			compatible = "xlnx,configurator-1.0";
 +			compatible = "generic-uio";
++			interrupt-parent = <&intc>;
++			interrupts = <0 29 1>;
  			reg = <0x43c00000 0x10000>;
  		};
  	};
