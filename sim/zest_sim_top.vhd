@@ -30,13 +30,15 @@ architecture dut of zest_sim_top is
 			resetn : in std_logic;
 
 			clken_error : out std_logic;
+			monomon : in std_logic;
+			mem_top	: in std_logic_vector(3 downto 0);
 
 			pclken : out std_logic;
 			de : out std_logic;
 			hsync : out std_logic;
 			vsync : out std_logic;
 			rgb : out std_logic_vector(8 downto 0);
-			monomon : in std_logic;
+
 			ikbd_clkren : out std_logic;
 			ikbd_clkfen : out std_logic;
 			ikbd_rx : in std_logic;
@@ -87,6 +89,7 @@ architecture dut of zest_sim_top is
 	signal clken_err	: std_logic;
 	signal rgb 			: std_logic_vector(8 downto 0);
 	signal monomon		: std_logic := '0';
+	signal mem_top		: std_logic_vector(3 downto 0) := "0000";
 
 	signal ram_A		: std_logic_vector(23 downto 1);
 	signal ram_iD		: std_logic_vector(15 downto 0);
@@ -111,12 +114,13 @@ begin
 		clk => clk,
 		resetn => resetn,
 		clken_error => clken_err,
+		monomon => monomon,
+		mem_top => mem_top,
 		pclken => pclken,
 		de => de,
 		hsync => hsync,
 		vsync => vsync,
 		rgb => rgb,
-		monomon => monomon,
 		ikbd_rx => ikbd_rx,
 		a => ram_A,
 		ds => ram_DS,

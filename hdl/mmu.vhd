@@ -23,6 +23,11 @@ entity mmu is
 		clk		: in std_logic;
 		enPhi1	: in std_logic;
 		enPhi2	: in std_logic;
+		resetn	: in std_logic;
+
+		RAMn	: in std_logic;
+		DMAn	: in std_logic;
+		DEVn	: in std_logic;
 
 		iA		: in std_logic_vector(23 downto 1);
 		iASn	: in std_logic;
@@ -31,7 +36,7 @@ entity mmu is
 		iUDSn	: in std_logic;
 		iLDSn	: in std_logic;
 		oD		: out std_logic_vector(7 downto 0);
-		DTACKn	: in std_logic;
+		DTACKn	: out std_logic;
 
 		RDATn	: out std_logic;
 
@@ -43,89 +48,90 @@ entity mmu is
 		-- vertical sync
 		VSYNC	: in std_logic;
 
+		-- max memory configuration
+		mem_top	: in std_logic_vector(3 downto 0);
+
 		-- interface to RAM. Using own signals instead of hardware specific ones
-		ram_A		: out std_logic_vector(23 downto 1);
-		ram_W		: out std_logic;
-		ram_R		: out std_logic;
-		ram_DS		: out std_logic_vector(1 downto 0);
-		ram_W_DONE	: in std_logic;
-		ram_R_DONE	: in std_logic
+		ram_A	: out std_logic_vector(23 downto 1);
+		ram_W	: out std_logic;
+		ram_R	: out std_logic;
+		ram_DS	: out std_logic_vector(1 downto 0)
 	);
 end mmu;
 
 architecture behavioral of mmu is
-	signal memcfg			: std_logic_vector(3 downto 0) := "0101";
-	signal memtop			: std_logic_vector(21 downto 18) := "0011";
-	signal cnt				: unsigned(1 downto 0) := "00";
-	signal screen_adr_high	: std_logic_vector(7 downto 0) := x"00";
-	signal screen_adr_mid	: std_logic_vector(7 downto 0) := x"03";
-	signal screen_adr_ptr	: std_logic_vector(23 downto 1) := (others => '0');
+	signal memcfg			: std_logic_vector(3 downto 0);
+	signal cnt				: unsigned(1 downto 0);
+	signal screen_adr_high	: std_logic_vector(7 downto 0);
+	signal screen_adr_mid	: std_logic_vector(7 downto 0);
+	signal screen_adr_ptr	: std_logic_vector(23 downto 1);
 	signal dma_ptr			: std_logic_vector(23 downto 1);
 	signal al				: std_logic_vector(7 downto 0);
-	signal bus_load_ff		: std_logic;
-	signal delay			: std_logic;
+	signal delay_dcycn		: std_logic;
+	signal delay_bus		: std_logic;
 	signal mode_bus			: std_logic;
 	signal mode_bus_ff		: std_logic;
-	signal dtackn_ff		: std_logic;
+	signal sdtackn			: std_logic;
 
 begin
 
 	al <= iA(7 downto 1) & '1';
+	mode_bus <= '1' when RAMn = '0' and (cnt = 1 or cnt = 2) and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00") else '0';
+	DTACKn <= sdtackn;
 
-	process(iASn,iUDSn,iLDSn,iA,memtop,delay,cnt,iRWn,DTACKn,dtackn_ff)
-	begin
-		if iASn = '0' and (iUDSn = '0' or iLDSn = '0') and delay = '0'
-		and (iA(23 downto 18) <= "00"&memtop or (iA(23 downto 16) >= x"fa" and iA(23 downto 16) <= x"fe"))
-		and ((cnt = 1 and iRWn = '1') or (cnt = 2 and iRWn = '0' and DTACKn = '0') or (DTACKn = '0' and dtackn_ff = '1')) then
-			mode_bus <= '1';
-		else
-			mode_bus <= '0';
-		end if;
-	end process;
-
-	process(mode_bus,mode_bus_ff,iRWn,iA,iUDSn,iLDSn,DCYCn,delay,screen_adr_ptr)
+	process(DCYCn,delay_bus,delay_dcycn,screen_adr_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn)
 	begin
 		RDATn <= '1';
-		if mode_bus = '1' or mode_bus_ff = '1' then
-			-- valid RAM/ROM address
-			ram_A <= iA;
-			ram_DS <= not (iUDSn,iLDSn);
-			ram_R <= iRWn;
-			ram_W <= not iRWn;
-			RDATn <= not iRWn;
-		elsif DCYCn = '0' and delay = '0' then
+		ram_A <= (others => '0');
+		ram_DS <= "00";
+		ram_R <= '0';
+		ram_W <= '0';
+		if DCYCn = '0' and delay_bus = '0' then
 			-- get shifter data
 			ram_A <= screen_adr_ptr;
 			ram_DS <= "11";
 			ram_R <= '1';
 			ram_W <= '0';
-		else
-			-- no memory access
-			ram_A <= (others => '0');
-			ram_DS <= "00";
-			ram_R <= '0';
-			ram_W <= '0';
+		elsif (mode_bus = '1' or mode_bus_ff = '1') and delay_dcycn = '0' then
+			-- valid ST RAM/ROM address
+			ram_A <= iA;
+			ram_DS <= not (iUDSn,iLDSn);
+			ram_R <= iRWn;
+			ram_W <= iRWn nor (iUDSn and iLDSn);
+			RDATn <= not iRWn;
 		end if;
 	end process;
 
 	process(clk)
 	begin
 	if rising_edge(clk) then
-		delay <= '0';
-		if enPhi1 = '1' then
-			dtackn_ff <= DTACKn;
-			if DTACKn = '0' and dtackn_ff = '1' then
-				cnt <= "11";
+		delay_dcycn <= '0';
+		delay_bus <= '0';
+		if resetn = '0' then
+			sdtackn <= '1';
+			cnt <= "00";
+			CMPCSn <= '1';
+			oD <= x"ff";
+			mode_bus_ff <= '0';
+			screen_adr_ptr <= (others => '0');
+			screen_adr_high <= (others => '0');
+			screen_adr_mid <= (others => '0');
+			memcfg <= (others => '0');
+			dma_ptr <= (others => '0');
+		elsif enPhi1 = '1' then
+			if (RAMn = '0' or DEVn = '0') and (cnt = 2 or cnt = 3) then
+				sdtackn <= '0';
+			end if;
+			if cnt = 0 then
+				sdtackn <= '1';
 			end if;
 		elsif enPhi2 = '1' then
 			mode_bus_ff <= mode_bus;
 			cnt <= cnt + 1;
 			CMPCSn <= '1';
 			oD <= x"ff";
-
-			if mode_bus_ff = '1' and cnt = 3 then
+			if cnt = 3 then
 				mode_bus_ff <= '0';
-				delay <= '1';
 			end if;
 
 			if VSYNC = '0' then
@@ -168,18 +174,6 @@ begin
 					elsif iRWn = '0' and cnt = 2 then
 						-- write
 						memcfg <= iD(3 downto 0);
-						case iD(3 downto 0) is
-							when "0000" => memtop <= "0000";	-- 256 KB
-							when "0001" => memtop <= "0001";	-- 512 KB
-							when "0010" => memtop <= "0111";	-- 2048 KB
-							when "0100" => memtop <= "0001";	-- 512 KB
-							when "0101" => memtop <= "0011";	-- 1024 KB
-							when "0110" => memtop <= "1001";	-- 2560 KB
-							when "1000" => memtop <= "0111";	-- 2048 KB
-							when "1001" => memtop <= "1001";	-- 2560 KB
-							when "1010" => memtop <= "1111";	-- 4096 KB
-							when others =>
-						end case;
 					end if;
 				elsif iA(23 downto 4) & "0000" = x"ff8600" and iLDSn = '0' then
 					-- DMA base and counter
@@ -203,9 +197,12 @@ begin
 				end if;
 			end if;
 
+			if mode_bus_ff = '1' and cnt = 3 then
+				delay_bus <= '1';
+			end if;
 			if DCYCn = '0' then
 				screen_adr_ptr <= std_logic_vector(unsigned(screen_adr_ptr)+1);
-				delay <= '1';
+				delay_dcycn <= '1';
 			end if;
 		end if;
 	end if;

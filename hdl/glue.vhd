@@ -31,7 +31,8 @@ entity glue is
 		iD		: in std_logic_vector(1 downto 0);
 		iUDSn	: in std_logic;
 		iLDSn	: in std_logic;
-		DTACKn	: out std_logic;
+		iDTACKn	: in std_logic;
+		oDTACKn	: out std_logic;
 		BEER	: out std_logic;
 		oD		: out std_logic_vector(1 downto 0);
 
@@ -41,6 +42,9 @@ entity glue is
 		VMAn	: in std_logic;
 		cs6850	: out std_logic;
 		FCSn	: out std_logic;
+		RAMn	: out std_logic;
+		DMAn	: out std_logic;
+		DEVn	: out std_logic;
 
 		MFPCSn	: out std_logic;
 		MFPINTn	: in std_logic;
@@ -74,69 +78,13 @@ architecture behavioral of glue is
 
 	type sync_array_t is array (0 to 2) of sync_t;
 	constant sync_array : sync_array_t := (sync_60,sync_50,sync_hi);
-
 	signal sync		: sync_t;
-
-	-- IO memory mapped registers map
-	type iomap_t is array (16#8000# to 16#ffff#) of std_logic;
-	constant iomap	: iomap_t := (
-		16#8001# => '1',
-		16#8201# => '1',
-		16#8203# => '1',
-		16#8205# => '1',
-		16#8207# => '1',
-		16#8209# => '1',
-		16#820a# => '1',
-		16#820b# => '1',
-		16#820d# => '1',
-		16#8240# to 16#827f# => '1',
-		16#8604# to 16#8607# => '1',
-		16#8609# => '1',
-		16#860b# => '1',
-		16#860d# => '1',
-		16#8800# to 16#88ff# => '1',
-		-- 16#8a00# to 16#8a3d# => '1',
-		16#fa01# => '1',
-		16#fa03# => '1',
-		16#fa05# => '1',
-		16#fa07# => '1',
-		16#fa09# => '1',
-		16#fa0b# => '1',
-		16#fa0d# => '1',
-		16#fa0f# => '1',
-		16#fa11# => '1',
-		16#fa13# => '1',
-		16#fa15# => '1',
-		16#fa17# => '1',
-		16#fa19# => '1',
-		16#fa1b# => '1',
-		16#fa1d# => '1',
-		16#fa1f# => '1',
-		16#fa21# => '1',
-		16#fa23# => '1',
-		16#fa25# => '1',
-		16#fa27# => '1',
-		16#fa29# => '1',
-		16#fa2b# => '1',
-		16#fa2d# => '1',
-		16#fa2f# => '1',
-		16#fa31# => '1',
-		16#fa33# => '1',
-		16#fa35# => '1',
-		16#fa37# => '1',
-		16#fa39# => '1',
-		16#fa3b# => '1',
-		16#fa3d# => '1',
-		16#fa3f# => '1',
-		16#fc00# to 16#fdff# => '1',
-		others => '0');
 
 	-- resolution
 	signal mono		: std_logic := '0';
 	-- 0 -> 60 Hz, 1 -> 50 Hz
 	signal hz50		: std_logic := '1';
 
-	signal cnt		: unsigned(1 downto 0);
 	signal hcnt		: unsigned(8 downto 0);
 	signal vcnt		: unsigned(8 downto 0);
 	signal vblank	: std_logic;
@@ -145,8 +93,6 @@ architecture behavioral of glue is
 	signal hde		: std_logic;
 	signal line_pal	: std_logic := '0';
 
-	signal rd_reg	: boolean;
-	signal wt_reg	: boolean;
 	signal sync_id	: unsigned(1 downto 0);
 
 	signal irq_vbl	: std_logic;
@@ -160,17 +106,21 @@ architecture behavioral of glue is
 	signal ack_hbl	: std_logic;
 	signal vpa_irqn	: std_logic;
 	signal vpa_acia	: std_logic;
+	signal sdtackn	: std_logic;
+	signal wdtackn	: std_logic;
+	signal beercnt	: unsigned(5 downto 0);
+	signal rwn_ff	: std_logic;
 
 begin
 
-rd_reg <= (iRWn = '1' and cnt = 1) or cnt = 2;
-wt_reg <= iRWn = '0' and cnt = 2;
 BLANKn <= vblank nor hblank;
 DE <= vde and hde;
 VSYNC <= svsync;
 HSYNC <= shsync;
 irq_mfp <= not MFPINTn;
 VPAn <= vpa_irqn and vpa_acia;
+wdtackn <= '0' when iA(15 downto 2)&"00" = x"8604" or iA(15 downto 8) = x"88" else '1';
+oDTACKn <= sdtackn;
 
 sync_id <= mono & (line_pal and not mono);
 sync <= sync_array(to_integer(sync_id));
@@ -195,12 +145,9 @@ process(clk)
 begin
 	if rising_edge(clk) then
 	if resetn = '0' then
-		DTACKn <= '1';
-		BEER <= '1';
-		cnt <= "00";
+		sdtackn <= '1';
 	elsif enPhi2 = '1' then
-		cnt <= cnt + 1;
-		if FC /= "111" and iASn = '0' and iUDSn = '0' and iA(23 downto 8) = x"ff82" and FC(2) = '1' and wt_reg then
+		if FC /= "111" and iASn = '0' and iUDSn = '0' and iA(23 downto 8) = x"ff82" and FC(2) = '1' and iRWn = '0' then
 			if iA(7 downto 1)&'0' = x"60" then
 				-- resolution (write only - Read is managed by Shifter.)
 				mono <= iD(1);
@@ -211,46 +158,80 @@ begin
 		end if;
 	elsif enPhi1 = '1' then
 		oD <= (others => '1');
-		if cnt = 0 then
-			DTACKn <= '1';
-			BEER <= '1';
-		end if;
-		if FC /= "111" and iASn = '0' and (cnt = 1 or cnt = 2) then
+		sdtackn <= '1';
+		if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRwn = '0' and rwn_ff = '1')) then
 			if iA(23 downto 15) = "111111111" and FC(2) = '1' then
 				-- hardware registers
-				if iUDSn = '0' and iA(15 downto 1)&'0' = x"820a" and rd_reg then
-					oD <= hz50&'0';
+				if iA(15 downto 6)&"000000" = x"8240" then
+					if iA(15 downto 1)&'0' = x"820a" and iUDSn = '0' and iRWn = '1' then
+						oD <= hz50&'0';
+					end if;
 				end if;
-				if cnt = 2 and iA(15 downto 6)&"000000" /= x"fa00" and iA(15 downto 9) /= "1111110" then
-					-- assert DTACKn except for MFP and ACIA register accesses.
-					DTACKn <= '0';
-				end if;
-				if cnt = 2 and ((iUDSn = '0' and iomap(to_integer(unsigned(iA(15 downto 1)&'0'))) = '0') or (iLDSn = '0' and iomap(to_integer(unsigned(iA(15 downto 1)&'1'))) = '0')) then
-					DTACKn <= '1';
-					BEER <= '0';
-				end if;
-			elsif ((unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fe") or unsigned(iA&'0') < 8) and iRWn = '1' then
-				-- rom access
-				if cnt = 2 then
-					DTACKn <= '0';
-				end if;
-			elsif unsigned(iA&'0') < x"800" and unsigned(iA&'0') >= 8 and FC(2) = '1' then
-				-- protected ram access (supervisor mode only)
-				if cnt = 2 then
-					DTACKn <= '0';
-				end if;
-			elsif unsigned(iA&'0') >= x"800" and unsigned(iA(23 downto 16)) < x"40" then
-				-- ram access
-				if cnt = 2 then
-					DTACKn <= '0';
-				end if;
-			else
-				if cnt = 2 then
-					BEER <= '0';
+				if wdtackn = '0' then
+					-- assert DTACKn for DMA and PSG access
+					sdtackn <= '0';
 				end if;
 			end if;
 		end if;
 	end if;
+	end if;
+end process;
+
+-- RAMn / DEVn bus signals to the MMU
+process(clk)
+begin
+	if rising_edge(clk) then
+		if resetn = '0' then
+			rwn_ff <= '1';
+		elsif enPhi1 = '1' then
+			rwn_ff <= iRWn;
+		end if;
+	end if;
+end process;
+process(FC,iA,iASn,iUDSn,iLDSn,iRWn)
+begin
+	RAMn <= '1';
+	DEVn <= '1';
+	if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRwn = '0' and rwn_ff = '1')) then
+		if iA(23 downto 15) = "111111111" then
+			-- hardware registers
+			if FC(2) = '1' then
+				if iA(15 downto 7)&"0000000" = x"8200" or iA(15 downto 1)&'1' = x"8001" or iA(15 downto 3)&"000" = x"8608" then
+					DEVn <= '0';
+				end if;
+			end if;
+		elsif unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fe" and iRWn = '1' then
+			-- rom access
+			RAMn <= '0';
+		elsif unsigned(iA&'0') < 8 and iRWn = '1' and FC(2) = '1' then
+			-- rom access
+			RAMn <= '0';
+		elsif unsigned(iA&'0') < x"800" and unsigned(iA&'0') >= 8 and FC(2) = '1' then
+			-- protected ram access (supervisor mode only)
+			RAMn <= '0';
+		elsif unsigned(iA&'0') >= x"800" and iA(23 downto 22) = "00" then
+			-- ram access
+			RAMn <= '0';
+		end if;
+	end if;
+end process;
+
+-- bus error
+BEER <= beercnt(5);
+process(clk)
+begin
+	if rising_edge(clk) then
+		if resetn = '0' then
+			beercnt <= "100000";
+		elsif enPhi1 = '1' then
+			if iASn = '0' and (iUDSn = '0' or iLDSn = '0') and iDTACKn = '1' and sdtackn = '1' then
+				if beercnt(5) = '1' then
+					beercnt <= beercnt + 1;
+				end if;
+			else
+				beercnt <= "100000";
+			end if;
+		end if;
 	end if;
 end process;
 
@@ -267,7 +248,7 @@ end process;
 -- dma registers access
 process(iA,iASn)
 begin
-	if iASn = '0' and iA(23 downto 4)&"0000" = x"ff8600" then
+	if iASn = '0' and iA(23 downto 2)&"00" = x"ff8604" then
 		FCSn <= '0';
 	else
 		FCSn <= '1';
@@ -338,7 +319,7 @@ begin
 	if FC = "111" and iA(19 downto 16) = "1111" and iASn = '0' then
 		if iA(3 downto 2) = "11" then
 			IACKn <= '0';
-		elsif iA(3 downto 2) = "10" or iA(3 downto 2) = "01" then
+		else
 			vpa_irqn <= '0';
 		end if;
 	end if;

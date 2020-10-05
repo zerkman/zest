@@ -24,13 +24,15 @@ entity atarist_main is
 		resetn : in std_logic;
 
 		clken_error : out std_logic;
+		monomon : in std_logic;
+		mem_top	: in std_logic_vector(3 downto 0);
 
 		pclken : out std_logic;
 		de : out std_logic;
 		hsync : out std_logic;
 		vsync : out std_logic;
 		rgb : out std_logic_vector(8 downto 0);
-		monomon : in std_logic;
+
 		ikbd_clkren : out std_logic;
 		ikbd_clkfen : out std_logic;
 		ikbd_rx : in std_logic;
@@ -99,7 +101,8 @@ architecture structure of atarist_main is
 			iD		: in std_logic_vector(1 downto 0);
 			iUDSn	: in std_logic;
 			iLDSn	: in std_logic;
-			DTACKn	: out std_logic;
+			iDTACKn	: in std_logic;
+			oDTACKn	: out std_logic;
 			BEER	: out std_logic;
 			oD		: out std_logic_vector(1 downto 0);
 
@@ -109,6 +112,9 @@ architecture structure of atarist_main is
 			VMAn	: in std_logic;
 			cs6850	: out std_logic;
 			FCSn	: out std_logic;
+			RAMn	: out std_logic;
+			DMAn	: out std_logic;
+			DEVn	: out std_logic;
 
 			MFPCSn	: out std_logic;
 			MFPINTn	: in std_logic;
@@ -126,6 +132,11 @@ architecture structure of atarist_main is
 			clk		: in std_logic;
 			enPhi1	: in std_logic;
 			enPhi2	: in std_logic;
+			resetn	: in std_logic;
+
+			RAMn	: in std_logic;
+			DMAn	: in std_logic;
+			DEVn	: in std_logic;
 
 			iA		: in std_logic_vector(23 downto 1);
 			iASn	: in std_logic;
@@ -134,7 +145,7 @@ architecture structure of atarist_main is
 			iUDSn	: in std_logic;
 			iLDSn	: in std_logic;
 			oD		: out std_logic_vector(7 downto 0);
-			DTACKn	: in std_logic;
+			DTACKn	: out std_logic;
 
 			RDATn	: out std_logic;
 
@@ -146,13 +157,14 @@ architecture structure of atarist_main is
 			-- vertical sync
 			VSYNC	: in std_logic;
 
+			-- max memory configuration
+			mem_top	: in std_logic_vector(3 downto 0);
+
 			-- interface to RAM. Using own signals instead of hardware specific ones
-			ram_A		: out std_logic_vector(23 downto 1);
-			ram_W		: out std_logic;
-			ram_R		: out std_logic;
-			ram_DS		: out std_logic_vector(1 downto 0);
-			ram_W_DONE	: in std_logic;
-			ram_R_DONE	: in std_logic
+			ram_A	: out std_logic_vector(23 downto 1);
+			ram_W	: out std_logic;
+			ram_R	: out std_logic;
+			ram_DS	: out std_logic_vector(1 downto 0)
 		);
 	end component;
 
@@ -242,29 +254,29 @@ architecture structure of atarist_main is
 	end component;
 
 	component acia6850 is
-	  port (
-	    --
-	    -- CPU Interface signals
-	    --
-	    clk      : in  std_logic;                     -- System Clock
-	    rst      : in  std_logic;                     -- Reset input (active high)
-	    cs       : in  std_logic;                     -- miniUART Chip Select
-	    addr     : in  std_logic;                     -- Register Select
-	    rw       : in  std_logic;                     -- Read / Not Write
-	    data_in  : in  std_logic_vector(7 downto 0);  -- Data Bus In
-	    data_out : out std_logic_vector(7 downto 0);  -- Data Bus Out
-	    irq      : out std_logic;                     -- Interrupt Request out
-	    --
-	    -- RS232 Interface Signals
-	    --
-	    RxC   : in  std_logic;              -- Receive Baud Clock
-	    TxC   : in  std_logic;              -- Transmit Baud Clock
-	    RxD   : in  std_logic;              -- Receive Data
-	    TxD   : out std_logic;              -- Transmit Data
-	    DCD_n : in  std_logic;              -- Data Carrier Detect
-	    CTS_n : in  std_logic;              -- Clear To Send
-	    RTS_n : out std_logic               -- Request To send
-	    );
+		port (
+			--
+			-- CPU Interface signals
+			--
+			clk      : in  std_logic;                     -- System Clock
+			rst      : in  std_logic;                     -- Reset input (active high)
+			cs       : in  std_logic;                     -- miniUART Chip Select
+			addr     : in  std_logic;                     -- Register Select
+			rw       : in  std_logic;                     -- Read / Not Write
+			data_in  : in  std_logic_vector(7 downto 0);  -- Data Bus In
+			data_out : out std_logic_vector(7 downto 0);  -- Data Bus Out
+			irq      : out std_logic;                     -- Interrupt Request out
+			--
+			-- RS232 Interface Signals
+			--
+			RxC   : in  std_logic;              -- Receive Baud Clock
+			TxC   : in  std_logic;              -- Transmit Baud Clock
+			RxD   : in  std_logic;              -- Receive Data
+			TxD   : out std_logic;              -- Transmit Data
+			DCD_n : in  std_logic;              -- Data Carrier Detect
+			CTS_n : in  std_logic;              -- Clear To Send
+			RTS_n : out std_logic               -- Request To send
+		);
 	end component;
 
 	component dma_controller is
@@ -339,6 +351,9 @@ architecture structure of atarist_main is
 	signal blankn		: std_logic;
 	signal sde			: std_logic;
 
+	signal mmu_RAMn		: std_logic;
+	signal mmu_DMAn		: std_logic;
+	signal mmu_DEVn		: std_logic;
 	signal mmu_iA		: std_logic_vector(23 downto 1);
 	signal mmu_iASn		: std_logic;
 	signal mmu_iRWn		: std_logic;
@@ -346,6 +361,7 @@ architecture structure of atarist_main is
 	signal mmu_iUDSn	: std_logic;
 	signal mmu_iLDSn	: std_logic;
 	signal mmu_oD		: std_logic_vector(7 downto 0);
+	signal mmu_DTACKn	: std_logic;
 	signal RDATn		: std_logic;
 
 	signal ram_A		: std_logic_vector(23 downto 1);
@@ -438,7 +454,7 @@ begin
 			and dma_oD;
 	bus_LDSn <= cpu_LDSn;
 	bus_UDSn <= cpu_UDSn;
-	bus_DTACKn <= glue_DTACKn and mfp_dtackn;
+	bus_DTACKn <= glue_DTACKn and mfp_dtackn and mmu_dtackn;
 
 	cpu:fx68k port map(
 		clk => clk,
@@ -480,7 +496,7 @@ begin
 	clkgen:clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2rck,en2fck,en2_4576ck,ck05,clken_err);
 	enNC1 <= '1';
 	enNC2 <= clken_bus and clken_video;
-	clken_bus <= (ram_R_DONE or ram_W_DONE) or bus_DTACKn or clken_bus2;
+	clken_bus <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or bus_DTACKn or clken_bus2;
 	clken_video <= loadn or not ram_R or ram_R_DONE;
 	process(cpu_A)
 	begin
@@ -503,7 +519,8 @@ begin
 		iD => glue_iD,
 		iUDSn => glue_iUDSn,
 		iLDSn => glue_iLDSn,
-		DTACKn => glue_DTACKn,
+		iDTACKn => bus_DTACKn,
+		oDTACKn => glue_DTACKn,
 		BEER => cpu_BERRn,
 		oD => glue_oD,
 		FC => cpu_FC,
@@ -512,6 +529,9 @@ begin
 		VMAn => cpu_VMAn,
 		cs6850 => cs6850,
 		FCSn => dma_fcsn,
+		RAMn => mmu_RAMn,
+		DMAn => mmu_DMAn,
+		DEVn => mmu_DEVn,
 		MFPCSn => mfp_csn,
 		MFPINTn	=> mfp_irqn,
 		IACKn => mfp_iackn,
@@ -532,6 +552,11 @@ begin
 		clk => clk,
 		enPhi1 => en8rck,
 		enPhi2 => en8fck,
+		resetn => resetn,
+
+		RAMn => mmu_RAMn,
+		DMAn => mmu_DMAn,
+		DEVn => mmu_DEVn,
 
 		iA => mmu_iA,
 		iASn => mmu_iASn,
@@ -540,7 +565,7 @@ begin
 		iUDSn => mmu_iUDSn,
 		iLDSn => mmu_iLDSn,
 		oD => mmu_oD,
-		DTACKn => bus_DTACKn,
+		DTACKn => mmu_DTACKn,
 
 		RDATn => RDATn,
 
@@ -549,12 +574,11 @@ begin
 
 		vsync => vsyncn,
 
+		mem_top	=> mem_top,
 		ram_A => ram_A,
 		ram_W => ram_W,
 		ram_R => ram_R,
-		ram_DS => ram_DS,
-		ram_W_DONE => ram_W_DONE,
-		ram_R_DONE => ram_R_DONE
+		ram_DS => ram_DS
 	);
 	mmu_iA <= bus_A;
 	mmu_iASn <= bus_ASn;

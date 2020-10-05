@@ -18,6 +18,7 @@ TARGETS=display_checker.vhd display_checker.bin \
 	hbl_vbl.vhd hbl_vbl.bin \
 	mfp.bin mfp.vhd \
 	acia.bin acia.vhd \
+	all_hw.bin all_hw.vhd \
 
 all: $(TARGETS)
 

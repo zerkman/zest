@@ -43,6 +43,15 @@
 #define ST_MEM_ADDR 0x10000000
 #define ST_MEM_SIZE 0x1000000
 
+#define CFG_MONO 0x0004
+
+#define CFG_256K 0x0000
+#define CFG_512K 0x0010
+#define CFG_1M   0x0030
+#define CFG_2M   0x0070
+#define CFG_2_5M 0x0090
+#define CFG_4M   0x00f0
+
 volatile uint32_t *parmreg;
 
 // IIC device file descriptor
@@ -417,7 +426,7 @@ void usage(const char *progname) {
 
 int main(int argc, char **argv) {
 	int Status;
-	int cfg = 3;		/* end reset */
+	int cfg = CFG_1M | 3;		/* end reset */
 
 	printf("Shifter + HDMI + DDR + CPU test\n");
 	const char *binfilename = NULL;
@@ -425,7 +434,7 @@ int main(int argc, char **argv) {
 	while (++a<argc) {
 		const char *arg = argv[a];
 		if (!strcmp(arg,"--mono")) {
-			cfg |= 4;
+			cfg |= CFG_MONO;
 		} else if (binfilename == NULL) {
 			binfilename = arg;
 		} else {
@@ -458,7 +467,7 @@ int main(int argc, char **argv) {
 	// Status = hdmi_init(14850,5000,2200,1350);
 	/* 1080p60 */
 	// Status = hdmi_init(14850,6000,2200,1125);
-	if (cfg & 4) {
+	if (cfg & CFG_MONO) {
 		/* Mono */
 		Status = hdmi_init(3200,7129,896,501);
 	} else {
