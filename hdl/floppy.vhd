@@ -56,6 +56,7 @@ begin
 
 	read_datan <= not data_sr(31);
 	host_track <= std_logic_vector(track) & side;
+	write_protn <= '1';
 
 -- position
 process(clk)
