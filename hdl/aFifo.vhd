@@ -13,7 +13,7 @@
 ------------------------------------------------------------
 library ieee;
     use ieee.std_logic_1164.all;
-    use ieee.std_logic_unsigned.all;
+    use ieee.numeric_std.all;
 
 entity aFifo is
     generic (
@@ -74,7 +74,7 @@ begin
     process (RClk) begin
         if (rising_edge(RClk)) then
             if (ReadEn_in = '1' and empty = '0') then
-                Data_out <= Mem(conv_integer(pNextWordToRead));
+                Data_out <= Mem(to_integer(unsigned(pNextWordToRead)));
             end if;
         end if;
     end process;
@@ -83,7 +83,7 @@ begin
     process (WClk) begin
         if (rising_edge(WClk)) then
             if (WriteEn_in = '1' and full = '0') then
-                Mem(conv_integer(pNextWordToWrite)) <= Data_in;
+                Mem(to_integer(unsigned(pNextWordToWrite))) <= Data_in;
             end if;
         end if;
     end process;
