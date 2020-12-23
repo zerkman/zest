@@ -111,6 +111,7 @@ begin
 			amd_dtam <= '0';
 			upd_crc <= '0';
 			byte_cnt <= (others => '0');
+			delaycnt <= (others => '0');
 			wgs <= '0';
 		elsif clken = '1' then
 			ipn_ff <= IPn;
