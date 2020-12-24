@@ -79,7 +79,7 @@ begin
 			if drv_select = '1' and motor_on = '1' then
 				if ccnt < 1599999 then
 					ccnt <= ccnt + 1;
-					if ccnt = 176 then	-- minimun 160 = 20 us
+					if ccnt = 176-1 then	-- minimun 160 = 20 us
 						indexn <= '1';
 					end if;
 				else
@@ -108,9 +108,13 @@ begin
 					else
 						data_sr <= data_sr(30 downto 0) & data_sr(31);
 					end if;
-					if ccnt(9 downto 5) = "11111" then
+					if ccnt(9 downto 5) = "11111" or ccnt = 1599999 then
 						-- shift register is full (write) or empty (read)
-						host_addr <= std_logic_vector(ccnt(20 downto 10));
+						if ccnt = 1599999 then
+							host_addr <= (others => '0');
+						else
+							host_addr <= std_logic_vector(ccnt(20 downto 10)+1);
+						end if;
 						host_w <= wrq;
 						host_r <= '1';
 						host_din <= data_sr;
