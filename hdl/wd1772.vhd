@@ -405,7 +405,7 @@ begin
 				status(5) <= '0';	-- record type/spin-up
 				status(6) <= '0';	-- write protect
 				INTRQ <= '0';
-				if command(3) = '1'	then
+				if command(3) = '0'	then
 					-- enable spin-up sequence
 					status(7) <= '1';	-- motor on
 					ipcnt <= x"6";
@@ -708,7 +708,7 @@ begin
 				status(5) <= '0';	-- record type
 				status(6) <= '0';	-- write protect
 				status(7) <= '1';	-- motor on
-				if command(3) = '1'	then
+				if command(3) = '0'	then
 					-- enable spin-up sequence
 					ipcnt <= x"6";
 				end if;
