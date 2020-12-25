@@ -102,7 +102,6 @@ begin
 			ds_full <= '0';
 			ipcnt <= "0000";
 			DIR <= '0';
-			DRQ <= '0';
 			INTRQ <= '0';
 			cmd_st <= idle;
 			STEP <= '0';
