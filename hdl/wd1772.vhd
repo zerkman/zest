@@ -102,7 +102,6 @@ begin
 			ds_full <= '0';
 			ipcnt <= "0000";
 			DIR <= '0';
-			MO <= '0';
 			DRQ <= '0';
 			INTRQ <= '0';
 			cmd_st <= idle;
@@ -233,10 +232,14 @@ begin
 			-- commands state machine
 			case cmd_st is
 			when idle =>
-				ipcnt <= x"9";
-				cmd_st <= idle1;
+				if status(7) = '1' then
+					-- motor is on: wait 9 floppy rotations before turning motor off
+					ipcnt <= x"9";
+					cmd_st <= idle1;
+				end if;
 			when idle1 =>
 				if status(7) = '1' and ipcnt = x"0" then
+					-- turn motor off after the specified number of rotations
 					status(7) <= '0';
 				end if;
 			when c1_init =>
