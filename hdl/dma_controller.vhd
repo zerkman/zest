@@ -54,19 +54,16 @@ architecture behavioral of dma_controller is
 	signal seccnt0	: std_logic;
 	signal hdc_fdcn	: std_logic;
 	signal reg_sel	: std_logic;
-	signal dma_on	: std_logic;
 	signal dma_fdc	: std_logic;
 	signal dma_w	: std_logic;
 	signal dma_err	: std_logic;
 	type bus_st_t is ( idle, running, done );
 	signal bus_st	: bus_st_t;
-	type dc_st_t is ( idle, warmup, running, done );
+	type dc_st_t is ( idle, warmup, running, run_read, run_read2, run_inc, done );
 	signal dc_st	: dc_st_t;
-	signal rdy		: std_logic := '0';
 
 begin
 
-	oRDY <= rdy;
 	dma_err <= '0';
 
 	process(sec_cnt)
@@ -101,8 +98,9 @@ begin
 						CA <= iD(2 downto 1);
 						hdc_fdcn <= iD(3);
 						reg_sel <= iD(4);
-						dma_on <= iD(6);
+						-- dma_on <= not iD(6);
 						dma_fdc <= iD(7);
+						dma_w <= iD(8);
 						if dma_w /= iD(8) then
 							-- reset DMA
 							bus_st <= idle;
@@ -110,22 +108,20 @@ begin
 							buf_bi <= (others => '0');
 							buf_di <= (others => '0');
 							buf_wl <= '0';
-							rdy <= '0';
+							oRDY <= '0';
 						end if;
-						if dma_on = '0' and iD(6) = '1' then
-							CA <= "11";
-							bus_st <= running;
-							if dma_w = '1' then
+						if iD(6) = '0' then
+							-- DMA on
+							if iD(8) = '1' then
 								dc_st <= warmup;
 							else
 								dc_st <= running;
 							end if;
-						end if;
-						if dma_on = '1' and iD(6) = '0' then
+						else
+							-- DMA off
 							bus_st <= idle;
 							dc_st <= idle;
 						end if;
-						dma_w <= iD(8);
 					end if;
 				else
 					-- read registers
@@ -148,18 +144,18 @@ begin
 			when idle =>
 				null;
 			when running =>
-				rdy <= '1';
+				oRDY <= '1';
 				if iRDY = '0' then
 					if dma_w = '1' then
-						-- write to hdc/fdc, so read from memory
+						-- read from memory, write to hdc/fdc
 						buf(to_integer(buf_wl & buf_bi)) <= iD;
 					else
-						-- read from hdc/fdc, so write to memory
+						-- read from hdc/fdc, write to memory
 						oD <= buf(to_integer(not buf_wl & buf_bi));
 					end if;
 					buf_bi <= buf_bi + 1;
 					if buf_bi + 1 = 0 then
-						rdy <= '0';
+						oRDY <= '0';
 						bus_st <= done;
 					end if;
 				end if;
@@ -172,7 +168,7 @@ begin
 			when idle =>
 				null;
 			when warmup =>
-				-- read fisrt data burst
+				-- read first data burst from memory before sending to fdc
 				-- dma_w must be 1
 				if bus_st = done then
 					buf_wl <= not buf_wl;
@@ -182,6 +178,7 @@ begin
 			when running =>
 				if FDRQ = '1' then
 					FDCSn <= '0';
+					CA <= "11";			-- data register
 					if dma_w = '1' then
 						-- write to fdc
 						CRWn <= '0';
@@ -190,20 +187,30 @@ begin
 						else
 							oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(7 downto 0);
 						end if;
+						dc_st <= run_inc;
 					else
 						-- read from fdc
-						if buf_di(0) = '0' then
-							buf(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
-						else
-							buf(to_integer(buf_wl & buf_di(3 downto 1)))(7 downto 0) <= iCD;
-						end if;
-					end if;
-					buf_di <= buf_di + 1;
-					if buf_di + 1 = 0 then
-						buf_wl <= not buf_wl;
-						bus_st <= running;
+						CRWn <= '1';
+						dc_st <= run_read;
 					end if;
 				end if;
+			when run_read =>
+				-- wait one additional cycle so that the data is available from fdc
+				dc_st <= run_read2;
+			when run_read2 =>
+				if buf_di(0) = '0' then
+					buf(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
+				else
+					buf(to_integer(buf_wl & buf_di(3 downto 1)))(7 downto 0) <= iCD;
+				end if;
+				dc_st <= run_inc;
+			when run_inc =>
+				buf_di <= buf_di + 1;
+				if buf_di + 1 = 0 then
+					buf_wl <= not buf_wl;
+					bus_st <= running;
+				end if;
+				dc_st <= running;
 			when done =>
 				null;
 			end case;
