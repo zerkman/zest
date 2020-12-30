@@ -37,7 +37,33 @@ end sim_host;
 
 architecture behavioral of sim_host is
 	signal intr_ff	: std_logic;
+	constant TRACKS		: integer := 80;
+	constant SIDES		: integer := 1;
+	type buf_type is array (0 to 6250*TRACKS*SIDES-1) of std_logic_vector(7 downto 0);
+	signal buf			: buf_type;
+
+	signal do			: std_logic_vector(31 downto 0);
+	signal posaddr		: std_logic_vector(19 downto 0);
+	signal pos			: unsigned(19 downto 0);
+	signal bcnt			: unsigned(2 downto 0) := (others => '0');
+
 begin
+	dout <= do;
+	posaddr <= "0000000" & addr & "00";
+
+	read_file: process is
+		type char_file_t is file of character;
+		file char_file : char_file_t;
+		variable char_v : character;
+	begin
+		file_open(char_file, "floppy.mfm");
+		for i in buf'range loop
+			read(char_file,char_v);
+			buf(i) <= std_logic_vector(to_unsigned(character'pos(char_v),8));
+		end loop;
+		file_close(char_file);
+		wait;
+	end process;
 
 	process(clk)
 	begin
@@ -48,8 +74,14 @@ begin
 				intr_ff <= intr;
 				if intr = '1' and intr_ff = '0' then
 					if r = '1' then
-						dout <= not track & track & "00000" & addr;
+						pos <= unsigned(track(7 downto 1))*to_unsigned(6250,13) + unsigned(posaddr);
+						bcnt <= "100";
 					end if;
+				end if;
+				if bcnt > 0 then
+					do <= do(23 downto 0) & buf(to_integer(pos));
+					pos <= pos + 1;
+					bcnt <= bcnt - 1;
 				end if;
 			end if;
 		end if;
