@@ -40,7 +40,23 @@ architecture behavioral of sim_host is
 	constant TRACKS		: integer := 80;
 	constant SIDES		: integer := 1;
 	type buf_type is array (0 to 6250*TRACKS*SIDES-1) of std_logic_vector(7 downto 0);
-	signal buf			: buf_type;
+
+	impure function init_buf(file_name : in string) return buf_type is
+		type char_file_t is file of character;
+		file bin_file : char_file_t;
+		variable mem : buf_type;
+		variable c : character;
+	begin
+		file_open(bin_file,file_name,READ_MODE);
+		for i in buf_type'range loop
+			read(bin_file,c);
+			mem(i) := std_logic_vector(to_unsigned(character'pos(c),8));
+		end loop;
+		file_close(bin_file);
+		return mem;
+	end function;
+
+	signal buf			: buf_type := init_buf("floppy.mfm");
 
 	signal do			: std_logic_vector(31 downto 0);
 	signal posaddr		: std_logic_vector(19 downto 0);
@@ -50,20 +66,6 @@ architecture behavioral of sim_host is
 begin
 	dout <= do;
 	posaddr <= "0000000" & addr & "00";
-
-	read_file: process is
-		type char_file_t is file of character;
-		file char_file : char_file_t;
-		variable char_v : character;
-	begin
-		file_open(char_file, "floppy.mfm");
-		for i in buf'range loop
-			read(char_file,char_v);
-			buf(i) <= std_logic_vector(to_unsigned(character'pos(char_v),8));
-		end loop;
-		file_close(char_file);
-		wait;
-	end process;
 
 	process(clk)
 	begin
