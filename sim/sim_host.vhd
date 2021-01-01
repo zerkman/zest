@@ -42,6 +42,7 @@ architecture behavioral of sim_host is
 	type buf_type is array (0 to 6250*TRACKS*SIDES-1) of std_logic_vector(7 downto 0);
 
 	impure function init_buf(file_name : in string) return buf_type is
+		use std.textio.all;
 		type char_file_t is file of character;
 		file bin_file : char_file_t;
 		variable mem : buf_type;
@@ -60,28 +61,26 @@ architecture behavioral of sim_host is
 
 	signal do			: std_logic_vector(31 downto 0);
 	signal trkaddr		: unsigned(19 downto 0);
-	signal addr4		: std_logic_vector(12 downto 0);
 	signal pos			: unsigned(12 downto 0);
 	signal bcnt			: unsigned(2 downto 0) := (others => '0');
 
 begin
 	dout <= do;
-	addr4 <= addr & "00";
 
 	process(clk)
 	begin
 		if rising_edge(clk) then
 			if resetn = '0' then
-				dout <= (others => '0');
+				do <= (others => '0');
 			elsif clken = '1' then
 				intr_ff <= intr;
 				if intr = '1' and intr_ff = '0' then
 					if r = '1' then
 						trkaddr <= unsigned(track(7 downto 1))*to_unsigned(6250,13);
-						if unsigned(addr4)+4 >= 6250 then
-							pos <= unsigned(addr4)+4-6250;
+						if unsigned(std_logic_vector'(addr&"00"))+4 >= 6250 then
+							pos <= unsigned(std_logic_vector'(addr&"00"))+4-6250;
 						else
-							pos <= unsigned(addr4)+4;
+							pos <= unsigned(std_logic_vector'(addr&"00"))+4;
 						end if;
 						bcnt <= "100";
 					end if;
