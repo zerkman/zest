@@ -50,13 +50,14 @@ architecture behavioral of dma_controller is
 	signal buf_bi	: unsigned(2 downto 0);		-- index for bus operations (word index)
 	signal buf_di	: unsigned(3 downto 0);		-- index for controller operations (byte index)
 	signal buf_wl	: std_logic;				-- buffer line to write to
-	signal sec_cnt	: std_logic_vector(15 downto 0);
+	signal sec_cnt	: unsigned(16 downto 0);	-- 8 high bits: sector count, 9 low: byte count
 	signal seccnt0	: std_logic;
 	signal hdc_fdcn	: std_logic;
 	signal reg_sel	: std_logic;
 	signal dma_fdc	: std_logic;
 	signal dma_w	: std_logic;
 	signal dma_err	: std_logic;
+	signal dma_on	: std_logic;
 	type bus_st_t is ( idle, running, done );
 	signal bus_st	: bus_st_t;
 	type dc_st_t is ( idle, warmup, running, run_read, run_read2, run_inc, done );
@@ -64,14 +65,12 @@ architecture behavioral of dma_controller is
 
 begin
 
-	dma_err <= '0';
-
 	process(sec_cnt)
 	begin
-		if sec_cnt = x"0000" then
-			seccnt0 <= '1';
-		else
+		if sec_cnt = 0 then
 			seccnt0 <= '0';
+		else
+			seccnt0 <= '1';
 		end if;
 	end process;
 
@@ -92,35 +91,32 @@ begin
 							CRWn <= '0';
 							oCD <= iD(7 downto 0);
 						else
-							sec_cnt <= iD;
+							sec_cnt <= unsigned(std_logic_vector'(iD(7 downto 0) & (8 downto 0 => '0')));
+							if dma_w = '1' then
+								bus_st <= running;
+								dc_st <= warmup;
+							else
+								bus_st <= idle;
+								dc_st <= running;
+							end if;
 						end if;
 					else
 						CA <= iD(2 downto 1);
 						hdc_fdcn <= iD(3);
 						reg_sel <= iD(4);
-						-- dma_on <= not iD(6);
+						dma_on <= not iD(6);
 						dma_fdc <= iD(7);
 						dma_w <= iD(8);
 						if dma_w /= iD(8) then
 							-- reset DMA
+							dma_err <= '0';
 							bus_st <= idle;
 							dc_st <= idle;
+							sec_cnt <= (others => '0');
 							buf_bi <= (others => '0');
 							buf_di <= (others => '0');
 							buf_wl <= '0';
 							oRDY <= '0';
-						end if;
-						if iD(6) = '0' then
-							-- DMA on
-							if iD(8) = '1' then
-								dc_st <= warmup;
-							else
-								dc_st <= running;
-							end if;
-						else
-							-- DMA off
-							bus_st <= idle;
-							dc_st <= idle;
 						end if;
 					end if;
 				else
@@ -129,17 +125,16 @@ begin
 						if reg_sel = '0' then
 							FDCSn <= '0';
 							-- FIXME will not work (1 cycle delay)
-							oD <= x"00" & iCD;
-						else
-							oD <= sec_cnt;
+							oD <= x"ff" & iCD;
 						end if;
 					else
-						oD <= (15 downto 3 => '0', 2 => FDRQ, 1 => seccnt0, 0 => dma_err);
+						oD <= (15 downto 3 => '0', 2 => FDRQ, 1 => seccnt0, 0 => not dma_err);
 					end if;
 				end if;
 			end if;
 
 			-- state machine for bus operations
+			if dma_on = '1' then
 			case bus_st is
 			when idle =>
 				null;
@@ -177,21 +172,25 @@ begin
 				end if;
 			when running =>
 				if FDRQ = '1' then
-					FDCSn <= '0';
-					CA <= "11";			-- data register
-					if dma_w = '1' then
-						-- write to fdc
-						CRWn <= '0';
-						if buf_di(0) = '0' then
-							oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(15 downto 8);
-						else
-							oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(7 downto 0);
-						end if;
-						dc_st <= run_inc;
+					if seccnt0 = '0' then
+						dma_err <= '1';
 					else
-						-- read from fdc
-						CRWn <= '1';
-						dc_st <= run_read;
+						FDCSn <= '0';
+						CA <= "11";			-- data register
+						if dma_w = '1' then
+							-- write to fdc
+							CRWn <= '0';
+							if buf_di(0) = '0' then
+								oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(15 downto 8);
+							else
+								oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(7 downto 0);
+							end if;
+							dc_st <= run_inc;
+						else
+							-- read from fdc
+							CRWn <= '1';
+							dc_st <= run_read;
+						end if;
 					end if;
 				end if;
 			when run_read =>
@@ -205,6 +204,7 @@ begin
 				end if;
 				dc_st <= run_inc;
 			when run_inc =>
+				sec_cnt <= sec_cnt - 1;
 				buf_di <= buf_di + 1;
 				if buf_di + 1 = 0 then
 					buf_wl <= not buf_wl;
@@ -214,6 +214,7 @@ begin
 			when done =>
 				null;
 			end case;
+			end if;
 		end if;
 	end process;
 end architecture;
