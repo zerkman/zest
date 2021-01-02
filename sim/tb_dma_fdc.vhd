@@ -269,9 +269,9 @@ begin
 		begin
 			wait for cycle;
 			bus_RWn <= '0';
+			bus_A1 <= a;
 			wait for cycle;
 			dma_FCSn <= '0';
-			bus_A1 <= a;
 			bus_iD <= d;
 			wait for cycle;
 			bus_RWn <= '1';
@@ -280,6 +280,19 @@ begin
 			bus_iD <= x"ffff";
 			wait for cycle;
 		end bus_w;
+
+		procedure bus_r (constant a : in std_logic) is
+		begin
+			wait for cycle;
+			bus_RWn <= '1';
+			bus_A1 <= a;
+			dma_FCSn <= '0';
+			wait for 2*cycle;
+			bus_RWn <= '1';
+			dma_FCSn <= '1';
+			bus_A1 <= '1';
+			wait for cycle;
+		end bus_r;
 
 		procedure dma_r (constant count : in integer) is
 		begin
@@ -309,6 +322,17 @@ begin
 
 		wait until INTRQ = '1';
 		wait for 4*cycle;
+
+		bus_w('1',x"0082");		-- FDC track register, DMA on
+		bus_w('0',x"0042");
+		bus_w('1',x"0084");		-- FDC sector register, DMA on
+		bus_w('0',x"0043");
+		bus_w('1',x"0082");		-- FDC track register, DMA on
+		bus_r('0');
+		bus_w('1',x"0084");		-- FDC sector register, DMA on
+		bus_r('0');
+		bus_w('1',x"0082");		-- FDC track register, DMA on
+		bus_w('0',x"0000");
 
 		bus_w('1',x"0180");		-- reset DMA by toggling write bit
 		bus_w('1',x"0090");		-- DMA sector count register

@@ -101,7 +101,11 @@ begin
 							end if;
 						end if;
 					else
-						CA <= iD(2 downto 1);
+						if iD(4) = '0' then
+							-- FDC register select: pre-fetch current value
+							CA <= iD(2 downto 1);
+							FDCSn <= '0';
+						end if;
 						hdc_fdcn <= iD(3);
 						reg_sel <= iD(4);
 						dma_on <= not iD(6);
@@ -124,7 +128,6 @@ begin
 					if A1 = '0' then
 						if reg_sel = '0' then
 							FDCSn <= '0';
-							-- FIXME will not work (1 cycle delay)
 							oD <= x"ff" & iCD;
 						end if;
 					else
