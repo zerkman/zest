@@ -133,87 +133,87 @@ begin
 				end if;
 			end if;
 
-			-- state machine for bus operations
 			if dma_on = '1' then
-			case bus_st is
-			when idle =>
-				null;
-			when running =>
-				oRDY <= '1';
-				if iRDY = '0' then
-					if dma_w = '1' then
-						-- read from memory, write to hdc/fdc
-						buf(to_integer(buf_wl & buf_bi)) <= iD;
-					else
-						-- read from hdc/fdc, write to memory
-						oD <= buf(to_integer(not buf_wl & buf_bi));
-					end if;
-					buf_bi <= buf_bi + 1;
-					if buf_bi + 1 = 0 then
-						oRDY <= '0';
-						bus_st <= done;
-					end if;
-				end if;
-			when done =>
-				null;
-			end case;
-
-			-- state machine for disk controller operations
-			case dc_st is
-			when idle =>
-				null;
-			when warmup =>
-				-- read first data burst from memory before sending to fdc
-				-- dma_w must be 1
-				if bus_st = done then
-					buf_wl <= not buf_wl;
-					bus_st <= running;
-					dc_st <= running;
-				end if;
-			when running =>
-				if FDRQ = '1' then
-					if seccnt0 = '0' then
-						dma_err <= '1';
-					else
-						FDCSn <= '0';
-						CA <= "11";			-- data register
+				-- state machine for bus operations
+				case bus_st is
+				when idle =>
+					null;
+				when running =>
+					oRDY <= '1';
+					if iRDY = '0' then
 						if dma_w = '1' then
-							-- write to fdc
-							CRWn <= '0';
-							if buf_di(0) = '0' then
-								oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(15 downto 8);
-							else
-								oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(7 downto 0);
-							end if;
-							dc_st <= run_inc;
+							-- read from memory, write to hdc/fdc
+							buf(to_integer(buf_wl & buf_bi)) <= iD;
 						else
-							-- read from fdc
-							CRWn <= '1';
-							dc_st <= run_read;
+							-- read from hdc/fdc, write to memory
+							oD <= buf(to_integer(not buf_wl & buf_bi));
+						end if;
+						buf_bi <= buf_bi + 1;
+						if buf_bi + 1 = 0 then
+							oRDY <= '0';
+							bus_st <= done;
 						end if;
 					end if;
-				end if;
-			when run_read =>
-				-- wait one additional cycle so that the data is available from fdc
-				dc_st <= run_read2;
-			when run_read2 =>
-				if buf_di(0) = '0' then
-					buf(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
-				else
-					buf(to_integer(buf_wl & buf_di(3 downto 1)))(7 downto 0) <= iCD;
-				end if;
-				dc_st <= run_inc;
-			when run_inc =>
-				sec_cnt <= sec_cnt - 1;
-				buf_di <= buf_di + 1;
-				if buf_di + 1 = 0 then
-					buf_wl <= not buf_wl;
-					bus_st <= running;
-				end if;
-				dc_st <= running;
-			when done =>
-				null;
-			end case;
+				when done =>
+					null;
+				end case;
+
+				-- state machine for disk controller operations
+				case dc_st is
+				when idle =>
+					null;
+				when warmup =>
+					-- read first data burst from memory before sending to fdc
+					-- dma_w must be 1
+					if bus_st = done then
+						buf_wl <= not buf_wl;
+						bus_st <= running;
+						dc_st <= running;
+					end if;
+				when running =>
+					if FDRQ = '1' then
+						if seccnt0 = '0' then
+							dma_err <= '1';
+						else
+							FDCSn <= '0';
+							CA <= "11";			-- data register
+							if dma_w = '1' then
+								-- write to fdc
+								CRWn <= '0';
+								if buf_di(0) = '0' then
+									oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(15 downto 8);
+								else
+									oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(7 downto 0);
+								end if;
+								dc_st <= run_inc;
+							else
+								-- read from fdc
+								CRWn <= '1';
+								dc_st <= run_read;
+							end if;
+						end if;
+					end if;
+				when run_read =>
+					-- wait one additional cycle so that the data is available from fdc
+					dc_st <= run_read2;
+				when run_read2 =>
+					if buf_di(0) = '0' then
+						buf(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
+					else
+						buf(to_integer(buf_wl & buf_di(3 downto 1)))(7 downto 0) <= iCD;
+					end if;
+					dc_st <= run_inc;
+				when run_inc =>
+					sec_cnt <= sec_cnt - 1;
+					buf_di <= buf_di + 1;
+					if buf_di + 1 = 0 then
+						buf_wl <= not buf_wl;
+						bus_st <= running;
+					end if;
+					dc_st <= running;
+				when done =>
+					null;
+				end case;
 			end if;
 		end if;
 	end process;
