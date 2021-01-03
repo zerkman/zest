@@ -344,10 +344,39 @@ begin
 		wait until INTRQ = '1';
 
 		bus_w('1',x"0180");		-- reset DMA by toggling write bit
+		bus_w('1',x"0190");		-- DMA sector count register
+		bus_w('0',x"0002");		-- write 2 sectors
+		bus_w('1',x"0184");		-- FDC sector register
+		bus_w('0',x"0002");		-- start from sector 2
+		bus_w('1',x"0180");		-- FDC control register, DMA on
+		bus_w('0',x"00B8");		-- write sector, multiple sector mode, disable spin-up
+
+		for i in 0 to 63 loop
+			if dma_oRDY = '0' then
+				wait until dma_oRDY = '1';
+			end if;
+			wait for 20*cycle;
+			for j in 0 to 7 loop
+				bus_iD <= "0000000" & std_logic_vector(to_unsigned(i,6)) & std_logic_vector(to_unsigned(j,3));
+				dma_iRDY <= '0';
+				wait for cycle;
+				bus_iD <= x"ffff";
+				dma_iRDY <= '1';
+				wait for 3*cycle;
+			end loop;
+		end loop;
+		wait for 2 ms;
+
+		bus_w('1',x"0080");		-- FDC control register, DMA on
+		bus_w('0',x"00D8");		-- force interrupt, immediate
+
+		wait until INTRQ = '1';
+
+		bus_w('1',x"0180");		-- reset DMA by toggling write bit
 		bus_w('1',x"0090");		-- DMA sector count register
 		bus_w('0',x"0001");		-- read 1 sector
 		bus_w('1',x"0084");		-- FDC sector register
-		bus_w('0',x"0004");		-- read sector 4
+		bus_w('0',x"0007");		-- read sector 7
 		bus_w('1',x"0080");		-- FDC control register, DMA on
 		bus_w('0',x"0088");		-- read sector, single sector mode, disable spin-up
 		dma_r(32);
