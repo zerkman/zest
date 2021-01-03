@@ -206,7 +206,11 @@ begin
 					buf_di <= buf_di + 1;
 					if buf_di + 1 = 0 then
 						buf_wl <= not buf_wl;
-						bus_st <= running;
+						if dma_w = '0' or sec_cnt - 1 >= 32 then
+							-- read: always flush buffer to memory
+							-- write: need to fetch at least 16 more bytes apart from the 16 already in buffer
+							bus_st <= running;
+						end if;
 					end if;
 					dc_st <= running;
 				when done =>
