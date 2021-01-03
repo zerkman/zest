@@ -83,7 +83,6 @@ architecture behavioral of wd1772 is
 begin
 
 	MO <= status(7);
-	DRQ <= status(1);
 	WG <= wgs;
 
 process(clk)
@@ -195,6 +194,7 @@ begin
 					when "10" => oDAL <= SR;
 					when "11" =>
 						status(1) <= '0';	-- DRQ (S1)
+						DRQ <= '0';
 						oDAL <= DR;
 					when others =>
 				end case;
@@ -219,6 +219,7 @@ begin
 					when "10" => SR <= iDAL;
 					when "11" =>
 						status(1) <= '0';	-- DRQ (S1)
+						DRQ <= '0';
 						DR <= iDAL;
 					when others =>
 				end case;
@@ -247,6 +248,7 @@ begin
 				status(1) <= '0';	-- DRQ (S1)
 				status(3) <= '0';	-- CRC error (S3)
 				status(4) <= '0';	-- seek error (S4)
+				DRQ <= '0';
 				INTRQ <= '0';
 				ipcnt <= x"0";
 				if command(3) = '0' then
@@ -408,6 +410,7 @@ begin
 				status(4) <= '0';	-- record not found
 				status(5) <= '0';	-- record type/spin-up
 				status(6) <= '0';	-- write protect
+				DRQ <= '0';
 				INTRQ <= '0';
 				ipcnt <= x"0";
 				if command(3) = '0'	then
@@ -525,6 +528,7 @@ begin
 				if ds_full = '1' then
 					DR <= DSR;
 					status(1) <= '1';	-- DRQ (S1)
+					DRQ <= '1';
 					dat_btc <= dat_btc - 1;
 					cmd_st <= c2_2nb;
 				end if;
@@ -532,6 +536,7 @@ begin
 				if ds_full = '1' then
 					DR <= DSR;
 					status(1) <= '1';	-- DRQ (S1)
+					DRQ <= '1';
 					if status(1) = '1' then
 						-- DRQ still set -> DR has not been read by host
 						status(2) <= '1';	-- lost data (S2)
@@ -579,6 +584,7 @@ begin
 			when c2_3wt1 =>
 				if byte_cnt = 0 then
 					status(1) <= '1';	-- DRQ (S1)
+					DRQ <= '1';
 					byte_cnt <= to_unsigned(9,byte_cnt'length);
 					cmd_st <= c2_3wt2;
 				end if;
@@ -641,6 +647,7 @@ begin
 			when c2_3wrdata =>
 				if ds_full = '1' then
 					status(1) <= '1';	-- DRQ
+					DRQ <= '1';
 					if status(1) = '1' then
 						status(2) <= '1';	-- lost data
 						DSR <= x"00";
@@ -688,6 +695,7 @@ begin
 				status(5) <= '0';	-- record type
 				status(6) <= '0';	-- write protect
 				status(7) <= '1';	-- motor on
+				DRQ <= '0';
 				ipcnt <= x"0";
 				if command(3) = '0'	then
 					-- enable spin-up sequence
@@ -731,6 +739,7 @@ begin
 					SR <= DSR;
 					DR <= DSR;
 					status(1) <= '1';	-- DRQ
+					DRQ <= '1';
 					dat_btc <= to_unsigned(4,dat_btc'length);
 					cmd_st <= c3_rdad3;
 				end if;
@@ -742,6 +751,7 @@ begin
 						DR <= DSR;
 					end if;
 					status(1) <= '1';	-- DRQ
+					DRQ <= '1';
 					if dat_btc = 2 then
 						upd_crc <= '0';
 					end if;
@@ -773,6 +783,7 @@ begin
 					end if;
 					DR <= DSR;
 					status(1) <= '1';	-- DRQ
+					DRQ <= '1';
 					if ipcnt = x"0" then
 						INTRQ <= '1';
 						status(0) <= '0';	-- busy
@@ -787,6 +798,7 @@ begin
 					cmd_st <= idle;
 				else
 					status(1) <= '1';	-- DRQ
+					DRQ <= '1';
 					byte_cnt <= to_unsigned(3,byte_cnt'length);
 					cmd_st <= c3_wrtr1;
 				end if;
@@ -811,6 +823,7 @@ begin
 			when c3_wrtr_a =>
 				DSR <= DR;
 				status(1) <= '1';	-- DRQ
+				DRQ <= '1';
 				cmd_st <= c3_wrtr_b;
 			when c3_wrtr_b =>
 				cmd_st <= c3_wrtrwb;
@@ -863,6 +876,7 @@ begin
 					status(5) <= '0';	-- spin up
 					status(6) <= '0';	-- write protect
 				end if;
+				DRQ <= '0';
 				if command(3) = '1' then
 					cmd_st <= c4_trig;
 				elsif command(2) = '1' then
