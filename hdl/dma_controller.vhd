@@ -58,6 +58,7 @@ architecture behavioral of dma_controller is
 	signal dma_w	: std_logic;
 	signal dma_err	: std_logic;
 	signal dma_on	: std_logic;
+	signal dma_rst	: std_logic;
 	type bus_st_t is ( idle, running, done );
 	signal bus_st	: bus_st_t;
 	type dc_st_t is ( idle, warmup, running, run_read, run_read2, run_inc, done );
@@ -65,6 +66,7 @@ architecture behavioral of dma_controller is
 
 begin
 
+	dma_rst <= '1' when FCSn = '0' and RWn = '0' and A1 = '1' and dma_w /= iD(8) else '0';
 	seccnt0 <= '0' when sec_cnt = 0 else '1';
 
 	process(clk)
@@ -104,7 +106,7 @@ begin
 						dma_on <= not iD(6);
 						dma_fdc <= iD(7);
 						dma_w <= iD(8);
-						if dma_w /= iD(8) then
+						if dma_rst = '1' then
 							-- reset DMA
 							dma_err <= '0';
 							bus_st <= idle;
@@ -129,7 +131,7 @@ begin
 				end if;
 			end if;
 
-			if dma_on = '1' then
+			if dma_on = '1' and dma_rst = '0' then
 				-- state machine for bus operations
 				case bus_st is
 				when idle =>
