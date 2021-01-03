@@ -50,6 +50,7 @@ architecture behavioral of floppy_drive is
 	signal ccnt		: unsigned(20 downto 0);
 	signal track	: unsigned(6 downto 0);
 	signal data_sr	: std_logic_vector(31 downto 0);
+	signal nextdata	: std_logic_vector(31 downto 0);
 	signal wrq		: std_logic;
 	signal stepn_ff	: std_logic;
 begin
@@ -57,6 +58,16 @@ begin
 	read_datan <= not data_sr(31);
 	host_track <= std_logic_vector(track) & side;
 	write_protn <= '1';
+
+-- next host data word
+process(data_sr,write_data,write_gate)
+begin
+	if write_gate = '1' then
+		nextdata <= data_sr(30 downto 0) & write_data;
+	else
+		nextdata <= data_sr(30 downto 0) & data_sr(31);
+	end if;
+end process;
 
 -- position
 process(clk)
@@ -104,10 +115,8 @@ begin
 					host_intr <= '0';
 					if write_gate = '1' then
 						wrq <= '1';
-						data_sr <= data_sr(30 downto 0) & write_data;
-					else
-						data_sr <= data_sr(30 downto 0) & data_sr(31);
 					end if;
+					data_sr <= nextdata;
 					if ccnt(9 downto 5) = "11111" or ccnt = 1599999 then
 						-- shift register is full (write) or empty (read)
 						if ccnt = 1599999 then
@@ -117,7 +126,7 @@ begin
 						end if;
 						host_w <= wrq;
 						host_r <= '1';
-						host_din <= data_sr;
+						host_din <= nextdata;
 						host_intr <= '1';
 						data_sr <= host_dout;
 						wrq <= '0';
