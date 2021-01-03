@@ -69,7 +69,7 @@ architecture behavioral of wd1772 is
 		c1_init,c1_wait_ip,c1_a,c1_b,c1_c,c1_step,c1_delay,c1_d,c1_vlp,c1_dtr,c1_dsi,c1_dse,c1_dsl,c1_dc1,c1_dc2,
 		c2_init,c2_wait_ip,c2_delay,c2_4,c2_1,c2_1dtr,c2_1dsi,c2_1dse,c2_1dsl,c2_1dc1,c2_1dc2,
 		c2_2,c2_2fb,c2_2nb,c2_2crc0,c2_2crc1,c2_5,
-		c2_3,c2_3wt1,c2_3wt2,c2_3wt3,c2_3wt4,c2_3wr0,c2_3wram1,c2_3wram2,c2_3wram3,c2_3wrdata,c2_3wrcrc1,c2_3wrcrc2,c2_3wrff,c2_3wrend,
+		c2_3,c2_3wt1,c2_3wt2,c2_3wt3,c2_3wr0,c2_3wram,c2_3wrdata,c2_3wrcrc1,c2_3wrcrc2,c2_3wrff,c2_3wrend,
 		c3_init,c3_wl1,c3_wl2,
 		c3_rdad,c3_rdad1,c3_rdad2,c3_rdad3,
 		c3_rdtr,c3_rdtrwip,c3_rdtrlp,
@@ -85,7 +85,6 @@ begin
 	MO <= status(7);
 	DRQ <= status(1);
 	WG <= wgs;
-	WD <= DSR(7);
 
 process(clk)
 begin
@@ -111,6 +110,7 @@ begin
 			byte_cnt <= (others => '0');
 			delaycnt <= (others => '0');
 			wgs <= '0';
+			WD <= '0';
 		elsif clken = '1' then
 			ipn_ff <= IPn;
 			-- index pulse detection and counter decrement
@@ -125,6 +125,7 @@ begin
 			end if;
 			ds_full <= '0';
 			if ds_cnt(4 downto 0) = "01111" then
+				WD <= DSR(7);
 				DSR <= DSR(6 downto 0) & not RDn;
 				if upd_crc = '1' then
 					if wgs = '1' then
@@ -584,8 +585,17 @@ begin
 			when c2_3wt2 =>
 				if byte_cnt = 0 then
 					if status(1) = '0' then
-						byte_cnt <= to_unsigned(1,byte_cnt'length);
-						cmd_st <= c2_3wt3;
+						if DDENn = '0' then
+							-- MFM format
+							byte_cnt <= to_unsigned(11,byte_cnt'length);
+							cmd_st <= c2_3wt3;
+						else
+							-- FM format
+							wgs <= '1';
+							DSR <= x"00";
+							byte_cnt <= to_unsigned(6,byte_cnt'length);
+							cmd_st <= c2_3wr0;
+						end if;
 					else
 						-- lost data error
 						INTRQ <= '1';
@@ -596,20 +606,6 @@ begin
 				end if;
 			when c2_3wt3 =>
 				if byte_cnt = 0 then
-					if DDENn = '0' then
-						-- MFM format
-						byte_cnt <= to_unsigned(11,byte_cnt'length);
-						cmd_st <= c2_3wt4;
-					else
-						-- FM format
-						wgs <= '1';
-						DSR <= x"00";
-						byte_cnt <= to_unsigned(6,byte_cnt'length);
-						cmd_st <= c2_3wr0;
-					end if;
-				end if;
-			when c2_3wt4 =>
-				if byte_cnt = 0 then
 					wgs <= '1';
 					DSR <= x"00";
 					byte_cnt <= to_unsigned(12,byte_cnt'length);
@@ -618,34 +614,14 @@ begin
 			when c2_3wr0 =>
 				if ds_full = '1' then
 					if byte_cnt = 0 then
-						DSR <= x"4e";
-						byte_cnt <= to_unsigned(22,byte_cnt'length);
-						cmd_st <= c2_3wram1;
-					else
-						DSR <= x"00";
-					end if;
-				end if;
-			when c2_3wram1 =>
-				if ds_full = '1' then
-					if byte_cnt = 0 then
-						DSR <= x"00";
-						byte_cnt <= to_unsigned(12,byte_cnt'length);
-						cmd_st <= c2_3wram2;
-					else
-						DSR <= x"4e";
-					end if;
-				end if;
-			when c2_3wram2 =>
-				if ds_full = '1' then
-					if byte_cnt = 0 then
 						DSR <= x"a1";
 						byte_cnt <= to_unsigned(3,byte_cnt'length);
-						cmd_st <= c2_3wram3;
+						cmd_st <= c2_3wram;
 					else
-						DSR <= x"4e";
+						DSR <= x"00";
 					end if;
 				end if;
-			when c2_3wram3 =>
+			when c2_3wram =>
 				if ds_full = '1' then
 					if byte_cnt = 0 then
 						if command(0) = '1' then
