@@ -60,9 +60,14 @@ architecture behavioral of sim_host is
 	signal buf			: buf_type := init_buf("floppy.mfm");
 
 	signal do			: std_logic_vector(31 downto 0);
+	signal di			: std_logic_vector(31 downto 0);
 	signal trkaddr		: unsigned(19 downto 0);
 	signal pos			: unsigned(12 downto 0);
-	signal bcnt			: unsigned(2 downto 0) := (others => '0');
+	signal pos1			: unsigned(12 downto 0);
+	signal pos2			: unsigned(12 downto 0);
+	signal posw			: unsigned(12 downto 0);
+	signal rcnt			: unsigned(2 downto 0) := (others => '0');
+	signal wcnt			: unsigned(2 downto 0) := (others => '0');
 
 begin
 	dout <= do;
@@ -82,17 +87,34 @@ begin
 						else
 							pos <= unsigned(std_logic_vector'(addr&"00"))+4;
 						end if;
-						bcnt <= "100";
+						pos1 <= pos;
+						pos2 <= pos1;
+						posw <= pos2;
+						rcnt <= "100";
+						if w = '1' then
+							di <= din;
+							wcnt <= "100";
+						end if;
 					end if;
 				end if;
-				if bcnt > 0 then
+				if rcnt > 0 then
 					do <= do(23 downto 0) & buf(to_integer(trkaddr+pos));
 					if pos+1 = 6250 then
 						pos <= (others => '0');
 					else
 						pos <= pos + 1;
 					end if;
-					bcnt <= bcnt - 1;
+					rcnt <= rcnt - 1;
+				end if;
+				if wcnt > 0 then
+					buf(to_integer(trkaddr+posw)) <= di(31 downto 24);
+					di <= di(23 downto 0) & x"00";
+					if posw+1 = 6250 then
+						wcnt <= "000";
+					else
+						posw <= posw + 1;
+						wcnt <= wcnt - 1;
+					end if;
 				end if;
 			end if;
 		end if;
