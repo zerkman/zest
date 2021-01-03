@@ -646,8 +646,6 @@ begin
 				end if;
 			when c2_3wrdata =>
 				if ds_full = '1' then
-					status(1) <= '1';	-- DRQ
-					DRQ <= '1';
 					if status(1) = '1' then
 						status(2) <= '1';	-- lost data
 						DSR <= x"00";
@@ -657,6 +655,8 @@ begin
 					if dat_btc = 0 then
 						cmd_st <= c2_3wrcrc1;
 					else
+						status(1) <= '1';	-- DRQ
+						DRQ <= '1';
 						dat_btc <= dat_btc - 1;
 					end if;
 				end if;
