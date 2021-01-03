@@ -65,14 +65,7 @@ architecture behavioral of dma_controller is
 
 begin
 
-	process(sec_cnt)
-	begin
-		if sec_cnt = 0 then
-			seccnt0 <= '0';
-		else
-			seccnt0 <= '1';
-		end if;
-	end process;
+	seccnt0 <= '0' when sec_cnt = 0 else '1';
 
 	process(clk)
 	begin
