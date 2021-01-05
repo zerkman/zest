@@ -25,7 +25,7 @@ entity floppy_drive is
 		resetn		: in std_logic;
 
 		read_datan	: out std_logic;
-		side		: in std_logic;
+		side0		: in std_logic;
 		indexn		: out std_logic;
 		drv_select	: in std_logic;
 		motor_on	: in std_logic;
@@ -56,7 +56,7 @@ architecture behavioral of floppy_drive is
 begin
 
 	read_datan <= not data_sr(31);
-	host_track <= std_logic_vector(track) & side;
+	host_track <= std_logic_vector(track) & not side0;
 	write_protn <= '1';
 
 -- next host data word

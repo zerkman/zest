@@ -45,7 +45,7 @@ architecture dut of tb_dma_fdc is
 			resetn		: in std_logic;
 
 			read_datan	: out std_logic;
-			side		: in std_logic;
+			side0		: in std_logic;
 			indexn		: out std_logic;
 			drv_select	: in std_logic;
 			motor_on	: in std_logic;
@@ -144,7 +144,7 @@ architecture dut of tb_dma_fdc is
 	signal DDENn		: std_logic;
 
 	signal read_datan	: std_logic;
-	signal side			: std_logic;
+	signal side0		: std_logic;
 	signal indexn		: std_logic;
 	signal drv_select	: std_logic;
 	signal motor_on		: std_logic;
@@ -162,9 +162,6 @@ architecture dut of tb_dma_fdc is
 	signal host_w		: std_logic;
 	signal host_addr	: std_logic_vector(10 downto 0);
 	signal host_track	: std_logic_vector(7 downto 0);
-
-	signal data			: std_logic_vector(7 downto 0);
-
 
 begin
 	host:sim_host port map (
@@ -187,7 +184,7 @@ begin
 		resetn => resetn,
 
 		read_datan => read_datan,
-		side => side,
+		side0 => side0,
 		indexn => indexn,
 		drv_select => drv_select,
 		motor_on => motor_on,
@@ -206,7 +203,7 @@ begin
 		host_addr => host_addr,
 		host_track => host_track
 	);
-	side <= '0';
+	side0 <= '1';
 
 	fdc:wd1772 port map (
 		clk => clk,
