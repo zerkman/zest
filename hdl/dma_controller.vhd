@@ -59,7 +59,8 @@ architecture behavioral of dma_controller is
 	signal dma_err	: std_logic;
 	signal dma_on	: std_logic;
 	signal dma_rst	: std_logic;
-	type bus_st_t is ( idle, running, done );
+	signal dma_d	: std_logic_vector(15 downto 0);
+	type bus_st_t is ( idle, running, running1, done );
 	signal bus_st	: bus_st_t;
 	type dc_st_t is ( idle, warmup, running, run_read, run_read2, run_inc, done );
 	signal dc_st	: dc_st_t;
@@ -145,12 +146,19 @@ begin
 						else
 							-- read from hdc/fdc, write to memory
 							oD <= buf(to_integer(not buf_wl & buf_bi));
+							dma_d <= buf(to_integer(not buf_wl & buf_bi));
 						end if;
 						buf_bi <= buf_bi + 1;
+						bus_st <= running1;
 						if buf_bi + 1 = 0 then
 							oRDY <= '0';
 							bus_st <= done;
 						end if;
+					end if;
+				when running1 =>
+					oD <= dma_d;
+					if iRDY = '1' then
+						bus_st <= running;
 					end if;
 				when done =>
 					null;

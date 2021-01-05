@@ -76,10 +76,10 @@ architecture behavioral of mmu is
 begin
 
 	al <= iA(7 downto 1) & '1';
-	mode_bus <= '1' when RAMn = '0' and (cnt = 1 or cnt = 2) and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00") else '0';
+	mode_bus <= '1' when (cnt = 1 or cnt = 2) and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
 	DTACKn <= sdtackn;
 
-	process(DCYCn,delay_bus,delay_dcycn,screen_adr_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn)
+	process(DCYCn,delay_bus,delay_dcycn,screen_adr_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn)
 	begin
 		RDATn <= '1';
 		ram_A <= (others => '0');
@@ -94,10 +94,17 @@ begin
 			ram_W <= '0';
 		elsif (mode_bus = '1' or mode_bus_ff = '1') and delay_dcycn = '0' then
 			-- valid ST RAM/ROM address
-			ram_A <= iA;
-			ram_DS <= not (iUDSn,iLDSn);
-			ram_R <= iRWn;
-			ram_W <= iRWn nor (iUDSn and iLDSn);
+			if RAMn = '0' then
+				ram_A <= iA;
+				ram_DS <= not (iUDSn,iLDSn);
+				ram_R <= iRWn;
+				ram_W <= iRWn nor (iUDSn and iLDSn);
+			elsif DMAn = '0' then
+				ram_A <= dma_ptr;
+				ram_DS <= "11";
+				ram_R <= iRWn;
+				ram_W <= not iRWn;
+			end if;
 			RDATn <= not iRWn;
 		end if;
 	end process;
@@ -199,6 +206,9 @@ begin
 
 			if mode_bus_ff = '1' and cnt = 3 then
 				delay_bus <= '1';
+				if DMAn = '0' then
+					dma_ptr <= std_logic_vector(unsigned(dma_ptr)+1);
+				end if;
 			end if;
 			if DCYCn = '0' then
 				screen_adr_ptr <= std_logic_vector(unsigned(screen_adr_ptr)+1);

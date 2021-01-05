@@ -42,9 +42,15 @@ entity glue is
 		VMAn	: in std_logic;
 		cs6850	: out std_logic;
 		FCSn	: out std_logic;
+		iRDY	: in std_logic;
+		oRDY	: out std_logic;
 		RAMn	: out std_logic;
 		DMAn	: out std_logic;
 		DEVn	: out std_logic;
+
+		BRn		: out std_logic;
+		BGn		: in std_logic;
+		BGACKn	: out std_logic;
 
 		MFPCSn	: out std_logic;
 		MFPINTn	: in std_logic;
@@ -110,6 +116,11 @@ architecture behavioral of glue is
 	signal wdtackn	: std_logic;
 	signal beercnt	: unsigned(5 downto 0);
 	signal rwn_ff	: std_logic;
+	signal dma_w	: std_logic;
+	type dma_st_t is ( idle, wait_bg, running, running1, wait_rdy );
+	signal dma_st	: dma_st_t;
+	signal dma_cnt	: unsigned(2 downto 0);
+	signal dma_rdy	: std_logic;
 
 begin
 
@@ -121,6 +132,7 @@ irq_mfp <= not MFPINTn;
 VPAn <= vpa_irqn and vpa_acia;
 wdtackn <= '0' when iA(15 downto 2)&"00" = x"8604" or iA(15 downto 8) = x"88" else '1';
 oDTACKn <= sdtackn;
+oRDY <= iDTACKn or dma_rdy;
 
 sync_id <= mono & (line_pal and not mono);
 sync <= sync_array(to_integer(sync_id));
@@ -146,14 +158,21 @@ begin
 	if rising_edge(clk) then
 	if resetn = '0' then
 		sdtackn <= '1';
+		mono <= '0';
+		hz50 <= '0';
+		dma_w <= '0';
 	elsif enPhi2 = '1' then
-		if FC /= "111" and iASn = '0' and iUDSn = '0' and iA(23 downto 8) = x"ff82" and FC(2) = '1' and iRWn = '0' then
-			if iA(7 downto 1)&'0' = x"60" then
-				-- resolution (write only - Read is managed by Shifter.)
-				mono <= iD(1);
-			end if;
-			if iA(7 downto 1)&'0' = x"0a" then
-				hz50 <= iD(1);
+		if FC /= "111" and iASn = '0' and iUDSn = '0' and FC(2) = '1' and iRWn = '0' then
+			if iA(23 downto 8) = x"ff82" then
+				if iA(7 downto 1)&'0' = x"60" then
+					-- resolution (write only - Read is managed by Shifter.)
+					mono <= iD(1);
+				end if;
+				if iA(7 downto 1)&'0' = x"0a" then
+					hz50 <= iD(1);
+				end if;
+			elsif iA(23 downto 1)&'0' = x"ff8606" then
+				dma_w <= iD(0);
 			end if;
 		end if;
 	elsif enPhi1 = '1' then
@@ -192,7 +211,7 @@ process(FC,iA,iASn,iUDSn,iLDSn,iRWn)
 begin
 	RAMn <= '1';
 	DEVn <= '1';
-	if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRwn = '0' and rwn_ff = '1')) then
+	if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRWn = '0' and rwn_ff = '1')) then
 		if iA(23 downto 15) = "111111111" then
 			-- hardware registers
 			if FC(2) = '1' then
@@ -255,6 +274,58 @@ begin
 	end if;
 end process;
 
+-- dma operation
+process(clk)
+begin
+	if rising_edge(clk) then
+		if resetn = '0' then
+			BRn <= '1';
+			BGACKn <= '1';
+			dma_st <= idle;
+			dma_rdy <= '1';
+			dma_cnt <= "000";
+			DMAn <= '1';
+		elsif enPhi1 = '1' then
+			case dma_st is
+			when idle =>
+				if iRDY = '1' then
+					-- initiate bus request
+					BRn <= '0';
+					dma_st <= wait_bg;
+				end if;
+			when wait_bg =>
+				if BGn = '0' then
+					BRn <= '1';
+					BGACKn <= '0';
+					DMAn <= '0';
+					dma_rdy <= '0';
+					dma_cnt <= "111";
+					dma_st <= running;
+				end if;
+			when running =>
+				if iDTACKn = '0' then
+					dma_st <= running1;
+				end if;
+			when running1 =>
+				if iDTACKn = '1' then
+					if dma_cnt = 0 then
+						dma_rdy <= '1';
+						BGACKn <= '1';
+						DMAn <= '1';
+						dma_st <= wait_rdy;
+					else
+						dma_cnt <= dma_cnt - 1;
+						dma_st <= running;
+					end if;
+				end if;
+			when wait_rdy =>
+				if iRDY = '0' then
+					dma_st <= idle;
+				end if;
+			end case;
+		end if;
+	end if;
+end process;
 
 -- interrupt control
 process(clk)
