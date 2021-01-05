@@ -38,6 +38,18 @@ entity atarist_main is
 		ikbd_rx : in std_logic;
 		ikbd_tx : out std_logic;
 
+		fdd_read_datan : in std_logic;
+		fdd_side0 : out std_logic;
+		fdd_indexn : in std_logic;
+		fdd_drv_select : out std_logic;
+		fdd_motor_on : out std_logic;
+		fdd_direction : out std_logic;
+		fdd_stepn : out std_logic;
+		fdd_write_data : out std_logic;
+		fdd_write_gate : out std_logic;
+		fdd_track0n : in std_logic;
+		fdd_write_protn : in std_logic;
+
 		a : out std_logic_vector(23 downto 1);
 		ds : out std_logic_vector(1 downto 0);
 		r : out std_logic;
@@ -62,18 +74,18 @@ architecture structure of atarist_main is
 			enPhi1		: in std_logic;
 			enPhi2		: in std_logic;		-- Clock enables. Next cycle is PHI1 or PHI2
 
-			eRWn 		: out std_logic;
-			ASn 		: out std_logic;
-			LDSn 		: out std_logic;
-			UDSn 		: out std_logic;
-			E 			: out std_logic;
-			VMAn 		: out std_logic;
-			FC0 		: out std_logic;
-			FC1 		: out std_logic;
-			FC2 		: out std_logic;
-			BGn 		: out std_logic;
-			oRESETn 	: out std_logic;
-			oHALTEDn 	: out std_logic;
+			eRWn		: out std_logic;
+			ASn			: out std_logic;
+			LDSn		: out std_logic;
+			UDSn		: out std_logic;
+			E			: out std_logic;
+			VMAn		: out std_logic;
+			FC0			: out std_logic;
+			FC1			: out std_logic;
+			FC2			: out std_logic;
+			BGn			: out std_logic;
+			oRESETn		: out std_logic;
+			oHALTEDn	: out std_logic;
 			DTACKn		: in std_logic;
 			VPAn		: in std_logic;
 			BERRn		: in std_logic;
@@ -112,9 +124,15 @@ architecture structure of atarist_main is
 			VMAn	: in std_logic;
 			cs6850	: out std_logic;
 			FCSn	: out std_logic;
+			iRDY	: in std_logic;
+			oRDY	: out std_logic;
 			RAMn	: out std_logic;
 			DMAn	: out std_logic;
 			DEVn	: out std_logic;
+
+			BRn		: out std_logic;
+			BGn		: in std_logic;
+			BGACKn	: out std_logic;
 
 			MFPCSn	: out std_logic;
 			MFPINTn	: in std_logic;
@@ -285,24 +303,63 @@ architecture structure of atarist_main is
 			cken	: in std_logic;
 
 			FCSn	: in std_logic;
+			iRDY	: in std_logic;
+			oRDY	: out std_logic;
 			RWn		: in std_logic;
+
 			A1		: in std_logic;
 			iD		: in std_logic_vector(15 downto 0);
-			oD		: out std_logic_vector(15 downto 0)
+			oD		: out std_logic_vector(15 downto 0);
+
+			HDCSn	: out std_logic;
+			HDRQ	: in std_logic;
+
+			FDCSn	: out std_logic;
+			FDRQ	: in std_logic;
+			CRWn	: out std_logic;
+			CA		: out std_logic_vector(1 downto 0);
+			oCD		: out std_logic_vector(7 downto 0);
+			iCD		: in std_logic_vector(7 downto 0)
+		);
+	end component;
+
+	component wd1772 is
+		port (
+			clk			: in std_logic;
+			clken		: in std_logic;
+			resetn		: in std_logic;
+
+			CSn			: in std_logic;
+			RWn			: in std_logic;
+			A			: in std_logic_vector(1 downto 0);
+			iDAL		: in std_logic_vector(7 downto 0);
+			oDAL		: out std_logic_vector(7 downto 0);
+			INTRQ		: out std_logic;
+			DRQ			: out std_logic;
+			DDENn		: in std_logic;
+			WPRTn		: in std_logic;
+			IPn			: in std_logic;
+			TR0n		: in std_logic;
+			WD			: out std_logic;
+			WG			: out std_logic;
+			MO			: out std_logic;
+			RDn			: in std_logic;
+			DIRC		: out std_logic;
+			STEP		: out std_logic
 		);
 	end component;
 
 	signal reset		: std_logic;
 
-	signal enNC1 		: std_logic;
-	signal enNC2 		: std_logic;
-	signal en8rck 		: std_logic;
-	signal en8fck 		: std_logic;
-	signal en4rck 		: std_logic;
-	signal en4fck 		: std_logic;
-	signal en2rck 		: std_logic;
-	signal en2fck 		: std_logic;
-	signal en32ck 		: std_logic;
+	signal enNC1		: std_logic;
+	signal enNC2		: std_logic;
+	signal en8rck		: std_logic;
+	signal en8fck		: std_logic;
+	signal en4rck		: std_logic;
+	signal en4fck		: std_logic;
+	signal en2rck		: std_logic;
+	signal en2fck		: std_logic;
+	signal en32ck		: std_logic;
 	signal en2_4576ck	: std_logic;
 	signal ck05			: std_logic;
 	signal clken_err	: std_logic;
@@ -423,6 +480,18 @@ architecture structure of atarist_main is
 	signal dma_fcsn			: std_logic;
 	signal dma_iD			: std_logic_vector(15 downto 0);
 	signal dma_oD			: std_logic_vector(15 downto 0);
+	signal dma_iRDY			: std_logic;
+	signal dma_oRDY			: std_logic;
+	signal dma_HDCSn		: std_logic;
+	signal dma_HDRQ			: std_logic;
+	signal dma_FDCSn		: std_logic;
+	signal dma_FDRQ			: std_logic;
+	signal dma_CRWn			: std_logic;
+	signal dma_CA			: std_logic_vector(1 downto 0);
+	signal dma_oCD			: std_logic_vector(7 downto 0);
+	signal dma_iCD			: std_logic_vector(7 downto 0);
+
+	signal fdc_INTRQ		: std_logic;
 
 begin
 	reset <= not resetn;
@@ -489,8 +558,6 @@ begin
 		eab => cpu_A
 	);
 	cpu_HALTn <= '1';
-	cpu_BRn <= '1';
-	cpu_BGACKn <= '1';
 	cpu_IPLn(0) <= '1';
 
 	clkgen:clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2rck,en2fck,en2_4576ck,ck05,clken_err);
@@ -529,9 +596,14 @@ begin
 		VMAn => cpu_VMAn,
 		cs6850 => cs6850,
 		FCSn => dma_fcsn,
+		iRDY => dma_oRDY,
+		oRDY => dma_iRDY,
 		RAMn => mmu_RAMn,
 		DMAn => mmu_DMAn,
 		DEVn => mmu_DEVn,
+		BRn => cpu_BRn,
+		BGn => cpu_BGn,
+		BGACKn => cpu_BGACKn,
 		MFPCSn => mfp_csn,
 		MFPINTn	=> mfp_irqn,
 		IACKn => mfp_iackn,
@@ -640,7 +712,7 @@ begin
 		trn => mfp_trn
 	);
 	mfp_iein <= '0';
-	mfp_ii <= not monomon & "11" & acia_irq & "1111";
+	mfp_ii <= not monomon & '1' & not fdc_INTRQ & acia_irq & "1111";
 	mfp_tai <= '1';
 	mfp_tbi <= sde;
 	mfp_si <= '0';
@@ -696,14 +768,48 @@ begin
 	dma:dma_controller port map (
 		clk => clk,
 		cken => en8rck,
-
 		FCSn => dma_fcsn,
+		iRDY => dma_iRDY,
+		oRDY => dma_oRDY,
 		RWn => bus_RWn,
 		A1 => bus_A(1),
 		iD => dma_iD,
-		oD => dma_oD
+		oD => dma_oD,
+		HDCSn => dma_HDCSn,
+		HDRQ => dma_HDRQ,
+		FDCSn => dma_FDCSn,
+		FDRQ => dma_FDRQ,
+		CRWn => dma_CRWn,
+		CA => dma_CA,
+		oCD => dma_oCD,
+		iCD => dma_iCD
 	);
 	dma_iD <= bus_D;
+	dma_HDRQ <= '0';
 
+	fdc:wd1772 port map (
+		clk => clk,
+		clken => en8rck,
+		resetn => resetn,
+		CSn => dma_FDCSn,
+		RWn => dma_CRWn,
+		A => dma_CA,
+		iDAL => dma_oCD,
+		oDAL => dma_iCD,
+		INTRQ => fdc_INTRQ,
+		DRQ => dma_FDRQ,
+		DDENn => '0',
+		WPRTn => fdd_write_protn,
+		IPn => fdd_indexn,
+		TR0n => fdd_track0n,
+		WD => fdd_write_data,
+		WG => fdd_write_gate,
+		MO => fdd_motor_on,
+		RDn => fdd_read_datan,
+		DIRC => fdd_direction,
+		STEP => fdd_stepn
+	);
+
+	fdd_side0 <= '1';
 
 end structure;
