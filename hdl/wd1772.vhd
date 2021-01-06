@@ -84,6 +84,7 @@ begin
 
 	MO <= status(7);
 	WG <= wgs;
+	DIRC <= DIR;
 
 process(clk)
 begin
