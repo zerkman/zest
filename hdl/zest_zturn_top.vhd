@@ -129,6 +129,19 @@ architecture structure of zest_top is
 			ikbd_rx : in std_logic;
 			ikbd_tx : out std_logic;
 
+			fdd_clken : out std_logic;
+			fdd_read_datan : in std_logic;
+			fdd_side0 : out std_logic;
+			fdd_indexn : in std_logic;
+			fdd_drv_select : out std_logic;
+			fdd_motor_on : out std_logic;
+			fdd_direction : out std_logic;
+			fdd_stepn : out std_logic;
+			fdd_write_data : out std_logic;
+			fdd_write_gate : out std_logic;
+			fdd_track0n : in std_logic;
+			fdd_write_protn : in std_logic;
+
 			a : out std_logic_vector(23 downto 1);
 			ds : out std_logic_vector(1 downto 0);
 			r : out std_logic;
@@ -137,6 +150,34 @@ architecture structure of zest_top is
 			w_done : in std_logic;
 			od : in std_logic_vector(15 downto 0);
 			id : out std_logic_vector(15 downto 0)
+		);
+	end component;
+
+	component floppy_drive is
+		port (
+			clk			: in std_logic;
+			clken		: in std_logic;
+			resetn		: in std_logic;
+
+			read_datan	: out std_logic;
+			side0		: in std_logic;
+			indexn		: out std_logic;
+			drv_select	: in std_logic;
+			motor_on	: in std_logic;
+			direction	: in std_logic;
+			stepn		: in std_logic;
+			write_data	: in std_logic;
+			write_gate	: in std_logic;
+			track0n		: out std_logic;
+			write_protn	: out std_logic;
+
+			host_intr	: out std_logic;
+			host_din	: out std_logic_vector(31 downto 0);
+			host_dout	: in std_logic_vector(31 downto 0);
+			host_r		: out std_logic;
+			host_w		: out std_logic;
+			host_addr	: out std_logic_vector(10 downto 0);
+			host_track	: out std_logic_vector(7 downto 0)
 		);
 	end component;
 
@@ -209,6 +250,19 @@ architecture structure of zest_top is
 	signal ikbd_j1		: std_logic_vector(4 downto 0);
 	signal ikbd_k		: std_logic_vector(94 downto 0);
 
+	signal fdd_clken		: std_logic;
+	signal fdd_read_datan	: std_logic;
+	signal fdd_side0		: std_logic;
+	signal fdd_indexn		: std_logic;
+	signal fdd_drv_select	: std_logic;
+	signal fdd_motor_on		: std_logic;
+	signal fdd_direction	: std_logic;
+	signal fdd_stepn		: std_logic;
+	signal fdd_write_data	: std_logic;
+	signal fdd_write_gate	: std_logic;
+	signal fdd_track0n		: std_logic;
+	signal fdd_write_protn	: std_logic;
+
 	signal ram_A_23		: std_logic_vector(23 downto 1);
 	signal ram_A		: std_logic_vector(31 downto 0);
 	signal ram_iD		: std_logic_vector(15 downto 0);
@@ -262,7 +316,7 @@ begin
 	mem_top <= out_reg0(7 downto 4);
 
 	ram_offset <= out_reg1;
-	irq_f2p <= "0";
+	in_reg0(10 downto 0) <= (others => '0');
 
 	psd:ps_domain_wrapper port map(
 		DDR_addr => DDR_addr,
@@ -290,8 +344,8 @@ begin
 		IIC_0_0_sda_io => I2C0_SDA,
 		IRQ_F2P_0 => irq_f2p,
 		clk => clk,
-		in_reg0_0 => (others => '0'),
-		in_reg1_0 => (others => '0'),
+		in_reg0_0 => in_reg0,
+		in_reg1_0 => in_reg1,
 		out_reg0_0 => out_reg0,
 		out_reg1_0 => out_reg1,
 		out_reg2_0 => out_reg2,
@@ -330,6 +384,18 @@ begin
 		ikbd_clkfen => ikbd_clkfen,
 		ikbd_rx => ikbd_rx,
 		ikbd_tx => ikbd_tx,
+		fdd_clken => fdd_clken,
+		fdd_read_datan => fdd_read_datan,
+		fdd_side0 => fdd_side0,
+		fdd_indexn => fdd_indexn,
+		fdd_drv_select => fdd_drv_select,
+		fdd_motor_on => fdd_motor_on,
+		fdd_direction => fdd_direction,
+		fdd_stepn => fdd_stepn,
+		fdd_write_data => fdd_write_data,
+		fdd_write_gate => fdd_write_gate,
+		fdd_track0n => fdd_track0n,
+		fdd_write_protn => fdd_write_protn,
 		a => ram_A_23,
 		ds => ram_DS,
 		r => ram_R,
@@ -338,6 +404,32 @@ begin
 		w_done => ram_W_DONE,
 		od => ram_oD,
 		id => ram_iD
+	);
+
+	fdd:floppy_drive port map (
+		clk => clk,
+		clken => fdd_clken,
+		resetn => resetn,
+
+		read_datan => fdd_read_datan,
+		side0 => fdd_side0,
+		indexn => fdd_indexn,
+		drv_select => fdd_drv_select,
+		motor_on => fdd_motor_on,
+		direction => fdd_direction,
+		stepn => fdd_stepn,
+		write_data => fdd_write_data,
+		write_gate => fdd_write_gate,
+		track0n => fdd_track0n,
+		write_protn => fdd_write_protn,
+
+		host_intr => irq_f2p(0),
+		host_din => in_reg1,
+		host_dout => out_reg2,
+		host_r => in_reg0(31),
+		host_w => in_reg0(30),
+		host_addr => in_reg0(29 downto 19),
+		host_track => in_reg0(18 downto 11)
 	);
 
 	ikbd_clk <= clk;

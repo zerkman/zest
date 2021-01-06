@@ -38,6 +38,7 @@ entity atarist_main is
 		ikbd_rx : in std_logic;
 		ikbd_tx : out std_logic;
 
+		fdd_clken : out std_logic;
 		fdd_read_datan : in std_logic;
 		fdd_side0 : out std_logic;
 		fdd_indexn : in std_logic;
@@ -499,6 +500,7 @@ begin
 	pclken <= en32ck;
 	ikbd_clkren <= en2rck;
 	ikbd_clkfen <= en2fck;
+	fdd_clken <= en8rck;
 	de <= blankn;
 	hsync <= not hsyncn;
 	vsync <= not vsyncn;
