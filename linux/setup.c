@@ -34,6 +34,9 @@
 #include <linux/input-event-codes.h>
 #include <linux/i2c-dev.h>
 
+/* from floppy.c */
+void * thread_floppy(void * arg);
+
 /*
  * The slave address to send to and receive from.
  */
@@ -190,7 +193,7 @@ void * thread_uio(void * arg) {
 	return NULL;
 }
 
-volatile int thr_kbd_end = 0;
+volatile int thr_end = 0;
 void * thread_kbd(void * arg) {
 	unsigned int mx=0,my=0;
 	int dx=0,dy=0,ox=0,oy=0;
@@ -212,7 +215,7 @@ void * thread_kbd(void * arg) {
 
 	static const char *ev_type_names[] = { "EV_SYN", "EV_KEY", "EV_REL", "EV_ABS", "EV_MSC", "EV_SW" };
 
-	while (thr_kbd_end == 0) {
+	while (thr_end == 0) {
 		int retval = poll(pfd,nfds,timeout);
 		if (retval == -1) {
 			break;
@@ -421,7 +424,7 @@ void * thread_kbd(void * arg) {
 }
 
 void usage(const char *progname) {
-	printf("usage: %s [--mono] boot68k.bin\n",progname);
+	printf("usage: %s [--mono] boot68k.bin [floppy.mfm]\n",progname);
 }
 
 int main(int argc, char **argv) {
@@ -430,6 +433,7 @@ int main(int argc, char **argv) {
 
 	printf("Shifter + HDMI + DDR + CPU test\n");
 	const char *binfilename = NULL;
+	const char *floppyfilename = NULL;
 	int a = 0;
 	while (++a<argc) {
 		const char *arg = argv[a];
@@ -437,10 +441,16 @@ int main(int argc, char **argv) {
 			cfg |= CFG_MONO;
 		} else if (binfilename == NULL) {
 			binfilename = arg;
+		} else if (floppyfilename == NULL) {
+			floppyfilename = arg;
 		} else {
 			usage(argv[0]);
 			return 1;
 		}
+	}
+	if (binfilename == NULL) {
+		usage(argv[0]);
+		return 1;
 	}
 
 	uiofd = open("/dev/uio0",O_RDWR);
@@ -484,8 +494,8 @@ int main(int argc, char **argv) {
 	int c;
 	pthread_t kbd_thr;
 	pthread_create(&kbd_thr,NULL,thread_kbd,NULL);
-	pthread_t uio_thr;
-	pthread_create(&uio_thr,NULL,thread_uio,NULL);
+	pthread_t floppy_thr;
+	pthread_create(&floppy_thr,NULL,thread_floppy,(void*)floppyfilename);
 	do {
 		memset(mem_array,0,0x20000);
 		FILE *bootfd = fopen(binfilename,"rb");
@@ -503,8 +513,9 @@ int main(int argc, char **argv) {
 		parmreg[0] = 0;
 		usleep(10000);
 	} while (c!='q');
-	thr_kbd_end = 1;
+	thr_end = 1;
 	pthread_join(kbd_thr,NULL);
+	pthread_join(floppy_thr,NULL);
 
 	return 0;
 }
