@@ -32,6 +32,7 @@ entity glue is
 		iUDSn	: in std_logic;
 		iLDSn	: in std_logic;
 		iDTACKn	: in std_logic;
+		oRWn	: out std_logic;
 		oDTACKn	: out std_logic;
 		BEER	: out std_logic;
 		oD		: out std_logic_vector(1 downto 0);
@@ -117,10 +118,12 @@ architecture behavioral of glue is
 	signal beercnt	: unsigned(5 downto 0);
 	signal rwn_ff	: std_logic;
 	signal dma_w	: std_logic;
-	type dma_st_t is ( idle, wait_bg, running, running1, wait_rdy );
+	type dma_st_t is ( idle, wait_bg, running, wait_rdy );
 	signal dma_st	: dma_st_t;
 	signal dma_cnt	: unsigned(2 downto 0);
-	signal dma_rdy	: std_logic;
+	signal sdma		: std_logic;
+	signal mmuct	: unsigned(1 downto 0);
+	signal idtackff	: std_logic;
 
 begin
 
@@ -132,7 +135,8 @@ irq_mfp <= not MFPINTn;
 VPAn <= vpa_irqn and vpa_acia;
 wdtackn <= '0' when iA(15 downto 2)&"00" = x"8604" or iA(15 downto 8) = x"88" else '1';
 oDTACKn <= sdtackn;
-oRDY <= iDTACKn or dma_rdy;
+oRDY <= sdma;
+DMAn <= sdma;
 
 sync_id <= mono & (line_pal and not mono);
 sync <= sync_array(to_integer(sync_id));
@@ -161,7 +165,10 @@ begin
 		mono <= '0';
 		hz50 <= '0';
 		dma_w <= '0';
+		mmuct <= "00";
+		idtackff <= '1';
 	elsif enPhi2 = '1' then
+		idtackff <= iDTACKn;
 		if FC /= "111" and iASn = '0' and iUDSn = '0' and FC(2) = '1' and iRWn = '0' then
 			if iA(23 downto 8) = x"ff82" then
 				if iA(7 downto 1)&'0' = x"60" then
@@ -174,6 +181,12 @@ begin
 			elsif iA(23 downto 1)&'0' = x"ff8606" then
 				dma_w <= iD(0);
 			end if;
+		end if;
+		if iDTACKn = '0' and idtackff = '1' then
+			-- synchronize with MMU counter
+			mmuct <= "11";
+		else
+			mmuct <= mmuct + 1;
 		end if;
 	elsif enPhi1 = '1' then
 		oD <= (others => '1');
@@ -282,9 +295,9 @@ begin
 			BRn <= '1';
 			BGACKn <= '1';
 			dma_st <= idle;
-			dma_rdy <= '1';
 			dma_cnt <= "000";
-			DMAn <= '1';
+			sdma <= '1';
+			oRWn <= '1';
 		elsif enPhi1 = '1' then
 			case dma_st is
 			when idle =>
@@ -297,21 +310,18 @@ begin
 				if BGn = '0' then
 					BRn <= '1';
 					BGACKn <= '0';
-					DMAn <= '0';
-					dma_rdy <= '0';
 					dma_cnt <= "111";
 					dma_st <= running;
 				end if;
 			when running =>
-				if iDTACKn = '0' then
-					dma_st <= running1;
-				end if;
-			when running1 =>
-				if iDTACKn = '1' then
+				if mmuct = 0 then
+					oRWn <= '1';
+				elsif mmuct = 1 then
+					sdma <= '0';
+					oRWn <= dma_w;
+				elsif mmuct = 3 then
 					if dma_cnt = 0 then
-						dma_rdy <= '1';
 						BGACKn <= '1';
-						DMAn <= '1';
 						dma_st <= wait_rdy;
 					else
 						dma_cnt <= dma_cnt - 1;
@@ -319,10 +329,15 @@ begin
 					end if;
 				end if;
 			when wait_rdy =>
+				oRWn <= '1';
 				if iRDY = '0' then
 					dma_st <= idle;
 				end if;
 			end case;
+		elsif enPhi2 = '1' then
+			if sdma = '0' and mmuct = 3 then
+				sdma <= '1';
+			end if;
 		end if;
 	end if;
 end process;

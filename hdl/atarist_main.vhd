@@ -115,6 +115,7 @@ architecture structure of atarist_main is
 			iUDSn	: in std_logic;
 			iLDSn	: in std_logic;
 			iDTACKn	: in std_logic;
+			oRWn	: out std_logic;
 			oDTACKn	: out std_logic;
 			BEER	: out std_logic;
 			oD		: out std_logic_vector(1 downto 0);
@@ -401,6 +402,7 @@ architecture structure of atarist_main is
 	signal glue_iD		: std_logic_vector(1 downto 0);
 	signal glue_iUDSn	: std_logic;
 	signal glue_iLDSn	: std_logic;
+	signal glue_oRWn	: std_logic;
 	signal glue_DTACKn	: std_logic;
 	signal glue_oD		: std_logic_vector(1 downto 0);
 	signal cs6850		: std_logic;
@@ -516,7 +518,7 @@ begin
 
 	bus_A <= cpu_A;
 	bus_ASn <= cpu_ASn;
-	bus_RWn <= cpu_RWn;
+	bus_RWn <= cpu_RWn and glue_oRWn;
 	bus_D <= (cpu_oD or (15 downto 0 => cpu_RWn)) and shifter_oD
 			and (ram_oD or (15 downto 0 => RDATn))
 			and (x"ff" & (mmu_oD and mfp_oD)) and ("111111" & glue_oD & x"ff")
@@ -589,6 +591,7 @@ begin
 		iUDSn => glue_iUDSn,
 		iLDSn => glue_iLDSn,
 		iDTACKn => bus_DTACKn,
+		oRWn => glue_oRWn,
 		oDTACKn => glue_DTACKn,
 		BEER => cpu_BERRn,
 		oD => glue_oD,
@@ -812,6 +815,7 @@ begin
 		STEP => fdd_stepn
 	);
 
+	fdd_drv_select <= '1';
 	fdd_side0 <= '1';
 
 end structure;

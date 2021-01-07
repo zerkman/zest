@@ -60,7 +60,8 @@ architecture behavioral of dma_controller is
 	signal dma_on	: std_logic;
 	signal dma_rst	: std_logic;
 	signal dma_d	: std_logic_vector(15 downto 0);
-	type bus_st_t is ( idle, running, running1, done );
+	signal sod		: std_logic_vector(15 downto 0);
+	type bus_st_t is ( idle, start, running, running1, done );
 	signal bus_st	: bus_st_t;
 	type dc_st_t is ( idle, warmup, running, run_read, run_read2, run_inc, done );
 	signal dc_st	: dc_st_t;
@@ -70,10 +71,19 @@ begin
 	dma_rst <= '1' when FCSn = '0' and RWn = '0' and A1 = '1' and dma_w /= iD(8) else '0';
 	seccnt0 <= '0' when sec_cnt = 0 else '1';
 
+	-- data bus out
+	process(sod,iRDY,dma_w,dma_d)
+	begin
+		oD <= sod;
+		if dma_w = '0' and iRDY = '0' then
+			oD <= dma_d;
+		end if;
+	end process;
+
 	process(clk)
 	begin
 		if rising_edge(clk) and cken = '1' then
-			oD <= x"ffff";
+			sod <= x"ffff";
 			oCD <= x"ff";
 			FDCSn <= '1';
 			CRWn <= '1';
@@ -124,10 +134,10 @@ begin
 					if A1 = '0' then
 						if reg_sel = '0' then
 							FDCSn <= '0';
-							oD <= x"ff" & iCD;
+							sod <= x"ff" & iCD;
 						end if;
 					else
-						oD <= (15 downto 3 => '0', 2 => FDRQ, 1 => seccnt0, 0 => not dma_err);
+						sod <= (15 downto 3 => '0', 2 => FDRQ, 1 => seccnt0, 0 => not dma_err);
 					end if;
 				end if;
 			end if;
@@ -137,6 +147,11 @@ begin
 				case bus_st is
 				when idle =>
 					null;
+				when start =>
+					if dma_w = '0' then
+						dma_d <= buf(to_integer(not buf_wl & buf_bi));
+					end if;
+					bus_st <= running;
 				when running =>
 					oRDY <= '1';
 					if iRDY = '0' then
@@ -145,8 +160,7 @@ begin
 							buf(to_integer(buf_wl & buf_bi)) <= iD;
 						else
 							-- read from hdc/fdc, write to memory
-							oD <= buf(to_integer(not buf_wl & buf_bi));
-							dma_d <= buf(to_integer(not buf_wl & buf_bi));
+							-- handled in data bus output process
 						end if;
 						buf_bi <= buf_bi + 1;
 						bus_st <= running1;
@@ -156,8 +170,10 @@ begin
 						end if;
 					end if;
 				when running1 =>
-					oD <= dma_d;
 					if iRDY = '1' then
+						if dma_w = '0' then
+							dma_d <= buf(to_integer(not buf_wl & buf_bi));
+						end if;
 						bus_st <= running;
 					end if;
 				when done =>
@@ -217,7 +233,7 @@ begin
 						if dma_w = '0' or sec_cnt - 1 >= 32 then
 							-- read: always flush buffer to memory
 							-- write: need to fetch at least 16 more bytes apart from the 16 already in buffer
-							bus_st <= running;
+							bus_st <= start;
 						end if;
 					end if;
 					dc_st <= running;
