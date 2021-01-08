@@ -247,6 +247,7 @@ begin
 			when c1_init =>
 				status(0) <= '1';	-- busy (S0)
 				status(1) <= '0';	-- DRQ (S1)
+				status(2) <= '0';	-- Track 0 (S2)
 				status(3) <= '0';	-- CRC error (S3)
 				status(4) <= '0';	-- seek error (S4)
 				DRQ <= '0';
@@ -261,7 +262,7 @@ begin
 			when c1_wait_ip =>
 				if ipcnt = x"0" then
 					-- set spin-up (S5)
-					status(5) <= '1';
+					status(5) <= not command(3);
 					if command(6 downto 5) = "00" then
 						-- seek or restore
 						if command(4) = '0' then
@@ -306,6 +307,7 @@ begin
 				cmd_st <= c1_c;
 			when c1_c =>
 				if DIR = '0' and TR0n = '0' then
+					status(2) <= '1';	-- Track 0 (S2)
 					TR <= x"00";
 					cmd_st <= c1_d;
 				else

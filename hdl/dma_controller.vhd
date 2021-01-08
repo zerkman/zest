@@ -134,7 +134,7 @@ begin
 					if A1 = '0' then
 						if reg_sel = '0' then
 							FDCSn <= '0';
-							sod <= x"ff" & iCD;
+							sod <= x"00" & iCD;
 						end if;
 					else
 						sod <= (15 downto 3 => '0', 2 => FDRQ, 1 => seccnt0, 0 => not dma_err);

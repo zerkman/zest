@@ -315,7 +315,7 @@ begin
 		drv_select <= '1';
 		bus_w('1',x"0180");		-- reset DMA by toggling write bit
 		bus_w('1',x"0080");		-- FDC control register
-		bus_w('0',x"0003");		-- restore command, motor on/spin up, stepping rate=3 ms
+		bus_w('0',x"000b");		-- restore command, no motor on/spin up, stepping rate=3 ms
 
 		wait until INTRQ = '1';
 		wait for 4*cycle;
