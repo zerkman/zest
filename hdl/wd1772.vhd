@@ -268,8 +268,8 @@ begin
 						if command(4) = '0' then
 							-- restore
 							TR <= x"ff";
+							DR <= x"00";
 						end if;
-						DR <= x"00";
 						cmd_st <= c1_a;
 					else
 						-- step
@@ -307,7 +307,6 @@ begin
 				cmd_st <= c1_c;
 			when c1_c =>
 				if DIR = '0' and TR0n = '0' then
-					status(2) <= '1';	-- Track 0 (S2)
 					TR <= x"00";
 					cmd_st <= c1_d;
 				else
@@ -347,6 +346,7 @@ begin
 					end if;
 				end if;
 			when c1_d =>
+				status(2) <= not TR0n;	-- Track 0 (S2)
 				if command(2) = '1' then
 					ipcnt <= x"6";
 					amd_st <= init;
