@@ -316,8 +316,8 @@ begin
 
 		drv_select <= '1';
 		bus_w('1',x"0180");		-- reset DMA by toggling write bit
-		bus_w('1',x"0080");		-- FDC control register
-		bus_w('0',x"000b");		-- restore command, no motor on/spin up, stepping rate=3 ms
+		bus_w('1',x"0080");		-- FDC command register
+		bus_w('0',x"0003");		-- restore command, motor on/spin up, stepping rate=3 ms
 
 		wait until INTRQ = '1';
 		wait for 4*cycle;
@@ -333,10 +333,19 @@ begin
 		bus_w('1',x"0082");		-- FDC track register, DMA on
 		bus_w('0',x"0000");
 
+		bus_w('1',x"0086");		-- FDC data register
+		bus_w('0',x"0002");		-- go to track 2
+		bus_w('1',x"0080");		-- FDC command register
+		bus_w('0',x"001f");		-- seek command, no motor on/spin up, verify, stepping rate=3 ms
+
+		wait until INTRQ = '1';
+		bus_w('1',x"0080");		-- FDC status register, DMA on
+		bus_r('0');
+
 		bus_w('1',x"0180");		-- reset DMA by toggling write bit
 		bus_w('1',x"0090");		-- DMA sector count register
 		bus_w('0',x"0014");		-- read size must be larger than track size
-		bus_w('1',x"0080");		-- FDC control register, DMA on
+		bus_w('1',x"0080");		-- FDC command register, DMA on
 		bus_w('0',x"00EC");		-- read track, no spin-up, 15 ms delay
 		dma_r(390);
 
@@ -347,7 +356,7 @@ begin
 		bus_w('0',x"0002");		-- write 2 sectors
 		bus_w('1',x"0184");		-- FDC sector register
 		bus_w('0',x"0002");		-- start from sector 2
-		bus_w('1',x"0180");		-- FDC control register, DMA on
+		bus_w('1',x"0180");		-- FDC command register, DMA on
 		bus_w('0',x"00B8");		-- write sector, multiple sector mode, disable spin-up
 
 		for i in 0 to 63 loop
@@ -366,7 +375,7 @@ begin
 		end loop;
 		wait for 2 ms;
 
-		bus_w('1',x"0080");		-- FDC control register, DMA on
+		bus_w('1',x"0080");		-- FDC command register, DMA on
 		bus_w('0',x"00D8");		-- force interrupt, immediate
 
 		wait until INTRQ = '1';
@@ -376,7 +385,7 @@ begin
 		bus_w('0',x"0001");		-- read 1 sector
 		bus_w('1',x"0084");		-- FDC sector register
 		bus_w('0',x"0007");		-- read sector 7
-		bus_w('1',x"0080");		-- FDC control register, DMA on
+		bus_w('1',x"0080");		-- FDC command register, DMA on
 		bus_w('0',x"0088");		-- read sector, single sector mode, disable spin-up
 		dma_r(32);
 
@@ -387,13 +396,13 @@ begin
 		bus_w('0',x"0003");		-- read 3 sectors
 		bus_w('1',x"0084");		-- FDC sector register
 		bus_w('0',x"0001");		-- read starting from sector 1
-		bus_w('1',x"0080");		-- FDC control register, DMA on
+		bus_w('1',x"0080");		-- FDC command register, DMA on
 		bus_w('0',x"0098");		-- read sector, multiple sector mode, disable spin-up
 		dma_r(96);
 		-- no INTRQ in multiple sector mode
 
 		bus_w('1',x"0180");		-- reset DMA by toggling write bit
-		bus_w('1',x"0080");		-- FDC control register, DMA on
+		bus_w('1',x"0080");		-- FDC command register, DMA on
 		bus_w('0',x"00D8");		-- force interrupt, immediate
 
 		wait until INTRQ = '1';
