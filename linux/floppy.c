@@ -128,23 +128,23 @@ void * thread_floppy(void * arg) {
 			}
 			uint8_t *p = trkp+pos;
 			uint32_t d;
-			d = *p++;
-			d |= *p++<<8;
+			d = *p++<<24;
+			d |= *p++<<16;
 			if (pos==6248) {
-				d |= 0x4e4e0000;
+				d |= 0x00004e4e;
 			} else {
-				d |= *p++<<16;
-				d |= *p++<<24;
+				d |= *p++<<8;
+				d |= *p++;
 			}
 			parmreg[2] = d;
 			if (w) {
 				d = parmreg[1];
 				uint8_t *p = trkp+posw;
-				*p++ = d;
-				*p++ = d>>8;
+				*p++ = d>>24;
+				*p++ = d>>16;
 				if (posw<6248) {
-					*p++ = d>>16;
-					*p++ = d>>24;
+					*p++ = d>>8;
+					*p++ = d;
 				}
 				wrb = 1;
 			}

@@ -303,6 +303,7 @@ architecture structure of atarist_main is
 		port (
 			clk		: in std_logic;
 			cken	: in std_logic;
+			resetn	: in std_logic;
 
 			FCSn	: in std_logic;
 			iRDY	: in std_logic;
@@ -773,6 +774,7 @@ begin
 	dma:dma_controller port map (
 		clk => clk,
 		cken => en8rck,
+		resetn => resetn,
 		FCSn => dma_fcsn,
 		iRDY => dma_iRDY,
 		oRDY => dma_oRDY,

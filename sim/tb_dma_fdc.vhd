@@ -96,6 +96,7 @@ architecture dut of tb_dma_fdc is
 		port (
 			clk		: in std_logic;
 			cken	: in std_logic;
+			resetn	: in std_logic;
 
 			FCSn	: in std_logic;
 			iRDY	: in std_logic;
@@ -233,6 +234,7 @@ begin
 	dma:dma_controller port map (
 		clk => clk,
 		cken => clken,
+		resetn => resetn,
 
 		FCSn => dma_FCSn,
 		iRDY => dma_iRDY,

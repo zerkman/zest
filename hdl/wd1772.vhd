@@ -190,7 +190,9 @@ begin
 			-- host access to registers
 			if CSn = '0' and RWn = '1' then
 				case A is
-					when "00" => oDAL <= status;
+					when "00" =>
+						oDAL <= status;
+						INTRQ <= '0';
 					when "01" => oDAL <= TR;
 					when "10" => oDAL <= SR;
 					when "11" =>

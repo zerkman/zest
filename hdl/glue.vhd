@@ -118,7 +118,7 @@ architecture behavioral of glue is
 	signal beercnt	: unsigned(5 downto 0);
 	signal rwn_ff	: std_logic;
 	signal dma_w	: std_logic;
-	type dma_st_t is ( idle, wait_bg, running, wait_rdy );
+	type dma_st_t is ( idle, wait_bg, wait_sync, running, wait_rdy );
 	signal dma_st	: dma_st_t;
 	signal dma_cnt	: unsigned(2 downto 0);
 	signal sdma		: std_logic;
@@ -308,12 +308,22 @@ begin
 				end if;
 			when wait_bg =>
 				if BGn = '0' then
-					BRn <= '1';
 					BGACKn <= '0';
 					dma_cnt <= "111";
 					dma_st <= running;
+					if mmuct = 0 then
+						dma_st <= running;
+					else
+						dma_st <= wait_sync;
+					end if;
+				end if;
+			when wait_sync =>
+				BRn <= '1';
+				if mmuct = 0 then
+					dma_st <= running;
 				end if;
 			when running =>
+				BRn <= '1';
 				if mmuct = 0 then
 					oRWn <= '1';
 				elsif mmuct = 1 then
@@ -321,7 +331,6 @@ begin
 					oRWn <= dma_w;
 				elsif mmuct = 3 then
 					if dma_cnt = 0 then
-						BGACKn <= '1';
 						dma_st <= wait_rdy;
 					else
 						dma_cnt <= dma_cnt - 1;
@@ -330,6 +339,7 @@ begin
 				end if;
 			when wait_rdy =>
 				oRWn <= '1';
+				BGACKn <= '1';
 				if iRDY = '0' then
 					dma_st <= idle;
 				end if;

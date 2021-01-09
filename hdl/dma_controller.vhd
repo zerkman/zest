@@ -22,6 +22,7 @@ entity dma_controller is
 	port (
 		clk		: in std_logic;
 		cken	: in std_logic;
+		resetn	: in std_logic;
 
 		FCSn	: in std_logic;
 		iRDY	: in std_logic;
@@ -82,10 +83,24 @@ begin
 
 	process(clk)
 	begin
-		if rising_edge(clk) and cken = '1' then
+		if rising_edge(clk) then
+		if resetn = '0' then
 			sod <= x"ffff";
 			oCD <= x"ff";
 			FDCSn <= '1';
+			CRWn <= '1';
+			oRDY <= '0';
+			dma_w <= '0';
+			bus_st <= idle;
+			dc_st <= idle;
+			buf_bi <= (others => '0');
+			buf_di <= (others => '0');
+			buf_wl <= '0';
+		elsif cken = '1' then
+			sod <= x"ffff";
+			oCD <= x"ff";
+			FDCSn <= '1';
+			HDCSn <= '1';
 			CRWn <= '1';
 			if FCSn = '0' then
 				-- register access
@@ -93,7 +108,8 @@ begin
 					-- write to internal registers
 					if A1 = '0' then
 						if reg_sel = '0' then
-							FDCSn <= '0';
+							HDCSn <= not hdc_fdcn;
+							FDCSn <= hdc_fdcn;
 							CRWn <= '0';
 							oCD <= iD(7 downto 0);
 						else
@@ -107,7 +123,7 @@ begin
 							end if;
 						end if;
 					else
-						if iD(4) = '0' then
+						if iD(3) = '0' and iD(4) = '0' then
 							-- FDC register select: pre-fetch current value
 							CA <= iD(2 downto 1);
 							FDCSn <= '0';
@@ -131,13 +147,15 @@ begin
 					end if;
 				else
 					-- read registers
-					if A1 = '0' then
-						if reg_sel = '0' then
-							FDCSn <= '0';
-							sod <= x"00" & iCD;
+					if hdc_fdcn = '0' then
+						if A1 = '0' then
+							if reg_sel = '0' then
+								FDCSn <= '0';
+								sod <= x"00" & iCD;
+							end if;
+						else
+							sod <= (15 downto 3 => '0', 2 => FDRQ, 1 => seccnt0, 0 => not dma_err);
 						end if;
-					else
-						sod <= (15 downto 3 => '0', 2 => FDRQ, 1 => seccnt0, 0 => not dma_err);
 					end if;
 				end if;
 			end if;
@@ -241,6 +259,7 @@ begin
 					null;
 				end case;
 			end if;
+		end if;
 		end if;
 	end process;
 end architecture;
