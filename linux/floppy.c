@@ -83,7 +83,6 @@ void * thread_floppy(void * arg) {
 	uint32_t n,oldn=0;
 	unsigned int oldaddr=2000;
 	uint8_t buf[6250*2*MAXTRACK];
-	int s;
 	int ntracks,nsides;
 
 	if (open_image(arg,buf,&ntracks,&nsides) == -1) {
@@ -94,16 +93,27 @@ void * thread_floppy(void * arg) {
 	unsigned int pos=0,pos1=0,pos2=0,posw=0;
 	int wrb = 0;
 
-	do {
+	struct pollfd pfd = { .fd=uiofd, .events=POLLIN };
+
+	for(;;) {
 		// unmask interrupt
 		uint32_t unmask = 1;
 		ssize_t rv = write(uiofd, &unmask, sizeof(unmask));
 		if (rv != (ssize_t)sizeof(unmask)) {
 			perror("unmask interrupt");
+			break;
 		}
-		s = read(uiofd,&n,4);
-		if (s==0) {
+		int status = poll(&pfd,1,5);
+		if (thr_end) break;
+		if (status==-1) {
+			perror("UIO interrupts");
+			break;
+		} else if (status==0) {
+			continue;
+		}
+		if (read(uiofd,&n,4)==0) {
 			printf("nok\n");
+			break;
 		}
 
 		// read host values
@@ -156,7 +166,7 @@ void * thread_floppy(void * arg) {
 				wrb = 1;
 			}
 		}
-	} while (s!=0 && thr_end==0);
+	}
 
 	if (wrb) {
 		lseek(fd,0,SEEK_SET);
