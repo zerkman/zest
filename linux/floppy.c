@@ -81,6 +81,7 @@ static int open_image(const char *filename, void *buf, int *ntracks, int *nsides
 
 void * thread_floppy(void * arg) {
 	uint32_t n,oldn=0;
+	unsigned int oldaddr=2000;
 	uint8_t buf[6250*2*MAXTRACK];
 	int s;
 	int ntracks,nsides;
@@ -116,6 +117,12 @@ void * thread_floppy(void * arg) {
 			fflush(stdout);
 		}
 		oldn = n;
+		unsigned int newaddr = oldaddr==1562?0:(oldaddr+1);
+		if (oldaddr<=1562 && addr!=newaddr) {
+			printf("missed addr=%u\n",newaddr);
+			fflush(stdout);
+		}
+		oldaddr = addr;
 
 		if (r) {
 			uint8_t *trkp = buf+(track>>tks)*6250;
