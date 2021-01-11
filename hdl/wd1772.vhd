@@ -80,9 +80,12 @@ architecture behavioral of wd1772 is
 	signal cmd_st	: cmd_t;
 	signal upd_crc	: std_logic;	-- 1 iff CRC is being updated
 	signal wgs		: std_logic;	-- 1 iff writing to disk
+	signal motor_on	: std_logic;
+	signal spin_up	: std_logic;
 begin
 
-	MO <= status(7);
+	MO <= motor_on;
+	status(7) <= motor_on;
 	WG <= wgs;
 	DIRC <= DIR;
 
@@ -90,7 +93,7 @@ process(clk)
 begin
 	if rising_edge(clk) then
 		if resetn = '0' then
-			status <= (others => '0');
+			status(6 downto 0) <= (others => '0');
 			command <= (others => '0');
 			TR <= (others => '0');
 			SR <= (others => '0');
@@ -111,6 +114,8 @@ begin
 			delaycnt <= (others => '0');
 			wgs <= '0';
 			WD <= '0';
+			motor_on <= '0';
+			spin_up <= '0';
 		elsif clken = '1' then
 			ipn_ff <= IPn;
 			-- index pulse detection and counter decrement
@@ -236,15 +241,16 @@ begin
 			-- commands state machine
 			case cmd_st is
 			when idle =>
-				if status(7) = '1' then
+				if motor_on = '1' then
 					-- motor is on: wait 9 floppy rotations before turning motor off
 					ipcnt <= x"9";
 					cmd_st <= idle1;
 				end if;
 			when idle1 =>
-				if status(7) = '1' and ipcnt = x"0" then
+				if motor_on = '1' and ipcnt = x"0" then
 					-- turn motor off after the specified number of rotations
-					status(7) <= '0';
+					motor_on <= '0';
+					spin_up <= '0';
 				end if;
 			when c1_init =>
 				status(0) <= '1';	-- busy (S0)
@@ -252,19 +258,23 @@ begin
 				status(2) <= '0';	-- Track 0 (S2)
 				status(3) <= '0';	-- CRC error (S3)
 				status(4) <= '0';	-- seek error (S4)
+				status(5) <= spin_up;
 				DRQ <= '0';
 				INTRQ <= '0';
 				ipcnt <= x"0";
-				if command(3) = '0' and status(7) = '0' then
+				if command(3) = '0' and motor_on = '0' then
 					-- motor on (S7)
-					status(7) <= '1';
+					motor_on <= '1';
 					ipcnt <= x"6";
 				end if;
 				cmd_st <= c1_wait_ip;
 			when c1_wait_ip =>
 				if ipcnt = x"0" then
-					-- set spin-up (S5)
-					status(5) <= not command(3);
+					if command(3) = '0' then
+						-- set spin-up (S5)
+						spin_up <= '1';
+						status(5) <= '1';
+					end if;
 					if command(6 downto 5) = "00" then
 						-- seek or restore
 						if command(4) = '0' then
@@ -413,19 +423,22 @@ begin
 				status(1) <= '0';	-- DRQ
 				status(2) <= '0';	-- lost data
 				status(4) <= '0';	-- record not found
-				status(5) <= '0';	-- record type/spin-up
+				status(5) <= '0';	-- record type
 				status(6) <= '0';	-- write protect
 				DRQ <= '0';
 				INTRQ <= '0';
 				ipcnt <= x"0";
-				if command(3) = '0' and status(7) = '0' then
+				if command(3) = '0' and motor_on = '0' then
 					-- enable spin-up sequence
-					status(7) <= '1';	-- motor on
+					motor_on <= '1';	-- motor on
 					ipcnt <= x"6";
 				end if;
 				cmd_st <= c2_wait_ip;
 			when c2_wait_ip =>
 				if ipcnt = x"0" then
+					if command(3) = '0' then
+						spin_up <= '1';
+					end if;
 					if command(2) = '1' then
 						-- E, add 15 ms delay
 						delaycnt <= to_unsigned(120000,delaycnt'length);
@@ -699,16 +712,19 @@ begin
 				status(4) <= '0';	-- seek error
 				status(5) <= '0';	-- record type
 				status(6) <= '0';	-- write protect
-				status(7) <= '1';	-- motor on
+				motor_on <= '1';	-- motor on
 				DRQ <= '0';
 				ipcnt <= x"0";
-				if command(3) = '0' and status(7) = '0' then
+				if command(3) = '0' and motor_on = '0' then
 					-- enable spin-up sequence
 					ipcnt <= x"6";
 				end if;
 				cmd_st <= c3_wl1;
 			when c3_wl1 =>
 				if ipcnt = x"0" then
+					if command(3) = '0' then
+						spin_up <= '1';
+					end if;
 					if command(2) = '1' then
 						-- add 15 ms delay
 						delaycnt <= to_unsigned(120000,delaycnt'length);
@@ -878,7 +894,7 @@ begin
 					status(2) <= TR0n;	-- track 0
 					status(3) <= '0';	-- CRC error
 					status(4) <= '0';	-- record not found
-					status(5) <= '0';	-- spin up
+					status(5) <= spin_up;	-- spin up
 					status(6) <= '0';	-- write protect
 				end if;
 				DRQ <= '0';
