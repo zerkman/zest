@@ -114,19 +114,21 @@ end process;
 -- load next shift registers
 process(clk)
 begin
-	if rising_edge(clk) and enPhi2 = '1' then
-		sloadn <= '1';
-		if DE = '1' and cnt32(3 downto 2) = "10" then
-			sloadn <= '0';
-		elsif cnt32(3 downto 2) = "11" then
-			if sloadn = '0' then
-				nsh3 <= iD;
-			else
-				nsh3 <= x"0000";
+	if rising_edge(clk) then
+		if enPhi2 = '1' then
+			sloadn <= '1';
+			if DE = '1' and cnt32(3 downto 2) = "10" then
+				sloadn <= '0';
+			elsif cnt32(3 downto 2) = "11" then
+				if sloadn = '0' then
+					nsh3 <= iD;
+				else
+					nsh3 <= x"0000";
+				end if;
+				nsh2 <= nsh3;
+				nsh1 <= nsh2;
+				nsh0 <= nsh1;
 			end if;
-			nsh2 <= nsh3;
-			nsh1 <= nsh2;
-			nsh0 <= nsh1;
 		end if;
 	end if;
 end process;
@@ -149,13 +151,15 @@ end process;
 -- pixel counter
 process(clk)
 begin
-	if rising_edge(clk) and en32ck = '1' then
-		sde <= DE;
-		if DE = '1' and sde = '0' then
-			-- sync counter to MMU and 8 MHz clock
-			cnt32 <= "111110";
-		else
-			cnt32 <= cnt32 + 1;
+	if rising_edge(clk) then
+		if en32ck = '1' then
+			sde <= DE;
+			if DE = '1' and sde = '0' then
+				-- sync counter to MMU and 8 MHz clock
+				cnt32 <= "111110";
+			else
+				cnt32 <= cnt32 + 1;
+			end if;
 		end if;
 	end if;
 end process;
@@ -163,35 +167,37 @@ end process;
 -- output RGB pixels
 process(clk)
 begin
-	if rising_edge(clk) and en32ck = '1' then
-		if res(1) = '1' then
-			rgb <= (8 downto 0 => pixel(0) xor monopal);
-		else
-			rgb <= palette(to_integer(unsigned(pixel)));
-		end if;
-		if cnt32 = "111111" then
-			sh0 <= nsh0;
-			sh1 <= nsh1;
-			sh2 <= nsh2;
-			sh3 <= nsh3;
-		elsif res = "00" and cnt32(1 downto 0) = "11" then
-			-- low resolution
-			sh0 <= sh0(14 downto 0) & '0';
-			sh1 <= sh1(14 downto 0) & '0';
-			sh2 <= sh2(14 downto 0) & '0';
-			sh3 <= sh3(14 downto 0) & '0';
-		elsif res = "01" and cnt32(0) = '1' then
-			-- medium resolution
-			sh0 <= sh0(14 downto 0) & sh2(15);
-			sh1 <= sh1(14 downto 0) & sh3(15);
-			sh2 <= sh2(14 downto 0) & '0';
-			sh3 <= sh3(14 downto 0) & '0';
-		elsif res = "10" then
-			-- high resolution
-			sh0 <= sh0(14 downto 0) & sh1(15);
-			sh1 <= sh1(14 downto 0) & sh2(15);
-			sh2 <= sh2(14 downto 0) & sh3(15);
-			sh3 <= sh3(14 downto 0) & '0';
+	if rising_edge(clk) then
+		if en32ck = '1' then
+			if res(1) = '1' then
+				rgb <= (8 downto 0 => pixel(0) xor monopal);
+			else
+				rgb <= palette(to_integer(unsigned(pixel)));
+			end if;
+			if cnt32 = "111111" then
+				sh0 <= nsh0;
+				sh1 <= nsh1;
+				sh2 <= nsh2;
+				sh3 <= nsh3;
+			elsif res = "00" and cnt32(1 downto 0) = "11" then
+				-- low resolution
+				sh0 <= sh0(14 downto 0) & '0';
+				sh1 <= sh1(14 downto 0) & '0';
+				sh2 <= sh2(14 downto 0) & '0';
+				sh3 <= sh3(14 downto 0) & '0';
+			elsif res = "01" and cnt32(0) = '1' then
+				-- medium resolution
+				sh0 <= sh0(14 downto 0) & sh2(15);
+				sh1 <= sh1(14 downto 0) & sh3(15);
+				sh2 <= sh2(14 downto 0) & '0';
+				sh3 <= sh3(14 downto 0) & '0';
+			elsif res = "10" then
+				-- high resolution
+				sh0 <= sh0(14 downto 0) & sh1(15);
+				sh1 <= sh1(14 downto 0) & sh2(15);
+				sh2 <= sh2(14 downto 0) & sh3(15);
+				sh3 <= sh3(14 downto 0) & '0';
+			end if;
 		end if;
 	end if;
 end process;

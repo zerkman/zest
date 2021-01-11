@@ -116,7 +116,6 @@ architecture behavioral of mc68901 is
 	signal tdmc		: unsigned(7 downto 0);
 
 	signal sirqn	: std_logic;
-	signal iackn1	: std_logic;
 	signal intv		: std_logic_vector(15 downto 0);
 	signal ipl		: std_logic_vector(3 downto 0);
 	signal isr_ipl	: std_logic_vector(3 downto 0);
@@ -138,6 +137,9 @@ architecture behavioral of mc68901 is
 	end priority;
 
 begin
+	so <= '1';
+	rrn <= '1';
+	trn <= '1';
 	addr <= "00" & rs & '1';
 	ieon <= '1';
 	io <= gpip or not ddr;
@@ -203,8 +205,6 @@ begin
 				tdto <= '0';
 				tdpc <= x"01";
 				tdmc <= x"01";
-
-				iackn1 <= '1';
 			else
 				if xtlcken = '1' then
 					-- Timer A operation
@@ -355,7 +355,6 @@ begin
 					if ddr(1) = '0' and ii(1) /= ii1(1) and ii(1) = aer(1) and ierb(1) = '1' then iprb(1) <= '1'; end if;
 					if ddr(0) = '0' and ii(0) /= ii1(0) and ii(0) = aer(0) and ierb(0) = '1' then iprb(0) <= '1'; end if;
 
-					iackn1 <= iackn;
 					if sirqn = '0' and iackn = '0' and dsn = '0' then
 						-- begin interrupt acknowledge cycle
 						dtackn_irq <= '0';

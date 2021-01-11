@@ -79,7 +79,7 @@ begin
 	mode_bus <= '1' when (cnt = 1 or cnt = 2) and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
 	DTACKn <= sdtackn;
 
-	process(DCYCn,delay_bus,delay_dcycn,screen_adr_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn)
+	process(DCYCn,delay_bus,delay_dcycn,screen_adr_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
 	begin
 		RDATn <= '1';
 		ram_A <= (others => '0');

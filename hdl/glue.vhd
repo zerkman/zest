@@ -220,7 +220,7 @@ begin
 		end if;
 	end if;
 end process;
-process(FC,iA,iASn,iUDSn,iLDSn,iRWn)
+process(FC,iA,iASn,iUDSn,iLDSn,iRWn,rwn_ff)
 begin
 	RAMn <= '1';
 	DEVn <= '1';
