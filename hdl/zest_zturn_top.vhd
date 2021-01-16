@@ -409,7 +409,7 @@ begin
 	fdd:floppy_drive port map (
 		clk => clk,
 		clken => fdd_clken,
-		resetn => resetn,
+		resetn => soft_resetn,
 
 		read_datan => fdd_read_datan,
 		side0 => fdd_side0,
