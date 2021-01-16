@@ -119,6 +119,7 @@
 -- 4.4     John Kent     2010-08-27   Combined with ACIA_RX & ACIA_TX
 --                                    Renamed to acia6850
 --        François Galea 2020-09-05   Removed dependency to ieee.std_logic_unsigned
+--        François Galea 2021-01-16   Changed active clock edge
 
 library ieee;
   use ieee.std_logic_1164.all;
@@ -322,7 +323,7 @@ begin
     -- ACIA reset Synchronous
     -- Includes software reset
     --
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       ac_rst <= (CtrlReg(1) and CtrlReg(0)) or rst;
     end if;
     -- Receiver reset
@@ -338,7 +339,7 @@ begin
 
   acia_read_write : process(clk, ac_rst)
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if rst = '1' then
         CtrlReg(1 downto 0) <= "11";
         CtrlReg(7 downto 2) <= (others => '0');
@@ -376,7 +377,7 @@ begin
 
   acia_status : process( clk )
   begin
-    if falling_edge( clk ) then
+    if rising_edge( clk ) then
       StatReg(0) <= RxRdy;                 -- Receive Data Ready
       StatReg(1) <= TxRdy and (not CTS_n); -- Transmit Buffer Empty
       StatReg(2) <= DCDInt;                -- Data Carrier Detect
@@ -443,7 +444,7 @@ begin
 
   acia_dcd_edge : process( clk, ac_rst )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if ac_rst = '1' then
         DCDDel  <= '0';
         DCDEdge <= '0';
@@ -463,7 +464,7 @@ begin
 
   acia_dcd_int : process( clk, ac_rst )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if ac_rst = '1' then
         DCDInt   <= '0';
         DCDState <= DCD_State_Idle;
@@ -501,7 +502,7 @@ begin
 
   acia_rx_clock_edge : process( clk, rx_rst )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if rx_rst = '1' then
         RxClkDel  <= '0';
         RxClkEdge <= '0';
@@ -519,7 +520,7 @@ begin
 
   acia_rx_data_edge : process( clk, rx_rst )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if rx_rst = '1' then
         RxDatDel0 <= '0';
         RxDatDel1 <= '0';
@@ -542,7 +543,7 @@ begin
 
   acia_rx_start_stop : process( clk, rx_rst )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if rx_rst = '1' then
         RxEnable <= '0';
         RxStart  <= '0';
@@ -568,7 +569,7 @@ begin
 
   acia_rx_clock_divide : process( clk, rx_rst )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if rx_rst = '1' then
         RxClkCnt  <= (others => '0');
       elsif RxDatEdge = '1' then
@@ -619,7 +620,7 @@ begin
 
   acia_rx_receive : process( clk, rst )
   begin
-    if falling_edge( clk ) then
+    if rising_edge( clk ) then
       if rx_rst = '1' then
         FErr       <= '0';
         OErr       <= '0';
@@ -704,7 +705,7 @@ begin
 
   acia_rx_read : process( clk, rst, RxRdy )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if rx_rst = '1' then
         RxRdy <= '0';
         RxReq <= '0';
@@ -729,7 +730,7 @@ begin
 
   acia_tx_clock_edge : process( Clk, tx_rst )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if tx_rst = '1' then
         TxClkDel  <= '0';
         TxClkEdge <= '0';
@@ -747,7 +748,7 @@ begin
 
   acia_tx_clock_divide : process( clk, tx_rst )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if tx_rst = '1' then
         TxClkCnt <= (others=>'0');
       elsif TxClkEdge = '1' then
@@ -794,7 +795,7 @@ begin
 
   acia_tx_transmit : process( clk, tx_rst)
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if tx_rst = '1' then
         TxDat      <= '1';
         TxShiftReg <= (others=>'0');
@@ -875,7 +876,7 @@ begin
 
   acia_tx_write : process( clk, tx_rst, TxWr, TxReq, TxAck )
   begin
-    if falling_edge(clk) then
+    if rising_edge(clk) then
       if tx_rst = '1' then
         TxRdy <= '0';
         TxReq <= '0';
