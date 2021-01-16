@@ -351,6 +351,20 @@ begin
 
 		wait until INTRQ = '1';
 
+		bus_w('1',x"0086");		-- FDC data register
+		bus_w('0',x"0000");		-- go to track 0
+		bus_w('1',x"0180");		-- reset DMA by toggling write bit
+		bus_w('1',x"0080");		-- FDC command register, DMA on
+		bus_w('0',x"0013");		-- Seek
+
+		wait until INTRQ = '1';
+
+		bus_w('1',x"0180");		-- reset DMA by toggling write bit
+		bus_w('1',x"0080");		-- FDC command register, DMA on
+		bus_w('0',x"000b");		-- Restore
+
+		wait until INTRQ = '1';
+
 		bus_w('1',x"0180");		-- reset DMA by toggling write bit
 		bus_w('1',x"0190");		-- DMA sector count register
 		bus_w('0',x"0002");		-- write 2 sectors
