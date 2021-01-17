@@ -136,7 +136,7 @@ architecture structure of zest_top is
 			fdd_drv_select : out std_logic;
 			fdd_motor_on : out std_logic;
 			fdd_direction : out std_logic;
-			fdd_stepn : out std_logic;
+			fdd_step : out std_logic;
 			fdd_write_data : out std_logic;
 			fdd_write_gate : out std_logic;
 			fdd_track0n : in std_logic;
@@ -165,7 +165,7 @@ architecture structure of zest_top is
 			drv_select	: in std_logic;
 			motor_on	: in std_logic;
 			direction	: in std_logic;
-			stepn		: in std_logic;
+			step		: in std_logic;
 			write_data	: in std_logic;
 			write_gate	: in std_logic;
 			track0n		: out std_logic;
@@ -257,7 +257,7 @@ architecture structure of zest_top is
 	signal fdd_drv_select	: std_logic;
 	signal fdd_motor_on		: std_logic;
 	signal fdd_direction	: std_logic;
-	signal fdd_stepn		: std_logic;
+	signal fdd_step			: std_logic;
 	signal fdd_write_data	: std_logic;
 	signal fdd_write_gate	: std_logic;
 	signal fdd_track0n		: std_logic;
@@ -391,7 +391,7 @@ begin
 		fdd_drv_select => fdd_drv_select,
 		fdd_motor_on => fdd_motor_on,
 		fdd_direction => fdd_direction,
-		fdd_stepn => fdd_stepn,
+		fdd_step => fdd_step,
 		fdd_write_data => fdd_write_data,
 		fdd_write_gate => fdd_write_gate,
 		fdd_track0n => fdd_track0n,
@@ -417,7 +417,7 @@ begin
 		drv_select => fdd_drv_select,
 		motor_on => fdd_motor_on,
 		direction => fdd_direction,
-		stepn => fdd_stepn,
+		step => fdd_step,
 		write_data => fdd_write_data,
 		write_gate => fdd_write_gate,
 		track0n => fdd_track0n,

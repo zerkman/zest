@@ -45,7 +45,7 @@ entity atarist_main is
 		fdd_drv_select : out std_logic;
 		fdd_motor_on : out std_logic;
 		fdd_direction : out std_logic;
-		fdd_stepn : out std_logic;
+		fdd_step : out std_logic;
 		fdd_write_data : out std_logic;
 		fdd_write_gate : out std_logic;
 		fdd_track0n : in std_logic;
@@ -814,7 +814,7 @@ begin
 		MO => fdd_motor_on,
 		RDn => fdd_read_datan,
 		DIRC => fdd_direction,
-		STEP => fdd_stepn
+		STEP => fdd_step
 	);
 
 	fdd_drv_select <= '1';

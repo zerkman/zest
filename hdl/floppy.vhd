@@ -30,7 +30,7 @@ entity floppy_drive is
 		drv_select	: in std_logic;
 		motor_on	: in std_logic;
 		direction	: in std_logic;
-		stepn		: in std_logic;
+		step		: in std_logic;
 		write_data	: in std_logic;
 		write_gate	: in std_logic;
 		track0n		: out std_logic;
@@ -52,7 +52,7 @@ architecture behavioral of floppy_drive is
 	signal data_sr	: std_logic_vector(31 downto 0);
 	signal nextdata	: std_logic_vector(31 downto 0);
 	signal wrq		: std_logic;
-	signal stepn_ff	: std_logic;
+	signal step_ff	: std_logic;
 begin
 
 	read_datan <= not data_sr(31);
@@ -78,7 +78,7 @@ begin
 			track <= (others => '0');
 			data_sr <= (others => '0');
 			wrq <= '0';
-			stepn_ff <= '1';
+			step_ff <= '1';
 			host_intr <= '0';
 			host_din <= (others => '0');
 			host_r <= '0';
@@ -97,8 +97,8 @@ begin
 					ccnt <= (others => '0');
 					indexn <= '0';
 				end if;
-				stepn_ff <= stepn;
-				if stepn = '0' and stepn_ff = '1' then
+				step_ff <= step;
+				if step = '1' and step_ff = '0' then
 					if direction = '1' and track < 83 then
 						track <= track + 1;
 						track0n <= '1';
@@ -135,7 +135,7 @@ begin
 			else
 				host_r <= '0';
 				host_w <= '0';
-				stepn_ff <= '1';
+				step_ff <= '0';
 			end if;
 		end if;
 	end if;
