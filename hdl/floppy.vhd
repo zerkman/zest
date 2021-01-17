@@ -87,16 +87,7 @@ begin
 			track0n <= '0';
 			indexn <= '0';
 		elsif clken = '1' then
-			if drv_select = '1' and motor_on = '1' then
-				if ccnt < 1599999 then
-					ccnt <= ccnt + 1;
-					if ccnt = 176-1 then	-- minimun 160 = 20 us
-						indexn <= '1';
-					end if;
-				else
-					ccnt <= (others => '0');
-					indexn <= '0';
-				end if;
+			if drv_select = '1' then
 				step_ff <= step;
 				if step = '1' and step_ff = '0' then
 					if direction = '1' and track < 83 then
@@ -110,26 +101,37 @@ begin
 						end if;
 					end if;
 				end if;
-				if ccnt(4 downto 0) = "11111" then
-					-- new data bit
-					host_intr <= '0';
-					if write_gate = '1' then
-						wrq <= '1';
-					end if;
-					data_sr <= nextdata;
-					if ccnt(9 downto 5) = "11111" or ccnt = 1599999 then
-						-- shift register is full (write) or empty (read)
-						if ccnt = 1599999 then
-							host_addr <= (others => '0');
-						else
-							host_addr <= std_logic_vector(ccnt(20 downto 10)+1);
+				if motor_on = '1' then
+					if ccnt < 1599999 then
+						ccnt <= ccnt + 1;
+						if ccnt = 176-1 then	-- minimun 160 = 20 us
+							indexn <= '1';
 						end if;
-						host_w <= wrq;
-						host_r <= '1';
-						host_din <= nextdata;
-						host_intr <= '1';
-						data_sr <= host_dout;
-						wrq <= '0';
+					else
+						ccnt <= (others => '0');
+						indexn <= '0';
+					end if;
+					if ccnt(4 downto 0) = "11111" then
+						-- new data bit
+						host_intr <= '0';
+						if write_gate = '1' then
+							wrq <= '1';
+						end if;
+						data_sr <= nextdata;
+						if ccnt(9 downto 5) = "11111" or ccnt = 1599999 then
+							-- shift register is full (write) or empty (read)
+							if ccnt = 1599999 then
+								host_addr <= (others => '0');
+							else
+								host_addr <= std_logic_vector(ccnt(20 downto 10)+1);
+							end if;
+							host_w <= wrq;
+							host_r <= '1';
+							host_din <= nextdata;
+							host_intr <= '1';
+							data_sr <= host_dout;
+							wrq <= '0';
+						end if;
 					end if;
 				end if;
 			else
