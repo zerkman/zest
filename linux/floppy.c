@@ -90,7 +90,7 @@ void * thread_floppy(void * arg) {
 		return NULL;
 	}
 	unsigned int tks = nsides==1;
-	unsigned int pos=0,pos1=0,pos2=0,posw=0;
+	unsigned int pos=0,pos1=0,posw=0;
 	int wrb = 0;
 
 	struct pollfd pfd = { .fd=uiofd, .events=POLLIN };
@@ -136,8 +136,7 @@ void * thread_floppy(void * arg) {
 
 		if (r) {
 			uint8_t *trkp = buf+(track>>tks)*6250;
-			posw = pos2;
-			pos2 = pos1;
+			posw = pos1;
 			pos1 = pos;
 			pos = addr*4+4;
 			if (pos>=6250) {
