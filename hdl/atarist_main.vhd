@@ -369,6 +369,7 @@ architecture structure of atarist_main is
 	signal clken_video	: std_logic;
 	signal clken_bus	: std_logic;
 	signal clken_bus2	: std_logic;
+	signal clken_dma	: std_logic;
 
 	signal bus_A		: std_logic_vector(23 downto 1);
 	signal bus_ASn		: std_logic;
@@ -567,9 +568,10 @@ begin
 
 	clkgen:clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2rck,en2fck,en2_4576ck,ck05,clken_err);
 	enNC1 <= '1';
-	enNC2 <= clken_bus and clken_video;
+	enNC2 <= clken_bus and clken_video and clken_dma;
 	clken_bus <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or bus_DTACKn or clken_bus2;
 	clken_video <= loadn or not ram_R or ram_R_DONE;
+	clken_dma <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or mmu_DMAn;
 	process(cpu_A)
 	begin
 		if cpu_A(23 downto 15) = "111111111" then
