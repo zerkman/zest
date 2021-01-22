@@ -62,7 +62,7 @@ architecture behavioral of dma_controller is
 	signal dma_rst	: std_logic;
 	signal dma_d	: std_logic_vector(15 downto 0);
 	signal sod		: std_logic_vector(15 downto 0);
-	type bus_st_t is ( idle, start, running, running1, done );
+	type bus_st_t is ( idle, start, running, running_w, running_r, done );
 	signal bus_st	: bus_st_t;
 	type dc_st_t is ( idle, warmup, running, run_read, run_read2, run_inc, done );
 	signal dc_st	: dc_st_t;
@@ -175,19 +175,27 @@ begin
 					if iRDY = '0' then
 						if dma_w = '1' then
 							-- read from memory, write to hdc/fdc
-							buf(to_integer(buf_wl & buf_bi)) <= iD;
+							bus_st <= running_w;
 						else
 							-- read from hdc/fdc, write to memory
 							-- handled in data bus output process
-						end if;
-						buf_bi <= buf_bi + 1;
-						bus_st <= running1;
-						if buf_bi + 1 = 0 then
-							oRDY <= '0';
-							bus_st <= done;
+							bus_st <= running_r;
+							buf_bi <= buf_bi + 1;
+							if buf_bi + 1 = 0 then
+								oRDY <= '0';
+								bus_st <= done;
+							end if;
 						end if;
 					end if;
-				when running1 =>
+				when running_w =>
+					buf(to_integer(buf_wl & buf_bi)) <= iD;
+					bus_st <= running_r;
+					buf_bi <= buf_bi + 1;
+					if buf_bi + 1 = 0 then
+						oRDY <= '0';
+						bus_st <= done;
+					end if;
+				when running_r =>
 					if iRDY = '1' then
 						if dma_w = '0' then
 							dma_d <= buf(to_integer(not buf_wl & buf_bi));
