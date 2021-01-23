@@ -39,10 +39,10 @@ extern volatile int thr_end;
 
 int fd;
 
-static void * findam(void *p, unsigned int size) {
+static const uint8_t * findam(const uint8_t *p, const uint8_t *buf_end) {
 	static const uint8_t head[] = {0,0,0,0,0,0,0,0,0,0,0,0,0xa1,0xa1,0xa1};
-	size -= sizeof(head);
-	while (size-->=0) {
+	buf_end -= sizeof(head);
+	while (p<buf_end) {
 		if (memcmp(p,head,sizeof(head))==0) {
 			return p;
 		}
@@ -60,19 +60,46 @@ static int open_image(const char *filename, void *buf, int *ntracks, int *nsides
 	read(fd,buf,6250*2*MAXTRACK);
 
 	// find first sector
-	uint8_t *p = findam(buf,6250);
-	if (p==NULL || p[15]!=0xfe || p[16]!=0 || p[17]!=0 || p[18]!=1)
-		return -1;
+	const uint8_t *p = buf;
+	const uint8_t *p_end = buf+6250;
+	int ok = 0;
+	while (!ok) {
+		p = findam(p,p_end);
+		if (p==NULL || p[15]!=0xfe || p[16]!=0 || p[17]!=0) {
+			printf("wrong ID address mark\n");
+			ok = 2;
+			break;
+		}
+		else {
+			ok = p[18]==1?1:0;
+		}
 
-	p += 20;
-	p = findam(p,6250-(p-(uint8_t*)buf));
-	if (p==NULL || p[15]!=0xfb)
-		return -1;
+		p += 20;
+		p = findam(p,p_end);
+		if (p==NULL || p[15]!=0xfb) {
+			printf("wrong data address mark\n");
+			ok = 2;
+			break;
+		}
+		if (!ok) p += 514;
+	}
 
-	p += 16;
-	int sectors = p[0x19]<<8|p[0x18];
-	*nsides = p[0x1b]<<8|p[0x1a];
-	*ntracks = (p[0x14]<<8|p[0x13])/(sectors**nsides);
+	int sectors = 0;
+	if (ok==1) {
+		p += 16;
+		sectors = p[0x19]<<8|p[0x18];
+		*nsides = p[0x1b]<<8|p[0x1a];
+		*ntracks = (p[0x14]<<8|p[0x13])/(sectors**nsides);
+	} else {
+		int pos = lseek(fd,0,SEEK_CUR);
+		if (pos>6250*100) {
+			*nsides = 2;
+			*ntracks = pos/(6250*2);
+		} else {
+			*nsides = 1;
+			*ntracks = pos/6250;
+		}
+	}
 
 	printf("Successfully opened image file '%s', %d tracks, %d sides, %d sectors\n",filename,*ntracks,*nsides,sectors);
 
