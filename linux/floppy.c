@@ -37,8 +37,6 @@ extern volatile int thr_end;
 
 #define MAXTRACK 84
 
-int fd;
-
 static const uint8_t * findam(const uint8_t *p, const uint8_t *buf_end) {
 	static const uint8_t head[] = {0,0,0,0,0,0,0,0,0,0,0,0,0xa1,0xa1,0xa1};
 	buf_end -= sizeof(head);
@@ -52,7 +50,7 @@ static const uint8_t * findam(const uint8_t *p, const uint8_t *buf_end) {
 }
 
 static int open_image(const char *filename, void *buf, int *ntracks, int *nsides) {
-	fd = open(filename,O_RDWR);
+	int fd = open(filename,O_RDWR);
 	if (fd == -1) return -1;
 
 	*ntracks = 0;
@@ -103,7 +101,7 @@ static int open_image(const char *filename, void *buf, int *ntracks, int *nsides
 
 	printf("Successfully opened image file '%s', %d tracks, %d sides, %d sectors\n",filename,*ntracks,*nsides,sectors);
 
-	return 0;
+	return fd;
 }
 
 void * thread_floppy(void * arg) {
@@ -112,7 +110,8 @@ void * thread_floppy(void * arg) {
 	uint8_t buf[6250*2*MAXTRACK];
 	int ntracks,nsides;
 
-	if (open_image(arg,buf,&ntracks,&nsides) == -1) {
+	int fd = open_image(arg,buf,&ntracks,&nsides);
+	if (fd==-1) {
 		printf("Error opening floppy image file\n");
 		return NULL;
 	}
