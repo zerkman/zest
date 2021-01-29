@@ -159,15 +159,11 @@ begin
 						if amd_cnt > 0 then
 							amd_cnt <= amd_cnt - 1;
 						end if;
-					elsif DSR = x"00" then
-						if amd_cnt = 0 then
-							amd_cnt <= to_unsigned(11,amd_cnt'length);
-							amd_st <= am2;
-						else
-							amd_st <= init;
-						end if;
+					elsif DSR = x"00" and amd_cnt = 0 then
+						amd_cnt <= to_unsigned(11,amd_cnt'length);
+						amd_st <= am2;
 					else
-						amd_st <= init;
+						amd_cnt <= to_unsigned(22,amd_cnt'length);
 					end if;
 				when am2 =>
 					if DSR = x"00" and amd_cnt > 0 then
