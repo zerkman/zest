@@ -50,7 +50,7 @@ architecture dut of tb_dma_fdc is
 			drv_select	: in std_logic;
 			motor_on	: in std_logic;
 			direction	: in std_logic;
-			stepn		: in std_logic;
+			step		: in std_logic;
 			write_data	: in std_logic;
 			write_gate	: in std_logic;
 			track0n		: out std_logic;
@@ -150,7 +150,7 @@ architecture dut of tb_dma_fdc is
 	signal drv_select	: std_logic;
 	signal motor_on		: std_logic;
 	signal direction	: std_logic;
-	signal stepn		: std_logic;
+	signal step			: std_logic;
 	signal write_data	: std_logic;
 	signal write_gate	: std_logic;
 	signal track0n		: std_logic;
@@ -190,7 +190,7 @@ begin
 		drv_select => drv_select,
 		motor_on => motor_on,
 		direction => direction,
-		stepn => stepn,
+		step => step,
 		write_data => write_data,
 		write_gate => write_gate,
 		track0n => track0n,
@@ -227,7 +227,7 @@ begin
 		MO => motor_on,
 		RDn => read_datan,
 		DIRC => direction,
-		STEP => stepn
+		STEP => step
 	);
 	DDENn <= '0';
 
