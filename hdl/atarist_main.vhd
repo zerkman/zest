@@ -768,7 +768,7 @@ begin
 		RTS_n => acia_midi_rts_n
 	);
 	acia_midi_cs <= cs6850 and bus_A(2);
-	acia_midi_rxd <= '0';
+	acia_midi_rxd <= '1';
 	acia_midi_dcd_n <= '0';
 	acia_midi_cts_n <= '0';
 	acia_irq <= acia_ikbd_irq nor acia_midi_irq;
