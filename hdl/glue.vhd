@@ -397,9 +397,9 @@ process(irq_hbl,irq_vbl,irq_mfp)
 begin
 	if irq_mfp = '1' then
 		IPLn <= "00";
-	elsif irq_vbl = '1' then
+	elsif irq_vbl = '1' or (svsync = '0' and svsync2 = '1') then
 		IPLn <= "01";
-	elsif irq_hbl = '1' then
+	elsif irq_hbl = '1' or (shsync = '0' and shsync2 = '1') then
 		IPLn <= "10";
 	else
 		IPLn <= "11";
@@ -407,7 +407,6 @@ begin
 end process;
 
 -- interrupt acknowledge
--- process(FC,iA,iASn,irq_mfp,irq_vbl,irq_hbl)
 process(FC,iA,iASn)
 begin
 	vpa_irqn <= '1';
