@@ -86,6 +86,7 @@ architecture behavioral of glue is
 	type sync_array_t is array (0 to 2) of sync_t;
 	constant sync_array : sync_array_t := (sync_60,sync_50,sync_hi);
 	signal sync		: sync_t;
+	constant vsync_delay	: integer := 44;
 
 	-- resolution
 	signal mono		: std_logic := '0';
@@ -517,13 +518,9 @@ begin
 			if (hcnt = 213 and mono = '1') or hcnt = 501 then
 				-- update V signals
 				if (vcnt = 262 and mono = '0' and hz50 = '0') or (vcnt = 312 and mono = '0') or vcnt = 500 then
-					svsync <= '0';
 					vcnt <= (others => '0');
 				else
 					vcnt <= vcnt+1;
-					if (vcnt = 0 and mono = '1') or (vcnt = 2 and mono = '0') then
-						svsync <= '1';
-					end if;
 					if vcnt+1 = sync.vblank_on then
 						vblank <= '1';
 					end if;
@@ -540,6 +537,13 @@ begin
 			end if;
 			if (hcnt = 223 and mono = '1') or (hcnt = 507 and line_pal = '0') or hcnt = 511 then
 				hcnt <= (others => '0');
+			end if;
+			if hcnt+1 = vsync_delay then
+				if vcnt = 0 then
+					svsync <= '0';
+				elsif (vcnt = 1 and mono = '1') or (vcnt = 3 and mono = '0') then
+					svsync <= '1';
+				end if;
 			end if;
 		end if;
 	end if;
