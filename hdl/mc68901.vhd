@@ -414,6 +414,8 @@ begin
 								end if;
 								if id(3 downto 0) = "0000" then
 									tapc <= x"01";
+								elsif tacr = "0000" and id(3 downto 0) /= "1000" then
+									tapc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tapc'length);
 								end if;
 							when x"1b" =>
 								tbcr <= id(3 downto 0);
@@ -423,8 +425,17 @@ begin
 								end if;
 								if id(3 downto 0) = "0000" then
 									tbpc <= x"01";
+								elsif tbcr = "0000" and id(3 downto 0) /= "1000" then
+									tbpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tbpc'length);
 								end if;
-							when x"1d" => tcdcr <= id(6 downto 4) & id(2 downto 0);
+							when x"1d" =>
+								tcdcr <= id(6 downto 4) & id(2 downto 0);
+								if tcdcr(5 downto 3) = "000" and id(6 downto 4) /= "000" then
+									tcpc <= to_unsigned(prescale(to_integer(unsigned(id(6 downto 4)))),tcpc'length);
+								end if;
+								if tcdcr(2 downto 0) = "000" and id(2 downto 0) /= "000" then
+									tdpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tdpc'length);
+								end if;
 							when x"1f" =>
 								tadr <= id;
 								if tacr = "0000" then
