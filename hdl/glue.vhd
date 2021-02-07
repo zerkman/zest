@@ -104,7 +104,7 @@ architecture behavioral of glue is
 
 	signal irq_vbl	: std_logic;
 	signal irq_hbl	: std_logic;
-	signal irq_mfp	: std_logic;
+	signal irq_mfp	: std_logic_vector(3 downto 0);
 	signal svsync	: std_logic;
 	signal shsync	: std_logic;
 	signal svsync2	: std_logic;
@@ -131,7 +131,6 @@ BLANKn <= vblank nor hblank;
 DE <= vde and hde;
 VSYNC <= svsync;
 HSYNC <= shsync;
-irq_mfp <= not MFPINTn;
 VPAn <= vpa_irqn and vpa_acia;
 wdtackn <= '0' when iA(15 downto 2)&"00" = x"8604" or iA(15 downto 8) = x"88" else '1';
 oDTACKn <= sdtackn;
@@ -392,10 +391,25 @@ begin
 	end if;
 end process;
 
+-- shift register for 4-cycle MFP interrupt delay
+process(clk)
+begin
+	if rising_edge(clk) then
+		if resetn = '0' then
+			irq_mfp <= (others => '0');
+		elsif enPhi1 = '1' then
+			irq_mfp(irq_mfp'high) <= not MFPINTn;
+			for i in irq_mfp'low to irq_mfp'high-1 loop
+				irq_mfp(i) <= irq_mfp(i+1);
+			end loop;
+		end if;
+	end if;
+end process;
+
 -- compute IPL
 process(irq_hbl,irq_vbl,irq_mfp)
 begin
-	if irq_mfp = '1' then
+	if irq_mfp(0) = '1' then
 		IPLn <= "00";
 	elsif irq_vbl = '1' or (svsync = '0' and svsync2 = '1') then
 		IPLn <= "01";
