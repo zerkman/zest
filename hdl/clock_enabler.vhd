@@ -54,7 +54,7 @@ architecture behavioral of clock_enabler is
 	constant incr	: integer := 2*CLK_FREQ_DIV*CPU_FREQ_NUM;
 
 	signal cnt			: unsigned(CPT_BITS-1 downto 0);
-	signal cnt24		: unsigned(9 downto 0);
+	signal cnt24		: unsigned(15 downto 0);
 	signal cnt05		: unsigned(3 downto 0);
 	signal delay		: std_logic;
 	signal phase		: std_logic;
@@ -140,12 +140,12 @@ begin
 					err <= '1';
 				end if;
 				if new_phase = '1' or delay = '1' then
-					-- 32*48/625 = 2.4576 MHz
-					if cnt24+48 >= 625 then
+					-- 32*2400/31333 ~= 2.451 MHz
+					if cnt24+2400 >= 31333 then
 						en24 <= '1';
-						cnt24 <= cnt24 + 48 - 625;
+						cnt24 <= cnt24 + 2400 - 31333;
 					else
-						cnt24 <= cnt24 + 48;
+						cnt24 <= cnt24 + 2400;
 					end if;
 				end if;
 			end if;
