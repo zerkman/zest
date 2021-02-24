@@ -109,6 +109,7 @@ architecture behavioral of glue is
 	signal shsync	: std_logic;
 	signal svsync2	: std_logic;
 	signal shsync2	: std_logic;
+	signal iack_cnt	: unsigned(3 downto 0);
 	signal ack_vbl	: std_logic;
 	signal ack_hbl	: std_logic;
 	signal vpa_irqn	: std_logic;
@@ -421,15 +422,29 @@ begin
 end process;
 
 -- interrupt acknowledge
-process(FC,iA,iASn)
+process(clk)
 begin
-	vpa_irqn <= '1';
-	IACKn <= '1';
-	if FC = "111" and iA(19 downto 16) = "1111" and iASn = '0' then
-		if iA(3 downto 2) = "11" then
-			IACKn <= '0';
-		else
-			vpa_irqn <= '0';
+	if rising_edge(clk) then
+		if resetn = '0' then
+			iack_cnt <= (others => '0');
+			vpa_irqn <= '1';
+			IACKn <= '1';
+		elsif enPhi1 = '1' then
+			vpa_irqn <= '1';
+			IACKn <= '1';
+			if FC = "111" and iA(19 downto 16) = "1111" and iASn = '0' then
+				if iack_cnt+1 = 12 then
+					if iA(3 downto 2) = "11" then
+						IACKn <= '0';
+					else
+						vpa_irqn <= '0';
+					end if;
+				else
+					iack_cnt <= iack_cnt + 1;
+				end if;
+			else
+				iack_cnt <= (others => '0');
+			end if;
 		end if;
 	end if;
 end process;
