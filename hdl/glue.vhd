@@ -308,7 +308,7 @@ begin
 					dma_st <= wait_bg;
 				end if;
 			when wait_bg =>
-				if BGn = '0' then
+				if BGn = '0' and iASn = '1' and iDTACKn = '1' then
 					BGACKn <= '0';
 					dma_cnt <= "111";
 					dma_st <= running;
