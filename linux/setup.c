@@ -46,6 +46,7 @@ void * thread_floppy(void * arg);
 #define ST_MEM_ADDR 0x10000000
 #define ST_MEM_SIZE 0x1000000
 
+#define CFG_COLR 0x0000
 #define CFG_MONO 0x0004
 
 #define CFG_256K 0x0000
@@ -423,35 +424,62 @@ void * thread_kbd(void * arg) {
 	return NULL;
 }
 
-void usage(const char *progname) {
-	printf("usage: %s [--mono] boot68k.bin [floppy.mfm]\n",progname);
+int usage(const char *progname) {
+	printf("usage: %s [OPTIONS] rom.img [floppy.mfm]\n\n"
+		"OPTIONS are:\n"
+		" --color     Set video to color mode (default)\n"
+		" --mono      Set video to monochrome mode\n"
+		" --mem=VAL   Choose memory size\n"
+		"             Possible values: 256K, 512K, 1M (default), 2M, 2.5M, 4M\n"
+		, progname);
+	return 1;
 }
 
 int main(int argc, char **argv) {
 	int Status;
-	int cfg = CFG_1M | 3;		/* end reset */
+	int cfg_video = CFG_COLR;
+	int cfg_mem = CFG_1M;
 
-	printf("Shifter + HDMI + DDR + CPU test\n");
 	const char *binfilename = NULL;
 	const char *floppyfilename = NULL;
 	int a = 0;
 	while (++a<argc) {
 		const char *arg = argv[a];
-		if (!strcmp(arg,"--mono")) {
-			cfg |= CFG_MONO;
-		} else if (binfilename == NULL) {
+		if (arg[0]=='-') {
+			if (!strcmp(arg,"--color")) {
+				cfg_video = CFG_COLR;
+			} else if (!strcmp(arg,"--mono")) {
+				cfg_video = CFG_MONO;
+			} else if (!strncmp(arg,"--mem=",6)) {
+				arg += 6;
+				if (!strcmp(arg,"256K")) {
+					cfg_mem = CFG_256K;
+				} else if (!strcmp(arg,"512K")) {
+					cfg_mem = CFG_512K;
+				} else if (!strcmp(arg,"1M")) {
+					cfg_mem = CFG_1M;
+				} else if (!strcmp(arg,"2M")) {
+					cfg_mem = CFG_2M;
+				} else if (!strcmp(arg,"2.5M")) {
+					cfg_mem = CFG_2_5M;
+				} else if (!strcmp(arg,"4M")) {
+					cfg_mem = CFG_4M;
+				} else return usage(argv[0]);
+			} else return usage(argv[0]);
+		}
+		else if (binfilename == NULL) {
 			binfilename = arg;
 		} else if (floppyfilename == NULL) {
 			floppyfilename = arg;
 		} else {
-			usage(argv[0]);
-			return 1;
+			return usage(argv[0]);
 		}
 	}
 	if (binfilename == NULL) {
 		usage(argv[0]);
 		return 1;
 	}
+	int cfg = cfg_mem | cfg_video | 3;		/* end reset */
 
 	uiofd = open("/dev/uio0",O_RDWR);
 	if (uiofd < 0) {
