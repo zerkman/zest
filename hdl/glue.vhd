@@ -110,7 +110,7 @@ architecture behavioral of glue is
 	signal shsync	: std_logic;
 	signal svsync2	: std_logic;
 	signal shsync2	: std_logic;
-	signal iack_cnt	: unsigned(3 downto 0);
+	signal iack_cnt	: unsigned(2 downto 0);
 	signal ack_vbl	: std_logic;
 	signal ack_hbl	: std_logic;
 	signal vpa_irqn	: std_logic;
@@ -422,24 +422,27 @@ begin
 	end if;
 end process;
 
--- interrupt acknowledge
+-- Autovector interrupt acknowledge (for HBL and VBL)
+process(FC,iA,iASn)
+begin
+	vpa_irqn <= '1';
+	if FC = "111" and iA(19 downto 16) = "1111" and iA(3 downto 2) /= "11" and iASn = '0' then
+		vpa_irqn <= '0';
+	end if;
+end process;
+
+-- Vectored interrupt acknowledge (for MFP)
 process(clk)
 begin
 	if rising_edge(clk) then
 		if resetn = '0' then
 			iack_cnt <= (others => '0');
-			vpa_irqn <= '1';
 			IACKn <= '1';
 		elsif enPhi1 = '1' then
-			vpa_irqn <= '1';
 			IACKn <= '1';
-			if FC = "111" and iA(19 downto 16) = "1111" and iASn = '0' then
-				if iack_cnt+1 = 12 then
-					if iA(3 downto 2) = "11" then
-						IACKn <= '0';
-					else
-						vpa_irqn <= '0';
-					end if;
+			if FC = "111" and iA(19 downto 16) = "1111" and iA(3 downto 2) = "11" and iASn = '0' then
+				if iack_cnt = 7 then
+					IACKn <= '0';
 				else
 					iack_cnt <= iack_cnt + 1;
 				end if;
@@ -517,26 +520,25 @@ begin
 			end if;
 			if (hcnt = 213 and mono = '1') or hcnt = 501 then
 				-- update V signals
-				if (vcnt = 262 and mono = '0' and hz50 = '0') or (vcnt = 312 and mono = '0') or vcnt = 500 then
-					vcnt <= (others => '0');
-				else
-					vcnt <= vcnt+1;
-					if vcnt+1 = sync.vblank_on then
-						vblank <= '1';
-					end if;
-					if vcnt+1 = sync.first_visible then
-						vblank <= '0';
-					end if;
-					if vcnt+1 = sync.vde_on then
-						vde <= '1';
-					end if;
-					if vcnt+1 = sync.vde_off then
-						vde <= '0';
-					end if;
+				if vcnt+1 = sync.vblank_on then
+					vblank <= '1';
+				end if;
+				if vcnt+1 = sync.first_visible then
+					vblank <= '0';
+				end if;
+				if vcnt+1 = sync.vde_on then
+					vde <= '1';
+				end if;
+				if vcnt+1 = sync.vde_off then
+					vde <= '0';
 				end if;
 			end if;
 			if (hcnt = 223 and mono = '1') or (hcnt = 507 and line_pal = '0') or hcnt = 511 then
 				hcnt <= (others => '0');
+				vcnt <= vcnt + 1;
+				if (vcnt = 262 and mono = '0' and hz50 = '0') or (vcnt = 312 and mono = '0') or vcnt = 500 then
+					vcnt <= (others => '0');
+				end if;
 			end if;
 			if hcnt+1 = vsync_delay then
 				if vcnt = 0 then
