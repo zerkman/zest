@@ -86,7 +86,7 @@ architecture behavioral of glue is
 	type sync_array_t is array (0 to 2) of sync_t;
 	constant sync_array : sync_array_t := (sync_60,sync_50,sync_hi);
 	signal sync		: sync_t;
-	constant vsync_delay	: integer := 44;
+	constant vbl_delay	: integer := 68;
 
 	-- resolution
 	signal mono		: std_logic := '0';
@@ -94,6 +94,7 @@ architecture behavioral of glue is
 	signal hz50		: std_logic := '1';
 
 	signal hcnt		: unsigned(8 downto 0);
+	signal nexthcnt	: unsigned(8 downto 0);
 	signal vcnt		: unsigned(8 downto 0);
 	signal vblank	: std_logic;
 	signal hblank	: std_logic;
@@ -108,8 +109,6 @@ architecture behavioral of glue is
 	signal irq_mfp	: std_logic_vector(3 downto 0);
 	signal svsync	: std_logic;
 	signal shsync	: std_logic;
-	signal svsync2	: std_logic;
-	signal shsync2	: std_logic;
 	signal iack_cnt	: unsigned(2 downto 0);
 	signal ack_vbl	: std_logic;
 	signal ack_hbl	: std_logic;
@@ -362,15 +361,11 @@ begin
 			irq_vbl <= '0';
 			ack_hbl <= '0';
 			ack_vbl <= '0';
-			svsync2 <= '1';
-			shsync2 <= '1';
 		elsif enPhi2 = '1' then
-			svsync2 <= svsync;
-			shsync2 <= shsync;
-			if svsync = '0' and svsync2 = '1' then
+			if vcnt = 0 and nexthcnt = vbl_delay then
 				irq_vbl <= '1';
 			end if;
-			if shsync = '0' and shsync2 = '1' then
+			if nexthcnt = 0 then
 				irq_hbl <= '1';
 			end if;
 			if FC = "111" and iA(19 downto 16) = "1111" and iASn = '0' then
@@ -413,9 +408,9 @@ process(irq_hbl,irq_vbl,irq_mfp)
 begin
 	if irq_mfp(0) = '1' then
 		IPLn <= "00";
-	elsif irq_vbl = '1' or (svsync = '0' and svsync2 = '1') then
+	elsif irq_vbl = '1' then
 		IPLn <= "01";
-	elsif irq_hbl = '1' or (shsync = '0' and shsync2 = '1') then
+	elsif irq_hbl = '1' then
 		IPLn <= "10";
 	else
 		IPLn <= "11";
@@ -454,6 +449,15 @@ begin
 end process;
 
 -- video sync
+process(hcnt,mono,line_pal)
+begin
+	if (hcnt = 223 and mono = '1') or (hcnt = 507 and line_pal = '0') or hcnt = 511 then
+		nexthcnt <= (others => '0');
+	else
+		nexthcnt <= hcnt+1;
+	end if;
+end process;
+
 process(clk)
 begin
 	if rising_edge(clk) then
@@ -468,58 +472,67 @@ begin
 			vcnt <= (others => '0');
 		elsif enPhi1 = '1' then
 			-- update H signals
-			hcnt <= hcnt+1;
-			if hcnt+1 = 4 and mono = '1' then
+			hcnt <= nexthcnt;
+			if nexthcnt = 4 and mono = '1' then
 				hde <= '1';
 			end if;
-			if hcnt+1 = 21 and mono = '1' then
+			if nexthcnt = 21 and mono = '1' then
 				hblank <= '0';
 			end if;
-			if hcnt+1 = 24 and mono = '0' and hz50 = '0' then
+			if nexthcnt = 24 and mono = '0' and hz50 = '0' then
 				hblank <= '0';
 			end if;
-			if hcnt+1 = 28 and mono = '0' and hz50 = '1' then
+			if nexthcnt = 28 and mono = '0' and hz50 = '1' then
 				hblank <= '0';
 			end if;
-			if hcnt+1 = 52 and mono = '0' and hz50 = '0' then
+			if nexthcnt = 52 and mono = '0' and hz50 = '0' then
 				hde <= '1';
 			end if;
-			if hcnt+1 = 54 then
+			if nexthcnt = 54 then
 				line_pal <= hz50;
 			end if;
-			if hcnt+1 = 56 and mono = '0' and hz50 = '1' then
+			if nexthcnt = 56 and mono = '0' and hz50 = '1' then
 				hde <= '1';
 			end if;
-			if hcnt+1 = 164 and mono = '1' then
+			if nexthcnt = 164 and mono = '1' then
 				hde <= '0';
 			end if;
-			if hcnt+1 = 181 and mono = '1' then
+			if nexthcnt = 181 and mono = '1' then
 				hblank <= '1';
 			end if;
-			if hcnt+1 = 192 and mono = '1' then
+			if nexthcnt = 192 and mono = '1' then
 				shsync <= '0';
 			end if;
-			if hcnt+1 = 220 and mono = '1' then
+			if nexthcnt = 220 and mono = '1' then
 				shsync <= '1';
 			end if;
-			if hcnt+1 = 372 and mono = '0' and hz50 = '0' then
+			if nexthcnt = 372 and mono = '0' and hz50 = '0' then
 				hde <= '0';
 			end if;
-			if hcnt+1 = 376 and mono = '0' and hz50 = '1' then
+			if nexthcnt = 376 and mono = '0' and hz50 = '1' then
 				hde <= '0';
 			end if;
-			if hcnt+1 = 450 and mono = '0' then
+			if nexthcnt = 450 and mono = '0' then
 				hblank <= '1';
 			end if;
-			if ((hcnt = 457 and line_pal = '0') or (hcnt = 461 and line_pal = '1')) and mono = '0' then
+			if ((nexthcnt = 458 and line_pal = '0') or (nexthcnt = 462 and line_pal = '1')) and mono = '0' then
 				shsync <= '0';
 				hde <= '0';
 			end if;
-			if ((hcnt = 497 and line_pal = '0') or (hcnt = 501 and line_pal = '1')) and mono = '0' then
+			if ((nexthcnt = 498 and line_pal = '0') or (nexthcnt = 502 and line_pal = '1')) and mono = '0' then
 				shsync <= '1';
 			end if;
-			if (hcnt = 213 and mono = '1') or hcnt = 501 then
+			if (nexthcnt = 214 and mono = '1') or nexthcnt = 502 then
 				-- update V signals
+				if (vcnt = 262 and mono = '0' and hz50 = '0') or (vcnt = 312 and mono = '0') or vcnt = 500 then
+					svsync <= '0';
+					vcnt <= (others => '0');
+				else
+					vcnt <= vcnt + 1;
+					if (vcnt = 0 and mono = '1') or (vcnt = 2 and mono = '0') then
+						svsync <= '1';
+					end if;
+				end if;
 				if vcnt+1 = sync.vblank_on then
 					vblank <= '1';
 				end if;
@@ -531,20 +544,6 @@ begin
 				end if;
 				if vcnt+1 = sync.vde_off then
 					vde <= '0';
-				end if;
-			end if;
-			if (hcnt = 223 and mono = '1') or (hcnt = 507 and line_pal = '0') or hcnt = 511 then
-				hcnt <= (others => '0');
-				vcnt <= vcnt + 1;
-				if (vcnt = 262 and mono = '0' and hz50 = '0') or (vcnt = 312 and mono = '0') or vcnt = 500 then
-					vcnt <= (others => '0');
-				end if;
-			end if;
-			if hcnt+1 = vsync_delay then
-				if vcnt = 0 then
-					svsync <= '0';
-				elsif (vcnt = 1 and mono = '1') or (vcnt = 3 and mono = '0') then
-					svsync <= '1';
 				end if;
 			end if;
 		end if;
