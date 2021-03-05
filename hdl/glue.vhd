@@ -526,9 +526,7 @@ begin
 				-- update V signals
 				if (vcnt = 262 and mono = '0' and hz50 = '0') or (vcnt = 312 and mono = '0') or vcnt = 500 then
 					svsync <= '0';
-					vcnt <= (others => '0');
 				else
-					vcnt <= vcnt + 1;
 					if (vcnt = 0 and mono = '1') or (vcnt = 2 and mono = '0') then
 						svsync <= '1';
 					end if;
@@ -544,6 +542,13 @@ begin
 				end if;
 				if vcnt+1 = sync.vde_off then
 					vde <= '0';
+				end if;
+			end if;
+			if nexthcnt = 0 then
+				if (mono = '0' and ((vcnt = 262 and hz50 = '0') or vcnt = 312)) or vcnt = 500 then
+					vcnt <= (others => '0');
+				else
+					vcnt <= vcnt + 1;
 				end if;
 			end if;
 		end if;
