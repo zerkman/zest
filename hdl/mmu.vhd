@@ -25,8 +25,11 @@ entity mmu is
 		enPhi2	: in std_logic;
 		resetn	: in std_logic;
 
+		-- regular RAM access
 		RAMn	: in std_logic;
+		-- DMA RAM access (use DMA pointer instead of address bus)
 		DMAn	: in std_logic;
+		-- DMA or Shifter register access
 		DEVn	: in std_logic;
 
 		iA		: in std_logic_vector(23 downto 1);
@@ -42,7 +45,7 @@ entity mmu is
 
 		-- load request from shifter
 		DCYCn	: in std_logic;
-		-- register request from bus
+		-- register request to shifter
 		CMPCSn	: out std_logic;
 
 		-- vertical sync
