@@ -194,10 +194,8 @@ begin
 		if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRwn = '0' and rwn_ff = '1')) then
 			if iA(23 downto 15) = "111111111" and FC(2) = '1' then
 				-- hardware registers
-				if iA(15 downto 6)&"000000" = x"8240" then
-					if iA(15 downto 1)&'0' = x"820a" and iUDSn = '0' and iRWn = '1' then
-						oD <= hz50&'0';
-					end if;
+				if iA(15 downto 1)&'0' = x"820a" and iUDSn = '0' and iRWn = '1' then
+					oD <= hz50&'0';
 				end if;
 				if wdtackn = '0' then
 					-- assert DTACKn for DMA and PSG access
