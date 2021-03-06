@@ -64,6 +64,26 @@ end atarist_main;
 
 
 architecture structure of atarist_main is
+	component atarist_bus is
+		port (
+			cpu_d		: in std_logic_vector(15 downto 0);
+			cpu_e		: in std_logic;
+			shifter_d	: in std_logic_vector(15 downto 0);
+			ram_d		: in std_logic_vector(15 downto 0);
+			shifram_e	: in std_logic;
+			mfp_d		: in std_logic_vector(7 downto 0);
+			mmu_d		: in std_logic_vector(7 downto 0);
+			glue_d		: in std_logic_vector(1 downto 0);
+			acia_ikbd_d	: in std_logic_vector(7 downto 0);
+			acia_ikbd_e	: in std_logic;
+			acia_midi_d	: in std_logic_vector(7 downto 0);
+			acia_midi_e	: in std_logic;
+			dma_d		: in std_logic_vector(15 downto 0);
+
+			d			: out std_logic_vector(15 downto 0)
+		);
+	end component;
+
 	component fx68k is
 		port(
 			clk		: in std_logic;
@@ -518,15 +538,26 @@ begin
 	ram_oD <= od;
 	id <= ram_iD;
 
+	stbus:atarist_bus port map(
+		cpu_d => cpu_oD,
+		cpu_e => cpu_RWn,
+		shifter_d => shifter_oD,
+		ram_d => ram_oD,
+		shifram_e => RDATn,
+		mfp_d => mfp_oD,
+		mmu_d => mmu_oD,
+		glue_d => glue_oD,
+		acia_ikbd_d => acia_ikbd_od,
+		acia_ikbd_e => acia_ikbd_cs,
+		acia_midi_d => acia_midi_od,
+		acia_midi_e => acia_midi_cs,
+		dma_d => dma_oD,
+		d => bus_D
+	);
+
 	bus_A <= cpu_A;
 	bus_ASn <= cpu_ASn;
 	bus_RWn <= cpu_RWn and glue_oRWn;
-	bus_D <= (cpu_oD or (15 downto 0 => cpu_RWn)) and shifter_oD
-			and (ram_oD or (15 downto 0 => RDATn))
-			and (x"ff" & (mmu_oD and mfp_oD)) and ("111111" & glue_oD & x"ff")
-			and ((acia_ikbd_od or (7 downto 0 => acia_ikbd_cs nand cpu_RWn)) & x"ff")
-			and ((acia_midi_od or (7 downto 0 => acia_midi_cs nand cpu_RWn)) & x"ff")
-			and dma_oD;
 	bus_LDSn <= cpu_LDSn;
 	bus_UDSn <= cpu_UDSn;
 	bus_DTACKn <= glue_DTACKn and mfp_dtackn and mmu_dtackn;
