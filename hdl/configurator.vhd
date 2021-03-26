@@ -120,39 +120,45 @@ architecture arch_imp of configurator is
 	-- ADDR_LSB is used for addressing 32/64 bit registers/memories
 	-- ADDR_LSB = 2 for 32 bits (n downto 2)
 	-- ADDR_LSB = 3 for 64 bits (n downto 3)
-	constant ADDR_LSB	: integer := (C_S_AXI_DATA_WIDTH/32)+ 1;
-	constant OPT_MEM_ADDR_BITS : integer := 2;
+	constant ADDR_LSB	: integer := (C_S_AXI_DATA_WIDTH/32)+1;
+	-- address bits are in range (ADDR_MSB downto ADDR_LSB)
+	constant ADDR_MSB	: integer := C_S_AXI_ADDR_WIDTH-1;
 	------------------------------------------------
 	---- Signals for user logic register space example
 	--------------------------------------------------
 	---- Number of Slave Registers 4
-	type slv_reg_t is array (0 to 2**(OPT_MEM_ADDR_BITS+1)-1) of std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal slv_reg : slv_reg_t;
-	signal slv_reg_rden	: std_logic;
-	signal slv_reg_wren	: std_logic;
+	type out_reg_t is array (0 to 2**(ADDR_MSB-ADDR_LSB+1)-1) of std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+	signal out_reg : out_reg_t;
+	signal out_reg_rden	: std_logic;
+	signal out_reg_wren	: std_logic;
 	signal reg_data_out	: std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal byte_index	: integer;
 	signal aw_en	: std_logic;
+
+	-- Input register array
+	type in_reg_t is array (0 to 1) of std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+	signal in_reg : in_reg_t;
 
 begin
 	-- I/O Connections assignments
-	out_reg0	<= slv_reg(0);
-	out_reg1	<= slv_reg(1);
-	out_reg2	<= slv_reg(2);
-	out_reg3	<= slv_reg(3);
-	out_reg4	<= slv_reg(4);
-	out_reg5	<= slv_reg(5);
-	out_reg6	<= slv_reg(6);
-	out_reg7	<= slv_reg(7);
+	out_reg0 <= out_reg(0);
+	out_reg1 <= out_reg(1);
+	out_reg2 <= out_reg(2);
+	out_reg3 <= out_reg(3);
+	out_reg4 <= out_reg(4);
+	out_reg5 <= out_reg(5);
+	out_reg6 <= out_reg(6);
+	out_reg7 <= out_reg(7);
+	in_reg(0) <= in_reg0;
+	in_reg(1) <= in_reg1;
 
-	S_AXI_AWREADY	<= axi_awready;
-	S_AXI_WREADY	<= axi_wready;
-	S_AXI_BRESP	<= axi_bresp;
-	S_AXI_BVALID	<= axi_bvalid;
-	S_AXI_ARREADY	<= axi_arready;
-	S_AXI_RDATA	<= axi_rdata;
-	S_AXI_RRESP	<= axi_rresp;
-	S_AXI_RVALID	<= axi_rvalid;
+	S_AXI_AWREADY <= axi_awready;
+	S_AXI_WREADY <= axi_wready;
+	S_AXI_BRESP <= axi_bresp;
+	S_AXI_BVALID <= axi_bvalid;
+	S_AXI_ARREADY <= axi_arready;
+	S_AXI_RDATA <= axi_rdata;
+	S_AXI_RRESP <= axi_rresp;
+	S_AXI_RVALID <= axi_rvalid;
 	-- Implement axi_awready generation
 	-- axi_awready is asserted for one S_AXI_ACLK clock cycle when both
 	-- S_AXI_AWVALID and S_AXI_WVALID are asserted. axi_awready is
@@ -165,14 +171,14 @@ begin
 				axi_awready <= '0';
 				aw_en <= '1';
 			else
-				if (axi_awready = '0' and S_AXI_AWVALID = '1' and S_AXI_WVALID = '1' and aw_en = '1') then
+				if axi_awready = '0' and S_AXI_AWVALID = '1' and S_AXI_WVALID = '1' and aw_en = '1' then
 					-- slave is ready to accept write address when
 					-- there is a valid write address and write data
 					-- on the write address and data bus. This design
 					-- expects no outstanding transactions.
 					axi_awready <= '1';
 					aw_en <= '0';
-				elsif (S_AXI_BREADY = '1' and axi_bvalid = '1') then
+				elsif S_AXI_BREADY = '1' and axi_bvalid = '1' then
 					aw_en <= '1';
 					axi_awready <= '0';
 				else
@@ -192,7 +198,7 @@ begin
 			if S_AXI_ARESETN = '0' then
 				axi_awaddr <= (others => '0');
 			else
-				if (axi_awready = '0' and S_AXI_AWVALID = '1' and S_AXI_WVALID = '1' and aw_en = '1') then
+				if axi_awready = '0' and S_AXI_AWVALID = '1' and S_AXI_WVALID = '1' and aw_en = '1' then
 					-- Write Address latching
 					axi_awaddr <= S_AXI_AWADDR;
 				end if;
@@ -211,7 +217,7 @@ begin
 			if S_AXI_ARESETN = '0' then
 				axi_wready <= '0';
 			else
-				if (axi_wready = '0' and S_AXI_WVALID = '1' and S_AXI_AWVALID = '1' and aw_en = '1') then
+				if axi_wready = '0' and S_AXI_WVALID = '1' and S_AXI_AWVALID = '1' and aw_en = '1' then
 					-- slave is ready to accept write data when
 					-- there is a valid write address and write data
 					-- on the write address and data bus. This design
@@ -231,22 +237,21 @@ begin
 	-- These registers are cleared when reset (active low) is applied.
 	-- Slave register write enable is asserted when valid address and data are available
 	-- and the slave is ready to accept the write address and write data.
-	slv_reg_wren <= axi_wready and S_AXI_WVALID and axi_awready and S_AXI_AWVALID ;
+	out_reg_wren <= axi_wready and S_AXI_WVALID and axi_awready and S_AXI_AWVALID ;
 
 	process (S_AXI_ACLK)
-	variable loc_addr :std_logic_vector(OPT_MEM_ADDR_BITS downto 0);
+	variable loc_addr : integer;
 	begin
 		if rising_edge(S_AXI_ACLK) then
 			if S_AXI_ARESETN = '0' then
-				slv_reg <= (others => (others => '0'));
+				out_reg <= (others => (others => '0'));
 			else
-				loc_addr := axi_awaddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
-				if (slv_reg_wren = '1') then
+				loc_addr := to_integer(unsigned(axi_awaddr(ADDR_MSB downto ADDR_LSB)));
+				if out_reg_wren = '1' then
 					for byte_index in 0 to (C_S_AXI_DATA_WIDTH/8-1) loop
-						if ( S_AXI_WSTRB(byte_index) = '1' ) then
-						-- Respective byte enables are asserted as per write strobes
-						-- slave registor 0
-						slv_reg(to_integer(unsigned(loc_addr)))(byte_index*8+7 downto byte_index*8) <= S_AXI_WDATA(byte_index*8+7 downto byte_index*8);
+						if S_AXI_WSTRB(byte_index) = '1' then
+							-- Respective byte enables are asserted as per write strobes
+							out_reg(loc_addr)(byte_index*8+7 downto byte_index*8) <= S_AXI_WDATA(byte_index*8+7 downto byte_index*8);
 						end if;
 					end loop;
 				end if;
@@ -267,10 +272,10 @@ begin
 				axi_bvalid	<= '0';
 				axi_bresp	<= "00"; --need to work more on the responses
 			else
-				if (axi_awready = '1' and S_AXI_AWVALID = '1' and axi_wready = '1' and S_AXI_WVALID = '1' and axi_bvalid = '0'	) then
+				if axi_awready = '1' and S_AXI_AWVALID = '1' and axi_wready = '1' and S_AXI_WVALID = '1' and axi_bvalid = '0' then
 					axi_bvalid	<= '1';
 					axi_bresp	<= "00";
-				elsif (S_AXI_BREADY = '1' and axi_bvalid = '1') then	 --check if bready is asserted while bvalid is high)
+				elsif S_AXI_BREADY = '1' and axi_bvalid = '1' then	 --check if bready is asserted while bvalid is high)
 					axi_bvalid	<= '0';								 -- (there is a possibility that bready is always asserted high)
 				end if;
 			end if;
@@ -291,7 +296,7 @@ begin
 				axi_arready <= '0';
 				axi_araddr	<= (others => '1');
 			else
-				if (axi_arready = '0' and S_AXI_ARVALID = '1') then
+				if axi_arready = '0' and S_AXI_ARVALID = '1' then
 					-- indicates that the slave has acceped the valid read address
 					axi_arready <= '1';
 					-- Read Address latching
@@ -316,15 +321,15 @@ begin
 		if rising_edge(S_AXI_ACLK) then
 			if S_AXI_ARESETN = '0' then
 				axi_rvalid <= '0';
-				axi_rresp	<= "00";
+				axi_rresp <= "00";
 			else
-				if (axi_arready = '1' and S_AXI_ARVALID = '1' and axi_rvalid = '0') then
-				-- Valid read data is available at the read data bus
-				axi_rvalid <= '1';
-				axi_rresp	<= "00"; -- 'OKAY' response
-				elsif (axi_rvalid = '1' and S_AXI_RREADY = '1') then
-				-- Read data is accepted by the master
-				axi_rvalid <= '0';
+				if axi_arready = '1' and S_AXI_ARVALID = '1' and axi_rvalid = '0' then
+					-- Valid read data is available at the read data bus
+					axi_rvalid <= '1';
+					axi_rresp <= "00"; -- 'OKAY' response
+				elsif axi_rvalid = '1' and S_AXI_RREADY = '1' then
+					-- Read data is accepted by the master
+					axi_rvalid <= '0';
 				end if;
 			end if;
 		end if;
@@ -333,30 +338,28 @@ begin
 	-- Implement memory mapped register select and read logic generation
 	-- Slave register read enable is asserted when valid address is available
 	-- and the slave is ready to accept the read address.
-	slv_reg_rden <= axi_arready and S_AXI_ARVALID and (not axi_rvalid) ;
+	out_reg_rden <= axi_arready and S_AXI_ARVALID and (not axi_rvalid) ;
 
-	process (in_reg0, in_reg1, slv_reg, axi_araddr, S_AXI_ARESETN, slv_reg_rden)
-	variable loc_addr :std_logic_vector(OPT_MEM_ADDR_BITS downto 0);
+	process (in_reg, out_reg, axi_araddr)
+	variable loc_addr : integer;
 	begin
 		-- Address decoding for reading registers
-		loc_addr := axi_araddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
-		if unsigned(loc_addr) = 0 then
-			reg_data_out <= in_reg0;
-		elsif unsigned(loc_addr) = 1 then
-			reg_data_out <= in_reg1;
+		loc_addr := to_integer(unsigned(axi_araddr(ADDR_MSB downto ADDR_LSB)));
+		if loc_addr >= in_reg'low and loc_addr <= in_reg'high then
+			reg_data_out <= in_reg(loc_addr);
 		else
-			reg_data_out <= slv_reg(to_integer(unsigned(loc_addr)));
+			reg_data_out <= out_reg(loc_addr);
 		end if;
 	end process;
 
 	-- Output register or memory read data
-	process( S_AXI_ACLK ) is
+	process (S_AXI_ACLK) is
 	begin
-		if (rising_edge (S_AXI_ACLK)) then
-			if ( S_AXI_ARESETN = '0' ) then
-				axi_rdata	<= (others => '0');
+		if rising_edge (S_AXI_ACLK) then
+			if S_AXI_ARESETN = '0' then
+				axi_rdata <= (others => '0');
 			else
-				if (slv_reg_rden = '1') then
+				if out_reg_rden = '1' then
 					-- When there is a valid read address (S_AXI_ARVALID) with
 					-- acceptance of read address by the slave (axi_arready),
 					-- output the read dada
