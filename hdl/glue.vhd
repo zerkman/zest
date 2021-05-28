@@ -57,6 +57,8 @@ entity glue is
 		MFPINTn	: in std_logic;
 		IACKn	: out std_logic;
 
+		SNDCSn	: out std_logic;
+
 		VSYNC	: out std_logic;
 		HSYNC	: out std_logic;
 		BLANKn	: out std_logic;
@@ -282,6 +284,16 @@ begin
 		FCSn <= '0';
 	else
 		FCSn <= '1';
+	end if;
+end process;
+
+-- YM registers access
+process(iA,iASn)
+begin
+	if iASn = '0' and iA(23 downto 8) = x"ff88" then
+		SNDCSn <= '0';
+	else
+		SNDCSn <= '1';
 	end if;
 end process;
 

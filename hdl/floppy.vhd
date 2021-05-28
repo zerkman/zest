@@ -87,7 +87,7 @@ begin
 			track0n <= '0';
 			indexn <= '0';
 		elsif clken = '1' then
-			if drv_select = '1' then
+			if drv_select = '0' then
 				step_ff <= step;
 				if step = '1' and step_ff = '0' then
 					if direction = '1' and track < 83 then

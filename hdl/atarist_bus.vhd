@@ -33,6 +33,8 @@ entity atarist_bus is
 		acia_midi_d	: in std_logic_vector(7 downto 0);
 		acia_midi_e	: in std_logic;
 		dma_d		: in std_logic_vector(15 downto 0);
+		psg_d		: in std_logic_vector(7 downto 0);
+		psg_e		: in std_logic;
 
 		d			: out std_logic_vector(15 downto 0)
 	);
@@ -47,6 +49,7 @@ d <= (cpu_d or (15 downto 0 => cpu_e)) and shifter_d
 		and (x"ff" & (mmu_d and mfp_d)) and ("111111" & glue_d & x"ff")
 		and ((acia_ikbd_d or (7 downto 0 => acia_ikbd_e nand cpu_e)) & x"ff")
 		and ((acia_midi_d or (7 downto 0 => acia_midi_e nand cpu_e)) & x"ff")
+		and ((psg_d or (7 downto 0 => psg_e)) & x"ff")
 		and dma_d;
 
 end architecture;

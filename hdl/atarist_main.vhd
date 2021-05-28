@@ -42,7 +42,8 @@ entity atarist_main is
 		fdd_read_datan : in std_logic;
 		fdd_side0 : out std_logic;
 		fdd_indexn : in std_logic;
-		fdd_drv_select : out std_logic;
+		fdd_drv0_select : out std_logic;
+		fdd_drv1_select : out std_logic;
 		fdd_motor_on : out std_logic;
 		fdd_direction : out std_logic;
 		fdd_step : out std_logic;
@@ -79,6 +80,8 @@ architecture structure of atarist_main is
 			acia_midi_d	: in std_logic_vector(7 downto 0);
 			acia_midi_e	: in std_logic;
 			dma_d		: in std_logic_vector(15 downto 0);
+			psg_d		: in std_logic_vector(7 downto 0);
+			psg_e		: in std_logic;
 
 			d			: out std_logic_vector(15 downto 0)
 		);
@@ -159,6 +162,8 @@ architecture structure of atarist_main is
 			MFPCSn	: out std_logic;
 			MFPINTn	: in std_logic;
 			IACKn	: out std_logic;
+
+			SNDCSn	: out std_logic;
 
 			VSYNC	: out std_logic;
 			HSYNC	: out std_logic;
@@ -372,6 +377,26 @@ architecture structure of atarist_main is
 		);
 	end component;
 
+	component ym2149 is
+		port (
+			clk		: in std_logic;
+			aclken	: in std_logic;
+			resetn	: in std_logic;
+			bdir	: in std_logic;
+			bc1		: in std_logic;
+			bc2		: in std_logic;
+			ida		: in std_logic_vector(7 downto 0);
+			oda		: out std_logic_vector(7 downto 0);
+			ia		: in std_logic_vector(7 downto 0);
+			oa		: out std_logic_vector(7 downto 0);
+			ib		: in std_logic_vector(7 downto 0);
+			ob		: out std_logic_vector(7 downto 0);
+			a		: out std_logic_vector(15 downto 0);
+			b		: out std_logic_vector(15 downto 0);
+			c		: out std_logic_vector(15 downto 0)
+		);
+	end component;
+
 	signal reset		: std_logic;
 
 	signal enNC1		: std_logic;
@@ -518,6 +543,19 @@ architecture structure of atarist_main is
 
 	signal fdc_INTRQ		: std_logic;
 
+	signal psg_csn			: std_logic;
+	signal psg_bdir			: std_logic;
+	signal psg_bc1			: std_logic;
+	signal psg_bc2			: std_logic;
+	signal psg_od			: std_logic_vector(7 downto 0);
+	signal psg_ia			: std_logic_vector(7 downto 0);
+	signal psg_oa			: std_logic_vector(7 downto 0);
+	signal psg_ib			: std_logic_vector(7 downto 0);
+	signal psg_ob			: std_logic_vector(7 downto 0);
+	signal psg_a			: std_logic_vector(15 downto 0);
+	signal psg_b			: std_logic_vector(15 downto 0);
+	signal psg_c			: std_logic_vector(15 downto 0);
+
 begin
 	reset <= not resetn;
 	clken_error <= clken_err;
@@ -552,6 +590,8 @@ begin
 		acia_midi_d => acia_midi_od,
 		acia_midi_e => acia_midi_cs,
 		dma_d => dma_oD,
+		psg_d => psg_od,
+		psg_e => psg_csn,
 		d => bus_D
 	);
 
@@ -646,6 +686,7 @@ begin
 		MFPCSn => mfp_csn,
 		MFPINTn	=> mfp_irqn,
 		IACKn => mfp_iackn,
+		SNDCSn => psg_csn,
 
 		VSYNC => vsyncn,
 		HSYNC => hsyncn,
@@ -850,7 +891,31 @@ begin
 		STEP => fdd_step
 	);
 
-	fdd_drv_select <= '1';
-	fdd_side0 <= '1';
+	fdd_side0 <= psg_oa(0);
+	fdd_drv0_select <= psg_oa(1);
+	fdd_drv1_select <= psg_oa(2);
+
+	psg_bdir <= psg_csn nor bus_RWn;
+	psg_bc1 <= psg_csn nor bus_A(1);
+	psg_bc2 <= '1';
+	psg_ia <= (others => '0');
+	psg_ib <= (others => '0');
+	psg:ym2149 port map (
+		clk => clk,
+		aclken => en2rck,
+		resetn => resetn,
+		bdir => psg_bdir,
+		bc1 => psg_bc1,
+		bc2 => psg_bc2,
+		ida => bus_D(15 downto 8),
+		oda => psg_od,
+		ia => psg_ia,
+		oa => psg_oa,
+		ib => psg_ib,
+		ob => psg_ob,
+		a => psg_a,
+		b => psg_b,
+		c => psg_c
+	);
 
 end structure;
