@@ -162,6 +162,58 @@ int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines) {
 	// TMDS active, enable HDMI output mode
 	if (i2c_set(0x1a,0x01) != 0) return 1;
 
+	// Audio interface = I2S, 2-channel, Mute on, PCM
+	if (i2c_set(0x26,0x91) != 0) return 1;
+	// I2S Config, SCK sample at rising edge, 128*?MCLK multiplier, WS low=left,
+	// SD justify left, 1st byte is MSB, WS to SD 1st bit shift
+	if (i2c_set(0x20,0x80) != 0) return 1;
+	// Connect SD0 pin to FIFO #0, no downsampling, no swap
+	if (i2c_set(0x1f,0x80) != 0) return 1;
+	// 16-bit mode (ignored?), 48 kHz sample frequency
+	if (i2c_set(0x27,0x58) != 0) return 1;
+	// Stream header settings for I2S
+
+	if (i2c_set(0x21,0) != 0) return 1;
+	if (i2c_set(0x22,0) != 0) return 1;
+	if (i2c_set(0x23,0) != 0) return 1;
+	if (i2c_set(0x24,2) != 0) return 1;
+	if (i2c_set(0x25,2) != 0) return 1;
+
+	// InfoFrame Data
+	static const uint8_t audio_infoframe_data[10] = {
+		0x11,		// audio format = PCM, 2 channels
+		0x0d,		// 48 kHz, 16 bit
+		0x00,		// no audio format code extension
+		0x00,		// channel 1 = front left, channel 2 = front right
+		0x00,		// 0dB attenuation, downmix inhibit off, no LFE playback info
+		0x00,		// data byte 6, reserved
+		0x00,		// data byte 7, reserved
+		0x00,		// data byte 8, reserved
+		0x00,		// data byte 9, reserved
+		0x00,		// data byte 10, reserved
+	};
+	unsigned int checksum = 0x84 + 0x01 + 0x0a;
+	int i;
+	for (i=0; i<10; ++i) {
+		checksum += audio_infoframe_data[i];
+	}
+	// IF select = audio, enable, repeat
+	if (i2c_set(0xbf,0xc2) != 0) return 1;
+	// IF type
+	if (i2c_set(0xc0,0x84) != 0) return 1;
+	// IF version
+	if (i2c_set(0xc1,1) != 0) return 1;
+	// IF length
+	if (i2c_set(0xc2,0x0a) != 0) return 1;
+	// IF checksum
+	if (i2c_set(0xc3,0x100-(checksum&0xff)) != 0) return 1;
+	// IF data bytes
+	for (i=0; i<10; ++i) {
+		if (i2c_set(0xc4+i,audio_infoframe_data[i]) != 0) return 1;
+	}
+	// Audio interface = I2S, 2-channel, Mute off, PCM
+	if (i2c_set(0x26,0x81) != 0) return 1;
+
 	return 0;
 }
 

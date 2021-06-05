@@ -33,6 +33,8 @@ entity atarist_main is
 		vsync : out std_logic;
 		rgb : out std_logic_vector(8 downto 0);
 
+		sound : out std_logic_vector(15 downto 0);
+
 		ikbd_clkren : out std_logic;
 		ikbd_clkfen : out std_logic;
 		ikbd_rx : in std_logic;
@@ -555,6 +557,7 @@ architecture structure of atarist_main is
 	signal psg_a			: std_logic_vector(15 downto 0);
 	signal psg_b			: std_logic_vector(15 downto 0);
 	signal psg_c			: std_logic_vector(15 downto 0);
+	signal sndsum			: signed(17 downto 0);
 
 begin
 	reset <= not resetn;
@@ -900,6 +903,8 @@ begin
 	psg_bc2 <= '1';
 	psg_ia <= (others => '0');
 	psg_ib <= (others => '0');
+	sndsum <= resize(signed(psg_a),sndsum'length) + resize(signed(psg_b),sndsum'length) + resize(signed(psg_c),sndsum'length);
+	sound <= std_logic_vector(sndsum(17 downto 2));
 	psg:ym2149 port map (
 		clk => clk,
 		aclken => en2rck,

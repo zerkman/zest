@@ -49,6 +49,9 @@ entity zest_top is
 		LEDS : out std_logic_vector (2 downto 0);  -- (2=>Rn,1=>Bn,0=>Gn)
 		I2C0_SCL : inout STD_LOGIC;
 		I2C0_SDA : inout STD_LOGIC;
+		I2S_SCLK : out std_logic;
+		I2S_FSYNC_OUT : out std_logic;
+		I2S_DOUT : out std_logic;
 		MEMS_INTn : in STD_LOGIC;
 		HDMI_INTn : in STD_LOGIC
 	);
@@ -123,6 +126,8 @@ architecture structure of zest_top is
 			hsync : out std_logic;
 			vsync : out std_logic;
 			rgb : out std_logic_vector(8 downto 0);
+
+			sound : out std_logic_vector(15 downto 0);
 
 			ikbd_clkren : out std_logic;
 			ikbd_clkfen : out std_logic;
@@ -231,6 +236,18 @@ architecture structure of zest_top is
 		);
 	end component;
 
+	component i2s_output is
+		port (
+			clk     : in std_logic;
+			resetn  : in std_logic;
+			data_l  : in std_logic_vector(15 downto 0);
+			data_r  : in std_logic_vector(15 downto 0);
+			i2s_sck : out std_logic;
+			i2s_fs	: out std_logic;
+			i2s_sd	: out std_logic
+		);
+	end component;
+
 	signal clk			: std_logic;
 	signal resetn		: std_logic;
 	signal pclk			: std_logic;
@@ -298,6 +315,8 @@ architecture structure of zest_top is
 	signal pvsync		: std_logic;
 	signal phsync		: std_logic;
 	signal pde			: std_logic;
+
+	signal sound		: std_logic_vector(15 downto 0);
 
 	signal opix			: std_logic_vector(15 downto 0);
 	signal ovsync		: std_logic;
@@ -382,6 +401,7 @@ begin
 		hsync => hsync,
 		vsync => vsync,
 		rgb => rgb,
+		sound => sound,
 		ikbd_clkren => ikbd_clkren,
 		ikbd_clkfen => ikbd_clkfen,
 		ikbd_rx => ikbd_rx,
@@ -480,6 +500,16 @@ begin
 		OUT_VSYNC => ovsync,
 		OUT_HSYNC => ohsync,
 		OUT_DE => ode
+	);
+
+	sndout:i2s_output port map (
+		clk => clk,
+		resetn => soft_resetn,
+		data_l => sound,
+		data_r => sound,
+		i2s_sck => I2S_SCLK,
+		i2s_fs => I2S_FSYNC_OUT,
+		i2s_sd => I2S_DOUT
 	);
 
 end structure;
