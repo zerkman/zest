@@ -325,7 +325,7 @@ architecture structure of zest_top is
 
 begin
 	soft_resetn <= out_reg0(0);
-	LEDS <= not clken_err & "11";
+	LEDS <= not clken_err & '1' & (fdd_drv0_select or not soft_resetn);
 	LCD_PCLK <= pclk;
 	LCD_DATA <= opix;
 	LCD_VSYNC <= ovsync;
