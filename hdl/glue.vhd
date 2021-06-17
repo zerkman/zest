@@ -117,7 +117,7 @@ architecture behavioral of glue is
 	signal vpa_irqn	: std_logic;
 	signal vpa_acia	: std_logic;
 	signal sdtackn	: std_logic;
-	signal wdtackn	: std_logic;
+	signal ymdtackn	: std_logic;
 	signal beercnt	: unsigned(5 downto 0);
 	signal rwn_ff	: std_logic;
 	signal dma_w	: std_logic;
@@ -135,7 +135,6 @@ DE <= vde and hde;
 VSYNC <= svsync;
 HSYNC <= shsync;
 VPAn <= vpa_irqn and vpa_acia;
-wdtackn <= '0' when iA(15 downto 2)&"00" = x"8604" or iA(15 downto 8) = x"88" else '1';
 oDTACKn <= sdtackn;
 oRDY <= sdma;
 DMAn <= sdma;
@@ -163,6 +162,7 @@ process(clk)
 begin
 	if rising_edge(clk) then
 	if resetn = '0' then
+		ymdtackn <= '1';
 		sdtackn <= '1';
 		mono <= '0';
 		hz50 <= '0';
@@ -193,17 +193,25 @@ begin
 	elsif enPhi1 = '1' then
 		oD <= (others => '1');
 		sdtackn <= '1';
+		ymdtackn <= '1';
 		if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRwn = '0' and rwn_ff = '1')) then
 			if iA(23 downto 15) = "111111111" and FC(2) = '1' then
 				-- hardware registers
 				if iA(15 downto 1)&'0' = x"820a" and iUDSn = '0' and iRWn = '1' then
 					oD <= hz50&'0';
 				end if;
-				if wdtackn = '0' then
-					-- assert DTACKn for DMA and PSG access
+				if iA(15 downto 2)&"00" = x"8604" then
+					-- assert DTACKn for DMA register access
 					sdtackn <= '0';
 				end if;
+				if iA(15 downto 8) = x"88" then
+					-- assert DTACKn for PSG register access (1 extra cycle delay)
+					ymdtackn <= '0';
+				end if;
 			end if;
+		end if;
+		if ymdtackn = '0' then
+			sdtackn <= '0';
 		end if;
 	end if;
 	end if;

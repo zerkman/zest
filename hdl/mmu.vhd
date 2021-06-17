@@ -79,7 +79,7 @@ architecture behavioral of mmu is
 begin
 
 	al <= iA(7 downto 1) & '1';
-	mode_bus <= '1' when (cnt = 1 or cnt = 2) and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
+	mode_bus <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
 	DTACKn <= sdtackn;
 
 	process(DCYCn,delay_bus,delay_dcycn,screen_adr_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
@@ -129,14 +129,14 @@ begin
 			memcfg <= (others => '0');
 			dma_ptr <= (others => '0');
 		elsif enPhi1 = '1' then
-			if (RAMn = '0' or DEVn = '0') and (cnt = 2 or cnt = 3) then
+			if (RAMn = '0' or DEVn = '0') and cnt = 2 then
 				sdtackn <= '0';
 			end if;
 			if cnt = 0 then
 				sdtackn <= '1';
 			end if;
 		elsif enPhi2 = '1' then
-			mode_bus_ff <= mode_bus;
+			mode_bus_ff <= mode_bus or mode_bus_ff;
 			cnt <= cnt + 1;
 			CMPCSn <= '1';
 			oD <= x"ff";
