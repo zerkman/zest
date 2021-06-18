@@ -59,6 +59,9 @@ architecture behavioral of vclkconvert is
 		);
 	end component;
 
+	constant fifo_depth : integer := 8;
+
+	signal initcnt : unsigned(fifo_depth-1 downto 0);
 	signal idata : std_logic_vector(18 downto 0);
 	signal odata : std_logic_vector(18 downto 0);
 	signal ifull : std_logic;
@@ -75,7 +78,7 @@ begin
 	opix <= odata(15 downto 0);
 
 	fifo:aFifo
-	generic map (DATA_WIDTH => 19, ADDR_WIDTH => 8)
+	generic map (DATA_WIDTH => 19, ADDR_WIDTH => fifo_depth)
 	port map (
 		Data_out => odata,
 		Empty_out => oempty,
@@ -108,11 +111,16 @@ begin
 	begin
 		if rising_edge(pclk) then
 			if resetn = '0' then
+				initcnt <= (others => '1');
 				readen <= '0';
 			else
 				readen <= '0';
 				if oempty = '0' then
-					readen <= '1';
+					if initcnt = 0 then
+						readen <= '1';
+					else
+						initcnt <= initcnt - 1;
+					end if;
 				end if;
 			end if;
 		end if;
