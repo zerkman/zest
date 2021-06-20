@@ -69,26 +69,67 @@ end glue;
 
 architecture behavioral of glue is
 
-	type sync_t is record
+	type videomode_t is record
 		cycles_per_line	: integer;
 		n_lines			: integer;
-		first_visible	: integer;
+		vblank_off		: integer;
 		vde_on			: integer;
 		vde_off			: integer;
 		vblank_on		: integer;
+		vvsync_on		: integer;
+		hsync_on		: integer;
+		hvsync_on		: integer;
 		hblank_off		: integer;
 		hde_on			: integer;
 		hde_off			: integer;
 		hblank_on		: integer;
 	end record;
-	constant sync_50	: sync_t := (512,313,34,63,263,310,28,56,376,450);
-	constant sync_60	: sync_t := (508,263,5,34,234,260,24,52,372,450);
-	constant sync_hi	: sync_t := (224,501,34,34,434,434,28,4,164,184);
+	constant mode_50	: videomode_t := (
+		cycles_per_line		=> 512,
+		n_lines				=> 313,
+		vblank_off			=> 34,
+		vde_on				=> 63,
+		vde_off				=> 263,
+		vblank_on			=> 310,
+		vvsync_on			=> 310,
+		hsync_on			=> 472,
+		hvsync_on			=> 0,
+		hblank_off			=> 28,
+		hde_on				=> 66,
+		hde_off				=> 386,
+		hblank_on			=> 450);
+	constant mode_60	: videomode_t := (
+		cycles_per_line		=> 508,
+		n_lines				=> 263,
+		vblank_off			=> 5,
+		vde_on				=> 34,
+		vde_off				=> 234,
+		vblank_on			=> 260,
+		vvsync_on			=> 260,
+		hsync_on			=> 468,
+		hvsync_on			=> 0,
+		hblank_off			=> 24,
+		hde_on				=> 62,
+		hde_off				=> 382,
+		hblank_on			=> 450);
+	constant mode_hi	: videomode_t := (
+		cycles_per_line		=> 224,
+		n_lines				=> 501,
+		vblank_off			=> 34,
+		vde_on				=> 34,
+		vde_off				=> 434,
+		vblank_on			=> 434,
+		vvsync_on			=> 500,
+		hsync_on			=> 196,
+		hvsync_on			=> 0,
+		hblank_off			=> 28,
+		hde_on				=> 14,
+		hde_off				=> 174,
+		hblank_on			=> 184);
 
-	type sync_array_t is array (0 to 2) of sync_t;
-	constant sync_array : sync_array_t := (sync_60,sync_50,sync_hi);
-	signal sync		: sync_t;
-	constant vbl_delay	: integer := 68;
+	type mode_array_t is array (0 to 2) of videomode_t;
+	constant mode_array : mode_array_t := (mode_60,mode_50,mode_hi);
+	signal currentmode	: videomode_t;
 
 	-- resolution
 	signal mono		: std_logic := '0';
@@ -104,7 +145,7 @@ architecture behavioral of glue is
 	signal hde		: std_logic;
 	signal line_pal	: std_logic := '0';
 
-	signal sync_id	: unsigned(1 downto 0);
+	signal mode_id	: unsigned(1 downto 0);
 
 	signal irq_vbl	: std_logic;
 	signal irq_hbl	: std_logic;
@@ -139,8 +180,8 @@ oDTACKn <= sdtackn;
 oRDY <= sdma;
 DMAn <= sdma;
 
-sync_id <= mono & (line_pal and not mono);
-sync <= sync_array(to_integer(sync_id));
+mode_id <= mono & (line_pal and not mono);
+currentmode <= mode_array(to_integer(mode_id));
 
 -- 8-bit bus (ACIA) signal management
 process(iA,iASn,VMAn)
@@ -380,7 +421,7 @@ begin
 			ack_hbl <= '0';
 			ack_vbl <= '0';
 		elsif enPhi2 = '1' then
-			if vcnt = 0 and nexthcnt = vbl_delay then
+			if vcnt = 0 and nexthcnt = currentmode.hvsync_on then
 				irq_vbl <= '1';
 			end if;
 			if nexthcnt = 0 then
@@ -469,7 +510,7 @@ end process;
 -- video sync
 process(hcnt,mono,line_pal)
 begin
-	if (hcnt = 223 and mono = '1') or (hcnt = 507 and line_pal = '0') or hcnt = 511 then
+	if hcnt+1 = currentmode.cycles_per_line then
 		nexthcnt <= (others => '0');
 	else
 		nexthcnt <= hcnt+1;
@@ -477,6 +518,7 @@ begin
 end process;
 
 process(clk)
+	variable nextvcnt : unsigned(8 downto 0);
 begin
 	if rising_edge(clk) then
 		if resetn = '0' then
@@ -491,82 +533,56 @@ begin
 		elsif enPhi1 = '1' then
 			-- update H signals
 			hcnt <= nexthcnt;
-			if nexthcnt = 4 and mono = '1' then
+			if nexthcnt = 0 then
+				shsync <= '1';
+			end if;
+			if nexthcnt = currentmode.hsync_on then
+				shsync <= '0';
+			end if;
+			if nexthcnt = currentmode.hde_on then
 				hde <= '1';
 			end if;
-			if nexthcnt = 21 and mono = '1' then
+			if nexthcnt = currentmode.hde_off then
+				hde <= '0';
+			end if;
+			if nexthcnt = currentmode.hblank_on then
+				hblank <= '1';
+			end if;
+			if nexthcnt = currentmode.hblank_off then
 				hblank <= '0';
 			end if;
-			if nexthcnt = 24 and mono = '0' and hz50 = '0' then
-				hblank <= '0';
-			end if;
-			if nexthcnt = 28 and mono = '0' and hz50 = '1' then
-				hblank <= '0';
-			end if;
-			if nexthcnt = 52 and mono = '0' and hz50 = '0' then
-				hde <= '1';
-			end if;
-			if nexthcnt = 54 then
+
+			if nexthcnt = 64 then
 				line_pal <= hz50;
 			end if;
-			if nexthcnt = 56 and mono = '0' and hz50 = '1' then
-				hde <= '1';
-			end if;
-			if nexthcnt = 164 and mono = '1' then
-				hde <= '0';
-			end if;
-			if nexthcnt = 181 and mono = '1' then
-				hblank <= '1';
-			end if;
-			if nexthcnt = 192 and mono = '1' then
-				shsync <= '0';
-			end if;
-			if nexthcnt = 220 and mono = '1' then
-				shsync <= '1';
-			end if;
-			if nexthcnt = 372 and mono = '0' and hz50 = '0' then
-				hde <= '0';
-			end if;
-			if nexthcnt = 376 and mono = '0' and hz50 = '1' then
-				hde <= '0';
-			end if;
-			if nexthcnt = 450 and mono = '0' then
-				hblank <= '1';
-			end if;
-			if ((nexthcnt = 458 and line_pal = '0') or (nexthcnt = 462 and line_pal = '1')) and mono = '0' then
-				shsync <= '0';
-				hde <= '0';
-			end if;
-			if ((nexthcnt = 498 and line_pal = '0') or (nexthcnt = 502 and line_pal = '1')) and mono = '0' then
-				shsync <= '1';
-			end if;
-			if (nexthcnt = 214 and mono = '1') or nexthcnt = 502 then
-				-- update V signals
-				if (vcnt = 262 and mono = '0' and hz50 = '0') or (vcnt = 312 and mono = '0') or vcnt = 500 then
-					svsync <= '0';
+
+			-- update V signals
+			nextvcnt := vcnt;
+			if nexthcnt = 0 then
+				if vcnt+1 = currentmode.n_lines then
+					nextvcnt := (others => '0');
 				else
-					if (vcnt = 0 and mono = '1') or (vcnt = 2 and mono = '0') then
-						svsync <= '1';
-					end if;
+					nextvcnt := vcnt + 1;
 				end if;
-				if vcnt+1 = sync.vblank_on then
+				vcnt <= nextvcnt;
+				if nextvcnt = currentmode.vblank_on then
 					vblank <= '1';
 				end if;
-				if vcnt+1 = sync.first_visible then
+				if nextvcnt = currentmode.vblank_off then
 					vblank <= '0';
 				end if;
-				if vcnt+1 = sync.vde_on then
+				if nextvcnt = currentmode.vde_on then
 					vde <= '1';
 				end if;
-				if vcnt+1 = sync.vde_off then
+				if nextvcnt = currentmode.vde_off then
 					vde <= '0';
 				end if;
 			end if;
-			if nexthcnt = 0 then
-				if (mono = '0' and ((vcnt = 262 and hz50 = '0') or vcnt = 312)) or vcnt = 500 then
-					vcnt <= (others => '0');
-				else
-					vcnt <= vcnt + 1;
+			if nexthcnt = currentmode.hvsync_on then
+				if nextvcnt = 0 then
+					svsync <= '1';
+				elsif nextvcnt = currentmode.vvsync_on then
+					svsync <= '0';
 				end if;
 			end if;
 		end if;
