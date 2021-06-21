@@ -100,12 +100,12 @@ architecture behavioral of mc68901 is
 	signal tato		: std_logic;
 	signal tapc		: unsigned(7 downto 0);
 	signal tamc		: unsigned(7 downto 0);
-	signal tai1		: std_logic;
+	signal tai1		: std_logic_vector(4 downto 0);
 
 	signal tbto		: std_logic;
 	signal tbpc		: unsigned(7 downto 0);
 	signal tbmc		: unsigned(7 downto 0);
-	signal tbi1		: std_logic;
+	signal tbi1		: std_logic_vector(4 downto 0);
 
 	signal tcto		: std_logic;
 	signal tcpc		: unsigned(7 downto 0);
@@ -191,12 +191,12 @@ begin
 				tato <= '0';
 				tapc <= x"01";
 				tamc <= x"01";
-				tai1 <= '0';
+				tai1 <= (others => '0');
 
 				tbto <= '0';
 				tbpc <= x"01";
 				tbmc <= x"01";
-				tbi1 <= '0';
+				tbi1 <= (others => '0');
 
 				tcto <= '0';
 				tcpc <= x"01";
@@ -208,14 +208,14 @@ begin
 			else
 				if xtlcken = '1' then
 					-- Timer A operation
-					tai1 <= tai;
-					if ierb(6) = '1' and tacr(3) = '1' and tai /= tai1 and tai = aer(4) then
+					tai1 <= tai1(tai1'high-1 downto 0) & tai;
+					if ierb(6) = '1' and tacr(3) = '1' and tai1(tai1'high) /= tai1(tai1'high-1) and tai = aer(4) then
 						-- Pulse count interrupt, GPIP4 channel
 						iprb(6) <= '1';
 					end if;
 					if tacr /= "0000" then
 						-- Decrement counters in delay mode or pulse width measurement mode or event count mode
-						if tacr(3) = '0' or (tacr = "1000" and tai /= tai1 and tai = aer(4)) then
+						if tacr(3) = '0' or (tacr = "1000" and tai1(tai1'high) /= tai1(tai1'high-1) and tai = aer(4)) then
 							if tapc = x"01" or tacr = "1000" then
 								if tacr /= "1000" then
 									tapc <= to_unsigned(prescale(to_integer(unsigned(tacr(2 downto 0)))),tapc'length);
@@ -237,14 +237,14 @@ begin
 					end if;
 
 					-- Timer B operation
-					tbi1 <= tbi;
-					if ierb(3) = '1' and tbcr(3) = '1' and tbi /= tbi1 and tbi = aer(3) then
+					tbi1 <= tbi1(tbi1'high-1 downto 0) & tbi;
+					if ierb(3) = '1' and tbcr(3) = '1' and tbi1(tbi1'high) /= tbi1(tbi1'high-1) and tbi = aer(3) then
 						-- Pulse count interrupt, GPIP3 channel
 						iprb(3) <= '1';
 					end if;
 					if tbcr /= "0000" then
 						-- Decrement counters in delay mode or pulse width measurement mode or event count mode
-						if tbcr(3) = '0' or (tbcr = "1000" and tbi /= tbi1 and tbi = aer(3)) then
+						if tbcr(3) = '0' or (tbcr = "1000" and tbi1(tbi1'high) /= tbi1(tbi1'high-1) and tbi = aer(3)) then
 							if tbpc = x"01" or tbcr = "1000" then
 								if tbcr /= "1000" then
 									tbpc <= to_unsigned(prescale(to_integer(unsigned(tbcr(2 downto 0)))),tbpc'length);
