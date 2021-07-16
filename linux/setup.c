@@ -33,6 +33,7 @@
 
 #include <linux/input-event-codes.h>
 #include <linux/i2c-dev.h>
+#include <linux/i2c.h>
 
 /* from floppy.c */
 void * thread_floppy(void * arg);
@@ -41,7 +42,7 @@ void * thread_floppy(void * arg);
  * The slave address to send to and receive from.
  */
 
-#define IIC_SLAVE_ADDR 0x3b
+#define HDMI_TX_ADDR 0x3b
 
 #define ST_MEM_ADDR 0x10000000
 #define ST_MEM_SIZE 0x1000000
@@ -71,42 +72,42 @@ int i2c_init(void) {
 	return 0;
 }
 
-int i2c_set(uint8_t addr, uint8_t val) {
-	uint8_t buffer[2] = {addr,val};
-
-	if (ioctl(i2cfd,I2C_SLAVE_FORCE,IIC_SLAVE_ADDR) < 0) {
-		printf("Could not set the I2C slave address\n");
+int i2c_read(uint8_t offset, unsigned int size, uint8_t *buffer) {
+	struct i2c_msg msgs[2] = {
+		{.addr = HDMI_TX_ADDR, .flags = 0, .len = 1, .buf = &offset},
+		{.addr = HDMI_TX_ADDR, .flags = 1, .len = size, .buf = buffer}
+	};
+	struct i2c_rdwr_ioctl_data data = {.msgs = msgs, .nmsgs = 2};
+	if (ioctl(i2cfd,I2C_RDWR,&data)<0) {
+		printf("I2C RDWR read transaction failed\n");
 		return 1;
 	}
-
-	if (write(i2cfd,buffer,2) != 2) {
-		printf("I2C write error\n");
-		return 1;
-	}
-
 	return 0;
 }
 
-int i2c_get(uint8_t addr, uint8_t *val) {
-	if (ioctl(i2cfd,I2C_SLAVE_FORCE,IIC_SLAVE_ADDR) < 0) {
-		printf("Could not set the I2C slave address\n");
+int i2c_write(unsigned int size, uint8_t *buffer) {
+	struct i2c_msg msg = {
+		.addr = HDMI_TX_ADDR, .flags = 0, .len = size, .buf = buffer
+	};
+	struct i2c_rdwr_ioctl_data data = {.msgs = &msg, .nmsgs = 1};
+	if (ioctl(i2cfd,I2C_RDWR,&data)<0) {
+		printf("I2C RDWR write transaction failed\n");
 		return 1;
 	}
-
-	if (write(i2cfd,&addr,1) != 1) {
-		printf("I2C write address error\n");
-		return 1;
-	}
-	if (read(i2cfd,val,1) != 1) {
-		printf("I2C read error\n");
-		return 1;
-	}
-
 	return 0;
+}
+
+int i2c_set(uint8_t offset, uint8_t val) {
+	uint8_t buf[2] = { offset, val };
+	return i2c_write(2,buf);
+}
+
+int i2c_get(uint8_t offset, uint8_t *val) {
+	return i2c_read(offset,1,val);
 }
 
 int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines) {
-	uint8_t buffer[4];
+	uint8_t tpi_id[3];
 
 	i2c_init();
 
@@ -114,53 +115,46 @@ int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines) {
 	if (i2c_set(0xc7,0) != 0) return 1;
 
 	/* TPI Identification registers */
-	/* Device ID */
-	if (i2c_get(0x1b,&buffer[0]) != 0) return 1;
-	/* Device Production Revision ID */
-	if (i2c_get(0x1c,&buffer[1]) != 0) return 1;
-	/* TPI Revision ID */
-	if (i2c_get(0x1d,&buffer[2]) != 0) return 1;
-	/* HDCP Revision */
-	if (i2c_get(0x30,&buffer[3]) != 0) return 1;
+	if (i2c_read(0x1b,3,tpi_id) != 0) return 1;
 
-	if (buffer[0]!=0xb0 || buffer[1]!=0x02 || buffer[2]!=0x03 || buffer[3]!=0x00) {
+	if (tpi_id[0]!=0xb0			/* Device ID */
+		|| tpi_id[1]!=0x02		/* Device Production Revision ID */
+		|| tpi_id[2]!=0x03)		/* TPI Revision ID */
+	{
 		printf("Failed identification of HDMI transmitter\n");
 		return 1;
 	}
 
-	// Power State Control, full operation
-	if (i2c_set(0x1e,0x00) != 0) return 1;
-	// InputBusFmt, 1x1 pixel repetition, rising edge of clock
-	if (i2c_set(0x08,0x70) != 0) return 1;
-
-	// 8-bit color depth, RGB
-	if (i2c_set(0x09,0x00) != 0) return 1;
-	// Output format, RGB
-	if (i2c_set(0x0a,0x00) != 0) return 1;
+	// No TMDS, enable HDMI output mode
+	if (i2c_set(0x1a,0x11) != 0) return 1;
 
 	// External sync, no sync adjust
 	if (i2c_set(0x60,0x04) != 0) return 1;
 	// Interrupts : hot plug
 	if (i2c_set(0x3c,0x01) != 0) return 1;
-	// No TMDS, enable HDMI output mode
-	if (i2c_set(0x1a,0x11) != 0) return 1;
 
-	// Pixel clock in multiples of 0.01 MHz e.g. 14850 -> 148.5 MHz
-	if (i2c_set(0x00,pxclock) != 0) return 1;
-	if (i2c_set(0x01,pxclock>>8) != 0) return 1;
-	// VFreq in 0.01 Hz e.g. 5000 -> 50 Hz
-	if (i2c_set(0x02,vfreq) != 0) return 1;
-	if (i2c_set(0x03,vfreq>>8) != 0) return 1;
-	// Pixels per line
-	if (i2c_set(0x04,pixperline) != 0) return 1;
-	if (i2c_set(0x05,pixperline>>8) != 0) return 1;
-	// Total lines
-	if (i2c_set(0x06,nlines) != 0) return 1;
-	if (i2c_set(0x07,nlines>>8) != 0) return 1;
-	// InputBusFmt, 1x1 pixel repetition, rising edge of clock
-	if (i2c_set(0x08,0x70) != 0) return 1;
-	// TMDS active, enable HDMI output mode
-	if (i2c_set(0x1a,0x01) != 0) return 1;
+	// Power State Control, full operation
+	if (i2c_set(0x1e,0x00) != 0) return 1;
+
+	uint8_t vmode_pxfmt[12] = {
+		// offset: video mode
+		0,
+		// 0: Pixel clock in multiples of 0.01 MHz e.g. 14850 -> 148.5 MHz
+		pxclock, pxclock>>8,
+		// 2: VFreq in 0.01 Hz e.g. 5000 -> 50 Hz
+		vfreq, vfreq>>8,
+		// 4: Pixels per line
+		pixperline, pixperline>>8,
+		// 6: Total lines
+		nlines, nlines>>8,
+		// 8: InputBusFmt, 1x1 pixel repetition, rising edge of clock
+		0x70,
+		// 9: 8-bit color depth, RGB
+		0x00,
+		// 10: Output format, RGB
+		0x00,
+	};
+	if (i2c_write(12,vmode_pxfmt) != 0) return 1;
 
 	// Audio interface = I2S, 2-channel, Mute on, PCM
 	if (i2c_set(0x26,0x91) != 0) return 1;
@@ -180,7 +174,13 @@ int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines) {
 	if (i2c_set(0x25,2) != 0) return 1;
 
 	// InfoFrame Data
-	static const uint8_t audio_infoframe_data[10] = {
+	uint8_t audio_infoframe_cmd[16] = {
+		0xbf,		// offset
+		0xc2,		// 0xbf: IF select = audio, enable, repeat
+		0x84,		// 0xc0: IF type
+		0x01,		// 0xc1: IF version
+		0x0a,		// 0xc2: IF length
+		0x00,		// 0xc3: IF checksum
 		0x11,		// audio format = PCM, 2 channels
 		0x0d,		// 48 kHz, 16 bit
 		0x00,		// no audio format code extension
@@ -192,27 +192,27 @@ int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines) {
 		0x00,		// data byte 9, reserved
 		0x00,		// data byte 10, reserved
 	};
-	unsigned int checksum = 0x84 + 0x01 + 0x0a;
+	unsigned int checksum = 0;
 	int i;
-	for (i=0; i<10; ++i) {
-		checksum += audio_infoframe_data[i];
-	}
-	// IF select = audio, enable, repeat
-	if (i2c_set(0xbf,0xc2) != 0) return 1;
-	// IF type
-	if (i2c_set(0xc0,0x84) != 0) return 1;
-	// IF version
-	if (i2c_set(0xc1,1) != 0) return 1;
-	// IF length
-	if (i2c_set(0xc2,0x0a) != 0) return 1;
-	// IF checksum
-	if (i2c_set(0xc3,0x100-(checksum&0xff)) != 0) return 1;
-	// IF data bytes
-	for (i=0; i<10; ++i) {
-		if (i2c_set(0xc4+i,audio_infoframe_data[i]) != 0) return 1;
-	}
+	for (i=2; i<16; ++i) checksum += audio_infoframe_cmd[i];
+	audio_infoframe_cmd[5] = 0x100-(checksum&0xff);
+	if (i2c_write(16,audio_infoframe_cmd) != 0) return 1;
+
 	// Audio interface = I2S, 2-channel, Mute off, PCM
 	if (i2c_set(0x26,0x81) != 0) return 1;
+
+	// TMDS active, enable HDMI output mode
+	if (i2c_set(0x1a,0x01) != 0) return 1;
+
+	return 0;
+}
+
+int hdmi_stop(void) {
+	// Audio interface = I2S, 2-channel, Mute on, PCM
+	if (i2c_set(0x26,0x91) != 0) return 1;
+
+	// TMDS down, mute HDMI AV
+	if (i2c_set(0x1a,0x19) != 0) return 1;
 
 	return 0;
 }
@@ -596,6 +596,7 @@ int main(int argc, char **argv) {
 	thr_end = 1;
 	pthread_join(kbd_thr,NULL);
 	pthread_join(floppy_thr,NULL);
+	hdmi_stop();
 
 	return 0;
 }
