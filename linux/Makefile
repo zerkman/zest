@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-TARGETS=setup
+TARGETS=setup setup_sil
 CFLAGS=-g -Wall -O2
 
 all: $(TARGETS)
@@ -23,3 +23,8 @@ clean:
 	rm -f *.o $(TARGETS)
 
 setup: setup.o floppy.o
+
+setup_sil: setup_sil.o floppy.o
+
+setup_sil.o: setup.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DSIL9022A -c -o $@ $<

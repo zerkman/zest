@@ -1,0 +1,53 @@
+#include "system-top.dts"
+/{
+	usb_phy0: usb_phy@0{
+		compatible = "ulpi-phy";
+		#phy-cells = <0>;
+		reg = <0xe0002000 0x1000>;
+		view-port = <0x170>;
+		drv-vbus;
+	};
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		vin_reserved: vin@10000000 {
+			reg = <0x10000000 0x1000000>;
+		};
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+		led1 {
+			label = "led1";
+			gpios = <&gpio0 0 1>;
+			default-state = "off";
+			linux,default-trigger = "none";
+		};
+	};
+	gpio-keys {
+		compatible = "gpio-keys";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		autorepeat;
+		k1 {
+			label = "k1";
+			gpios = <&gpio0 9 1>;
+			linux,code = <256>; /* BTN_0 */
+			gpio-key,wakeup;
+			autorepeat;
+		};
+	};
+
+};
+
+&usb0{
+	dr_mode = "host";
+	usb-phy = <&usb_phy0>;
+};
+
+&configurator_0{
+	compatible = "generic-uio";
+	interrupt-parent = <&intc>;
+	interrupts = <0 29 1>;
+};

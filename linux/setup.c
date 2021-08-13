@@ -32,17 +32,16 @@
 #include <sys/time.h>
 
 #include <linux/input-event-codes.h>
-#include <linux/i2c-dev.h>
-#include <linux/i2c.h>
+
+#ifdef SIL9022A
+# include <linux/i2c-dev.h>
+# include <linux/i2c.h>
+# define HDMI_TX_ADDR 0x3b
+#endif
 
 /* from floppy.c */
 void * thread_floppy(void * arg);
 
-/*
- * The slave address to send to and receive from.
- */
-
-#define HDMI_TX_ADDR 0x3b
 
 #define ST_MEM_ADDR 0x10000000
 #define ST_MEM_SIZE 0x1000000
@@ -62,6 +61,7 @@ volatile uint32_t *parmreg;
 // IIC device file descriptor
 int i2cfd;
 
+#ifdef SIL9022A
 int i2c_init(void) {
 	i2cfd = open("/dev/i2c-0",O_RDWR);
 	if (i2cfd < 0) {
@@ -216,6 +216,7 @@ int hdmi_stop(void) {
 
 	return 0;
 }
+#endif
 
 struct input_event {
 	struct timeval time;
@@ -488,7 +489,6 @@ int usage(const char *progname) {
 }
 
 int main(int argc, char **argv) {
-	int Status;
 	int cfg_video = CFG_COLR;
 	int cfg_mem = CFG_1M;
 
@@ -553,23 +553,26 @@ int main(int argc, char **argv) {
 	uint8_t *mem_array = mmap(NULL,ST_MEM_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,memfd,ST_MEM_ADDR);
 	parmreg[1] = ST_MEM_ADDR;
 
+#ifdef SIL9022A
+	int status;
 	/* Initialize HDMI, set up 1080p50 RGB mode */
-	// Status = hdmi_init(14850,5000,2200,1350);
+	// status = hdmi_init(14850,5000,2200,1350);
 	/* 1080p60 */
-	// Status = hdmi_init(14850,6000,2200,1125);
+	// status = hdmi_init(14850,6000,2200,1125);
 	if (cfg & CFG_MONO) {
 		/* Mono */
-		Status = hdmi_init(3200,7129,896,501);
+		status = hdmi_init(3200,7129,896,501);
 	} else {
 		/* 576p */
-		Status = hdmi_init(3200,5000,1024,625);
+		status = hdmi_init(3200,5000,1024,625);
 	}
-	if (Status != 0) {
+	if (status != 0) {
 		printf("HDMI setup Failed\n");
 		return 1;
 	}
-
 	printf("HDMI setup successful\n");
+#endif
+
 	memset(mem_array+0xfa0000,0xff,0x20000);
 	int c;
 	pthread_t kbd_thr;
@@ -596,7 +599,9 @@ int main(int argc, char **argv) {
 	thr_end = 1;
 	pthread_join(kbd_thr,NULL);
 	pthread_join(floppy_thr,NULL);
+#ifdef SIL9022A
 	hdmi_stop();
+#endif
 
 	return 0;
 }
