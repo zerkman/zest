@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -551,6 +552,9 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	uint8_t *mem_array = mmap(NULL,ST_MEM_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,memfd,ST_MEM_ADDR);
+	if (mem_array == MAP_FAILED) {
+		printf("Could not allocate the shared memory block: %s\n", strerror(errno));
+	}
 	parmreg[1] = ST_MEM_ADDR;
 
 #ifdef SIL9022A
