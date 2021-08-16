@@ -105,7 +105,7 @@ begin
 			sdelay <= (others => ((others => '0'), '0'));
 		else
 			if ide = '1' then
-				dly.data := rgb(7 downto 0) & rgb(15 downto 8) & rgb(23 downto 16);
+				dly.data := rgb;
 			else
 				dly.data := x"03030" & "00" & vsync & hsync;
 			end if;
