@@ -59,6 +59,19 @@ void * thread_floppy(void * arg);
 
 volatile uint32_t *parmreg;
 
+int joy_emu = 0;
+
+#define JOY_EMU_LED_FILE "/sys/class/leds/led1/brightness"
+int joyemufd;
+
+void led_status(int fd,int st) {
+	if (fd>=0) {
+		char val = st?'1':'0';
+		write(fd,&val,1);
+	}
+}
+
+
 // IIC device file descriptor
 int i2cfd;
 
@@ -332,7 +345,7 @@ void * thread_kbd(void * arg) {
 								case KEY_0: key = 19; break;
 								case KEY_EQUAL: key = 20; break;
 								case KEY_BACKSPACE: key = 21; break;
-								case KEY_UP: key = 22; break;
+								case KEY_UP: key = joy_emu?123:22; break;
 								// key 23 - numeric pad [)] not mapped
 								case KEY_KPASTERISK: key = 24; break;
 								case KEY_1: key = 25; break;
@@ -354,7 +367,7 @@ void * thread_kbd(void * arg) {
 								case KEY_O: key = 41; break;
 								case KEY_LEFTBRACE: key = 42; break;
 								case KEY_INSERT: key = 43; break;
-								case KEY_LEFT: key = 44; break;
+								case KEY_LEFT: key = joy_emu?125:44; break;
 								case KEY_KP8: key = 45; break;
 								case KEY_KPMINUS: key = 46; break;
 								case KEY_LEFTCTRL:
@@ -367,10 +380,10 @@ void * thread_kbd(void * arg) {
 								case KEY_P: key = 53; break;
 								case KEY_RIGHTBRACE: key = 54; break;
 								case KEY_BACKSLASH: key = 55; break;
-								case KEY_DOWN: key = 56; break;
+								case KEY_DOWN: key = joy_emu?124:56; break;
 								case KEY_KP4: key = 57; break;
 								case KEY_KP6: key = 58; break;
-								case KEY_LEFTSHIFT: key = 59; break;
+								case KEY_LEFTSHIFT: key = joy_emu?127:59; break;
 								case KEY_A: key = 60; break;
 								case KEY_S: key = 61; break;
 								case KEY_F: key = 62; break;
@@ -379,7 +392,7 @@ void * thread_kbd(void * arg) {
 								case KEY_L: key = 65; break;
 								case KEY_SEMICOLON: key = 66; break;
 								case KEY_ENTER: key = 67; break;
-								case KEY_RIGHT: key = 68; break;
+								case KEY_RIGHT: key = joy_emu?126:68; break;
 								case KEY_KP5: key = 69; break;
 								case KEY_KPPLUS: key = 70; break;
 								case KEY_LEFTALT:
@@ -409,6 +422,12 @@ void * thread_kbd(void * arg) {
 								case KEY_KPENTER: key = 94; break;
 								case BTN_LEFT: key = 122; break;
 								case BTN_RIGHT: key = 127; break;
+								case KEY_NUMLOCK:
+									if (ie[e].value == 1) {
+										joy_emu = !joy_emu;
+										led_status(joyemufd,joy_emu);
+									}
+									break;
 								// default:
 								// 	printf("Key code:%d val:%d\n",(int)ie[e].code,(int)ie[e].value);
 							}
@@ -557,6 +576,8 @@ int main(int argc, char **argv) {
 	}
 	parmreg[1] = ST_MEM_ADDR;
 
+	joyemufd = open(JOY_EMU_LED_FILE,O_WRONLY|O_SYNC);
+
 #ifdef SIL9022A
 	int status;
 	/* Initialize HDMI, set up 1080p50 RGB mode */
@@ -606,6 +627,7 @@ int main(int argc, char **argv) {
 #ifdef SIL9022A
 	hdmi_stop();
 #endif
+	if (joyemufd!=-1) close(joyemufd);
 
 	return 0;
 }
