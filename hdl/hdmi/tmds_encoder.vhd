@@ -30,7 +30,7 @@ entity tmds_encoder is
 end tmds_encoder;
 
 architecture rtl of tmds_encoder is
-	signal cnt : signed(3 downto 0);
+	signal cnt : signed(4 downto 0);
 
 	function n1 (x : in std_logic_vector) return integer is
 		variable n : integer;
@@ -53,7 +53,7 @@ begin
 	if rising_edge(clk) then
 		if reset = '1' then
 			tmds_d <= "1101010100";
-			cnt <= "0000";
+			cnt <= "00000";
 		else
 			if de = '1' then
 				q_m(0) := data(0);
@@ -128,6 +128,9 @@ begin
 					when "10" => tmds_d <= "0101010100";
 					when others => tmds_d <= "1010101011";
 				end case;
+			end if;
+			if de = '0' then
+				cnt <= "00000";
 			end if;
 		end if;
 	end if;
