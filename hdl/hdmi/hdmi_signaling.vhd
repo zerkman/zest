@@ -36,66 +36,100 @@ entity hdmi_sig is
 end hdmi_sig;
 
 architecture rtl of hdmi_sig is
+
+	component hdmi_packet_gen is
+		port (
+			clk    : in std_logic;
+			reset  : in std_logic;
+
+			if_tr  : in std_logic;		-- infoframe island trigger
+
+			data   : out std_logic_vector(7 downto 0);		-- packet data
+			dvalid : out std_logic;
+			dready : in std_logic
+		);
+	end component;
+
+	component hdmi_island_encoder is
+		port (
+			clk      : in std_logic;
+			reset    : in std_logic;
+
+			data     : in std_logic_vector(7 downto 0);
+			dvalid   : in std_logic;
+			dready   : out std_logic;
+
+			busy     : out std_logic;
+			preamble : out std_logic;
+			guard    : out std_logic;
+			packet   : out std_logic;
+			aux0     : out std_logic;
+			aux1     : out std_logic_vector(3 downto 0);
+			aux2     : out std_logic_vector(3 downto 0)
+		);
+	end component;
+
+	signal packet_data  : std_logic_vector(7 downto 0);
+	signal packet_valid : std_logic;
+	signal packet_ready : std_logic;
+
 	-- shift register for input signals
 	type sdelay_e_t is record
 		data  : std_logic_vector(23 downto 0);
 		de    : std_logic;
 	end record;
 	type sdelay_t is array (0 to 10) of sdelay_e_t;
-	signal sdelay : sdelay_t;
+	signal sdelay       : sdelay_t;
 
 	-- signals for preamble and guard band generation
-	signal pr_cnt : unsigned(3 downto 0);
-	signal old_de : std_logic;
+	signal pr_cnt       : unsigned(3 downto 0);
+	signal old_de       : std_logic;
 
 	-- signals to trigger the generation of the infoframe data island
-	signal vsync0     : std_logic;
-	signal info_ready : std_logic;
-	signal if_trig    : std_logic;
+	signal vsync0       : std_logic;
+	signal info_ready   : std_logic;
+	signal if_trig      : std_logic;
 
-	-- Pre-defined data island packet types
-	type data_packet_t is array (0 to 30) of std_logic_vector(7 downto 0);
-	-- Auxiliary Video Information (AVI) InfoFrame
-	constant avi_infoframe : data_packet_t := (
-		x"82", x"02", x"0d",	-- AVI InfoFrame version 2 header
-		x"12",			-- format = RGB, active format information present, no bar data, activate underscan
+	signal packet0      : std_logic;	-- determines 1st char of data island packet
 
-		-- x"28",			-- no colorimetry data, 16/9 input ratio, same display ratio
-		-- x"2a",			-- no colorimetry data, 16/9 input ratio, 16/9 centered display ratio
-		-- x"18",			-- no colorimetry data, 4/3 input ratio, same display ratio
-		x"19",			-- no colorimetry data, 4/3 input ratio, 4/3 centered display ratio
-
-		x"80",			-- IT content, no colorimetry data (bc. RGB mode), default RGB quantization, no known non-uniform scaling
-
-		-- x"10",			-- 1920x1080p @ 60 Hz
-		-- x"11",			-- 720x576p @ 50 Hz, 4:3
-		x"00",			-- no standard screen mode
-
-		x"30",			-- YCC quantization ignored, game content type, no pixel repetition
-		x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
-		x"00", x"00", x"00", x"00", x"00", x"00", x"00", x"00",
-		x"00", x"00", x"00", x"00", x"00", x"00", x"00" );
-	type island_st_t is (idle, preamble, ld_guard, packet, tr_guard);
-	signal island_st : island_st_t;
-	signal islandst1 : island_st_t;
-	signal packet0   : std_logic;	-- determines 1st char of data packet
-	-- state counter for infoframe data island generation
-	signal ifcnt     : unsigned(4 downto 0);
-	signal ecc0      : std_logic_vector(7 downto 0);
-	type chn_ecc_t is array(0 to 3) of std_logic_vector(7 downto 0);
-	signal ecc       : chn_ecc_t;
-
+	-- data island encoder status
+	signal enc_busy     : std_logic;
+	signal enc_preamble : std_logic;
+	signal enc_guard    : std_logic;
+	signal enc_packet   : std_logic;
 	-- BCH encoded auxiliary data
-	signal aux0      : std_logic;
-	signal aux1      : std_logic_vector(3 downto 0);
-	signal aux2      : std_logic_vector(3 downto 0);
-
-	function next_ecc(old_ecc : in std_logic_vector; x : in std_logic) return std_logic_vector is
-	begin
-		return (old_ecc(0) & old_ecc(7 downto 1)) xor (x"83" and (7 downto 0 => x));
-	end function;
+	signal aux0         : std_logic;
+	signal aux1         : std_logic_vector(3 downto 0);
+	signal aux2         : std_logic_vector(3 downto 0);
 
 begin
+
+	pkgen : hdmi_packet_gen port map (
+		clk => clk,
+		reset => reset,
+		if_tr => if_trig,
+		data => packet_data,
+		dvalid => packet_valid,
+		dready => packet_ready
+	);
+
+	isl_enc : hdmi_island_encoder port map (
+		clk => clk,
+		reset => reset,
+
+		data => packet_data,
+		dvalid => packet_valid,
+		dready => packet_ready,
+
+		busy => enc_busy,
+		preamble => enc_preamble,
+		guard => enc_guard,
+		packet => enc_packet,
+		aux0 => aux0,
+		aux1 => aux1,
+		aux2 => aux2
+	);
+
 
 process(clk)
 	variable dly : sdelay_e_t;
@@ -148,7 +182,6 @@ begin
 			if_trig <= '0';
 			packet0 <= '0';
 		else
-			islandst1 <= island_st;		-- one cycle dela
 			dly := sdelay(0);
 			data <= dly.data;
 			de <= dly.de;
@@ -158,19 +191,19 @@ begin
 			if_trig <= '0';
 			if dly.de = '0' then
 				-- default: only output vsync & hsync
-				if islandst1 /= idle then
+				if enc_busy = '1' then
 					-- data island mode
-					if islandst1 = preamble then
+					if enc_preamble = '1' then
 						-- preamble for data island period
 						data(17 downto 16) <= "01";
 						data(9 downto 8) <= "01";
 						packet0 <= '0';
-					elsif islandst1 = ld_guard or islandst1 = tr_guard then
+					elsif enc_guard = '1' then
 						-- leading or trailing guard band
 						ae <= '1';
 						dgb <= '1';
 						data(3 downto 2) <= "11";
-					elsif islandst1 = packet then
+					elsif enc_packet = '1' then
 						ae <= '1';
 						data(2) <= aux0;
 						data(3) <= packet0;
@@ -198,83 +231,6 @@ begin
 			else
 				info_ready <= '1';
 			end if;
-		end if;
-	end if;
-end process;
-
-
-process(clk)
-	variable pck : data_packet_t := avi_infoframe;
-	variable bid : integer range 0 to 7;
-	variable idx : integer range 0 to 30;
-	variable ec  : std_logic_vector(7 downto 0);
-	variable b   : std_logic;
-begin
-	if rising_edge(clk) then
-		if reset = '1' then
-			ifcnt <= (others => '0');
-			island_st <= idle;
-		else
-			if ifcnt > 0 then
-				ifcnt <= ifcnt - 1;
-			end if;
-
-			case island_st is
-			when idle =>
-				if if_trig = '1' then
-					ifcnt <= to_unsigned(7,ifcnt'length);
-					island_st <= preamble;
-				end if;
-			when preamble =>
-				if ifcnt = 0 then
-					ifcnt <= to_unsigned(1,ifcnt'length);
-					island_st <= ld_guard;
-				end if;
-			when ld_guard =>
-				if ifcnt = 0 then
-					ifcnt <= to_unsigned(31,ifcnt'length);
-					ecc0 <= x"00";
-					ecc <= (others => x"00");
-					island_st <= packet;
-				end if;
-			when packet =>
-				bid := 7 - to_integer(ifcnt(2 downto 0));
-				if ifcnt >= 8 then
-					idx := 3 - to_integer(ifcnt(4 downto 3));
-					b := pck(idx)(bid);
-					aux0 <= b;
-					ecc0 <= next_ecc(ecc0,b);
-				else
-					aux0 <= ecc0(bid);
-				end if;
-
-				bid := 6 - 2 * to_integer(ifcnt(1 downto 0));
-				idx := 3 + 7 - to_integer(ifcnt(4 downto 2));
-				if ifcnt >= 4 then
-					for i in 0 to 3 loop
-						b := pck(idx+7*i)(bid);
-						aux1(i) <= b;
-						ec := next_ecc(ecc(i),b);
-						b := pck(idx+7*i)(bid+1);
-						aux2(i) <= b;
-						ecc(i) <= next_ecc(ec,b);
-					end loop;
-				else
-					for i in 0 to 3 loop
-						aux1(i) <= ecc(i)(bid);
-						aux2(i) <= ecc(i)(bid+1);
-					end loop;
-				end if;
-
-				if ifcnt = 0 then
-					ifcnt <= to_unsigned(1,ifcnt'length);
-					island_st <= tr_guard;
-				end if;
-			when tr_guard =>
-				if ifcnt = 0 then
-					island_st <= idle;
-				end if;
-			end case;
 		end if;
 	end if;
 end process;
