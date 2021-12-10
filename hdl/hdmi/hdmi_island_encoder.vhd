@@ -71,7 +71,7 @@ architecture rtl of hdmi_island_encoder is
 
 	function next_ecc(old_ecc : in std_logic_vector; x : in std_logic) return std_logic_vector is
 	begin
-		return (old_ecc(0) & old_ecc(7 downto 1)) xor (x"83" and (7 downto 0 => x));
+		return ('0' & old_ecc(7 downto 1)) xor (x"83" and (7 downto 0 => (x xor old_ecc(0))));
 	end function;
 
 
@@ -130,6 +130,9 @@ begin
 			packet_wr_buf_idx <= 0;
 			ifcnt <= (others => '0');
 			island_st <= idle;
+			aux0 <= '0';
+			aux1 <= "0000";
+			aux2 <= "0000";
 		else
 			if ifcnt > 0 then
 				ifcnt <= ifcnt - 1;
@@ -137,7 +140,7 @@ begin
 
 			case island_st is
 			when idle =>
-				if packet_wr_buf_idx /= packet_rd_buf_idx then
+				if packet_rd_idx = 15 then
 					ifcnt <= to_unsigned(7,ifcnt'length);
 					island_st <= preamb;
 				end if;
@@ -197,6 +200,9 @@ begin
 					end if;
 				end if;
 			when tr_guard =>
+				aux0 <= '0';
+				aux1 <= "0000";
+				aux2 <= "0000";
 				if ifcnt = 0 then
 					island_st <= idle;
 				end if;

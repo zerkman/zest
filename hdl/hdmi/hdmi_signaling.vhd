@@ -19,6 +19,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity hdmi_sig is
+	generic (
+		SAMPLE_FREQ : integer := 48000
+	);
 	port (
 		clk   : in std_logic;
 		reset : in std_logic;
@@ -26,6 +29,11 @@ entity hdmi_sig is
 		vsync : in std_logic;
 		hsync : in std_logic;
 		ide   : in std_logic;
+
+		audio_en     : in std_logic;		-- audio enable
+		audio_l      : in std_logic_vector(23 downto 0);	-- left channel
+		audio_r      : in std_logic_vector(23 downto 0);	-- right channel
+		audio_clk    : in std_logic;		-- sample clock
 
 		data  : out std_logic_vector(23 downto 0);
 		de    : out std_logic;		-- display enable
@@ -38,11 +46,20 @@ end hdmi_sig;
 architecture rtl of hdmi_sig is
 
 	component hdmi_packet_gen is
+		generic (
+			SAMPLE_FREQ : integer := 48000
+		);
 		port (
 			clk    : in std_logic;
 			reset  : in std_logic;
 
-			if_tr  : in std_logic;		-- infoframe island trigger
+			island_tr    : in std_logic;		-- trigger data island
+			infoframe_en : in std_logic;		-- send infoframes in next data island
+
+			audio_en     : in std_logic;		-- audio enable
+			audio_l      : in std_logic_vector(23 downto 0);	-- left channel
+			audio_r      : in std_logic_vector(23 downto 0);	-- right channel
+			audio_clk    : in std_logic;		-- sample clock
 
 			data   : out std_logic_vector(7 downto 0);		-- packet data
 			dvalid : out std_logic;
@@ -87,8 +104,11 @@ architecture rtl of hdmi_sig is
 
 	-- signals to trigger the generation of the infoframe data island
 	signal vsync0       : std_logic;
-	signal info_ready   : std_logic;
-	signal if_trig      : std_logic;
+	signal vs_low       : std_logic;
+	signal hsync0       : std_logic;
+	signal hs_low       : std_logic;
+	signal island_trig  : std_logic;
+	signal infoframe_en : std_logic;
 
 	signal packet0      : std_logic;	-- determines 1st char of data island packet
 
@@ -102,15 +122,27 @@ architecture rtl of hdmi_sig is
 	signal aux1         : std_logic_vector(3 downto 0);
 	signal aux2         : std_logic_vector(3 downto 0);
 
+	signal de0          : std_logic;
+	signal line_size    : unsigned(11 downto 0);
+	signal hblccnt      : unsigned(11 downto 0);
+	signal isltrig_pos  : unsigned(11 downto 0);
+
 begin
 
-	pkgen : hdmi_packet_gen port map (
-		clk => clk,
-		reset => reset,
-		if_tr => if_trig,
-		data => packet_data,
-		dvalid => packet_valid,
-		dready => packet_ready
+	pkgen : hdmi_packet_gen generic map (
+			SAMPLE_FREQ => SAMPLE_FREQ )
+		port map (
+			clk => clk,
+			reset => reset,
+			island_tr => island_trig,
+			infoframe_en => infoframe_en,
+			audio_en => audio_en,
+			audio_l => audio_l,
+			audio_r => audio_r,
+			audio_clk => audio_clk,
+			data => packet_data,
+			dvalid => packet_valid,
+			dready => packet_ready
 	);
 
 	isl_enc : hdmi_island_encoder port map (
@@ -141,7 +173,7 @@ begin
 			if ide = '1' then
 				dly.data := rgb;
 			else
-				dly.data := x"03030" & "00" & vsync & hsync;
+				dly.data := x"00000" & "00" & vsync & hsync;
 			end if;
 			dly.de := ide;
 			sdelay <= sdelay(1 to sdelay'high) & dly;
@@ -178,17 +210,26 @@ begin
 			vgb <= '0';
 			dgb <= '0';
 			vsync0 <= '0';
-			info_ready <= '1';
-			if_trig <= '0';
+			vs_low <= '0';
+			hsync0 <= '0';
+			hs_low <= '0';
+			island_trig <= '0';
+			infoframe_en <= '0';
 			packet0 <= '0';
+			de0 <= '0';
+			line_size <= (others => '0');
+			hblccnt <= (others => '0');
+			isltrig_pos <= (others => '0');
 		else
 			dly := sdelay(0);
 			data <= dly.data;
 			de <= dly.de;
 			ae <= '0';
+			de0 <= dly.de;
 			vgb <= '0';
 			dgb <= '0';
-			if_trig <= '0';
+			island_trig <= '0';
+			infoframe_en <= '0';
 			if dly.de = '0' then
 				-- default: only output vsync & hsync
 				if enc_busy = '1' then
@@ -220,16 +261,28 @@ begin
 					vgb <= '1';
 				end if;
 				vsync0 <= dly.data(1);
-				if dly.data(1) /= vsync0 then
-					if info_ready = '1' then
-						info_ready <= '0';
-					else
-						-- second vsync value change after video display => trigger data island for InfoFrames
-						if_trig <= '1';
-					end if;
+				if dly.data(1) /= vs_low and vsync0 = vs_low then
+					-- vsync => enable data island for InfoFrames
+					infoframe_en <= '1';
+				end if;
+				hsync0 <= dly.data(0);
+				hblccnt <= hblccnt + 1;
+				if dly.data(0) /= hs_low and hsync0 = hs_low then
+					-- update line cycle count
+					line_size <= hblccnt;
+					hblccnt <= (others => '0');
+				end if;
+				if de0 = '1' then
+					-- data island trigger may start 4 cycles after display
+					isltrig_pos <= hblccnt + 4;
+				end if;
+				if hblccnt = isltrig_pos then
+					-- reached the proper cycle number => trigger data island generation
+					island_trig <= '1';
 				end if;
 			else
-				info_ready <= '1';
+				hs_low <= hsync0;
+				vs_low <= vsync0;
 			end if;
 		end if;
 	end if;

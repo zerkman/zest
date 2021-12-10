@@ -20,20 +20,24 @@ use ieee.numeric_std.all;
 
 entity vclkconvert is
 	port (
-		clk     : in std_logic;
-		clken	: in std_logic;
-		pclk    : in std_logic;
-		resetn	: in std_logic;
+		clk      : in std_logic;
+		clken	 : in std_logic;
+		pclk     : in std_logic;
+		resetn	 : in std_logic;
 
-		ivsync  : in std_logic;
-		ihsync  : in std_logic;
-		ide     : in std_logic;
-		ipix    : in std_logic_vector(15 downto 0);
+		ivsync   : in std_logic;
+		ihsync   : in std_logic;
+		ide      : in std_logic;
+		ipix     : in std_logic_vector(15 downto 0);
+		isound   : in std_logic_vector(15 downto 0);
+		isnd_clk : in std_logic;
 
-		ovsync  : out std_logic;
-		ohsync  : out std_logic;
-		ode     : out std_logic;
-		opix    : out std_logic_vector(15 downto 0)
+		ovsync   : out std_logic;
+		ohsync   : out std_logic;
+		ode      : out std_logic;
+		opix     : out std_logic_vector(15 downto 0);
+		osound   : out std_logic_vector(15 downto 0);
+		osnd_clk : out std_logic
 	);
 end vclkconvert;
 
@@ -59,11 +63,12 @@ architecture behavioral of vclkconvert is
 		);
 	end component;
 
+	constant DATA_WIDTH : integer := 36;
 	constant fifo_depth : integer := 8;
 
 	signal initcnt : unsigned(fifo_depth-1 downto 0);
-	signal idata : std_logic_vector(18 downto 0);
-	signal odata : std_logic_vector(18 downto 0);
+	signal idata : std_logic_vector(DATA_WIDTH-1 downto 0);
+	signal odata : std_logic_vector(DATA_WIDTH-1 downto 0);
 	signal ifull : std_logic;
 	signal oempty : std_logic;
 	signal readen : std_logic;
@@ -71,14 +76,16 @@ architecture behavioral of vclkconvert is
 	signal clear : std_logic;
 
 begin
-	idata <= ivsync & ihsync & ide & ipix;
+	idata <= isnd_clk & isound & ivsync & ihsync & ide & ipix;
+	osnd_clk <= odata(35);
+	osound <= odata(34 downto 19);
 	ovsync <= odata(18);
 	ohsync <= odata(17);
 	ode <= odata(16);
 	opix <= odata(15 downto 0);
 
 	fifo:aFifo
-	generic map (DATA_WIDTH => 19, ADDR_WIDTH => fifo_depth)
+	generic map (DATA_WIDTH => DATA_WIDTH, ADDR_WIDTH => fifo_depth)
 	port map (
 		Data_out => odata,
 		Empty_out => oempty,

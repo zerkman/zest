@@ -19,6 +19,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity hdmi_tx is
+	generic (
+		SAMPLE_FREQ : integer := 48000
+	);
 	port (
 		clk      : in std_logic;	-- pixel clock
 		sclk     : in std_logic;	-- serial clock = 5x clk frequency
@@ -28,22 +31,32 @@ entity hdmi_tx is
 		hsync    : in std_logic;
 		de       : in std_logic;
 
+		audio_en     : in std_logic;		-- audio enable
+		audio_l      : in std_logic_vector(23 downto 0);	-- left channel
+		audio_r      : in std_logic_vector(23 downto 0);	-- right channel
+		audio_clk    : in std_logic;		-- sample clock
+
 		tx_clk_n : out std_logic;	-- TMDS clock channel
 		tx_clk_p : out std_logic;
 		tx_d_n   : out std_logic_vector(2 downto 0);	-- TMDS data channels
-		tx_d_p   : out std_logic_vector(2 downto 0)		-- 0:red, 1:green, 2:blue
+		tx_d_p   : out std_logic_vector(2 downto 0)		-- 0:blue, 1:green, 2:red
 	);
 end hdmi_tx;
 
 
 architecture rtl of hdmi_tx is
 	component tmds_encoder is
+		generic (
+			CHN    : integer := 0		-- TMDS channel number 0:blue, 1:green, 2:red
+		);
 		port (
 			clk    : in std_logic;
 			reset  : in std_logic;
 			data   : in std_logic_vector(7 downto 0);
 			de     : in std_logic;		-- display enable
 			ae     : in std_logic;		-- auxiliary channel enable
+			vgb    : in std_logic;		-- video leading guard band
+			dgb    : in std_logic;		-- data island leading or trailing guard band
 			tmds_d : out std_logic_vector(9 downto 0)
 		);
 	end component;
@@ -60,6 +73,9 @@ architecture rtl of hdmi_tx is
 	end component;
 
 	component hdmi_sig is
+		generic (
+			SAMPLE_FREQ : integer := 48000
+		);
 		port (
 			clk   : in std_logic;
 			reset : in std_logic;
@@ -67,6 +83,11 @@ architecture rtl of hdmi_tx is
 			vsync : in std_logic;
 			hsync : in std_logic;
 			ide   : in std_logic;
+
+			audio_en     : in std_logic;		-- audio enable
+			audio_l      : in std_logic_vector(23 downto 0);	-- left channel
+			audio_r      : in std_logic_vector(23 downto 0);	-- right channel
+			audio_clk    : in std_logic;		-- sample clock
 
 			data  : out std_logic_vector(23 downto 0);
 			de    : out std_logic;		-- display enable
@@ -76,58 +97,37 @@ architecture rtl of hdmi_tx is
 		);
 	end component;
 
-	signal tmds_clk : std_logic_vector(9 downto 0);
 	type tmds_d_t is array(0 to 2) of std_logic_vector(9 downto 0);
 	signal tmds_d : tmds_d_t;
-	signal serial_i : tmds_d_t;
 
 	signal data : std_logic_vector(23 downto 0);
 	signal sde  : std_logic;
 	signal sae  : std_logic;
 	signal vgb  : std_logic;
 	signal dgb  : std_logic;
-	signal vgb1 : std_logic;
-	signal dgb1 : std_logic;
 
 begin
 
-	process(clk)
-	begin
-		if rising_edge(clk) then
-			-- one cycle delay to keep in sync wrt tmds_encoder latency
-			vgb1 <= vgb;
-			dgb1 <= dgb;
-		end if;
-	end process;
-
-	process(tmds_d,vgb1,dgb1)
-	begin
-		serial_i <= tmds_d;
-		if vgb1 = '1' then
-			-- video guard band
-			serial_i(0) <= "1011001100";
-			serial_i(1) <= "0100110011";
-			serial_i(2) <= "1011001100";
-		elsif dgb1 = '1' then
-			-- data island guard band
-			serial_i(1) <= "0100110011";
-			serial_i(2) <= "0100110011";
-		end if;
-	end process;
-
-	signaller: hdmi_sig port map (
-		clk => clk,
-		reset => reset,
-		rgb => rgb,
-		vsync => vsync,
-		hsync => hsync,
-		ide => de,
-		data => data,
-		de => sde,
-		ae => sae,
-		vgb => vgb,
-		dgb => dgb
-	);
+	signaller: hdmi_sig generic map (
+			SAMPLE_FREQ => SAMPLE_FREQ
+		)
+		port map (
+			clk => clk,
+			reset => reset,
+			rgb => rgb,
+			vsync => vsync,
+			hsync => hsync,
+			ide => de,
+			audio_en => audio_en,
+			audio_l => audio_l,
+			audio_r => audio_r,
+			audio_clk => audio_clk,
+			data => data,
+			de => sde,
+			ae => sae,
+			vgb => vgb,
+			dgb => dgb
+		);
 
 	-- send the clock through a serializer to keep in sync with the channels
 	serial_clk : tmds_serializer port map (
@@ -140,12 +140,16 @@ begin
 	);
 
 	chn: for i in 0 to 2 generate
-		encoder: tmds_encoder port map (
+		encoder: tmds_encoder generic map (
+			CHN => i
+		) port map (
 			clk => clk,
 			reset => reset,
 			data => data(i*8+7 downto i*8),
 			de => sde,
 			ae => sae,
+			vgb => vgb,
+			dgb => dgb,
 			tmds_d => tmds_d(i)
 		);
 
@@ -153,7 +157,7 @@ begin
 			clk => clk,
 			sclk => sclk,
 			reset => reset,
-			tmds_d => serial_i(i),
+			tmds_d => tmds_d(i),
 			tx_d_n => tx_d_n(i),
 			tx_d_p => tx_d_p(i)
 		);

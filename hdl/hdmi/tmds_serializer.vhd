@@ -1,4 +1,4 @@
--- serializer.vhd - serializer for DVI/HDMI output (Xilinx 7 series)
+-- tmds_serializer.vhd - serializer for DVI/HDMI output (Xilinx 7 series)
 --
 -- Copyright (c) 2021 Francois Galea <fgalea at free.fr>
 -- This program is free software: you can redistribute it and/or modify

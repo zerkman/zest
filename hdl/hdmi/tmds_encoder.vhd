@@ -19,12 +19,17 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity tmds_encoder is
+	generic (
+		CHN    : integer := 0		-- TMDS channel number 0:blue, 1:green, 2:red
+	);
 	port (
 		clk    : in std_logic;
 		reset  : in std_logic;
 		data   : in std_logic_vector(7 downto 0);
 		de     : in std_logic;		-- display enable
 		ae     : in std_logic;		-- auxiliary channel enable
+		vgb    : in std_logic;		-- video leading guard band
+		dgb    : in std_logic;		-- data island leading or trailing guard band
 		tmds_d : out std_logic_vector(9 downto 0)
 	);
 end tmds_encoder;
@@ -55,7 +60,19 @@ begin
 			tmds_d <= "1101010100";
 			cnt <= "00000";
 		else
-			if de = '1' then
+			if vgb = '1' then
+				-- video guard band
+				if CHN = 1 then
+					tmds_d <= "0100110011";
+				else
+					tmds_d <= "1011001100";
+				end if;
+			elsif dgb = '1' and CHN /= 0 then
+				-- data island leading or trailing guard band
+				tmds_d <= "0100110011";
+				-- When CHN = 0, fall back to TERC4 encoding of "11" & vsync & hsync
+			elsif de = '1' then
+				-- video encoding
 				q_m(0) := data(0);
 				if n1(data) > 4 or (n1(data) = 4 and data(0) = '0') then
 					for i in 1 to 7 loop
@@ -103,6 +120,7 @@ begin
 					end if;
 				end if;
 			elsif ae = '1' then
+				-- TERC4 Encoding
 				case data(3 downto 0) is
 					when "0000" => tmds_d <= "1010011100";
 					when "0001" => tmds_d <= "1001100011";
@@ -122,6 +140,7 @@ begin
 					when others => tmds_d <= "1011000011";
 				end case;
 			else
+				-- CTL encoding
 				case data(1 downto 0) is
 					when "00" => tmds_d <= "1101010100";
 					when "01" => tmds_d <= "0010101011";

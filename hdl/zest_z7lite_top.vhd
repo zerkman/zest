@@ -194,20 +194,24 @@ architecture structure of zest_top is
 
 	component vclkconvert is
 		port (
-			clk     : in std_logic;
-			clken	: in std_logic;
-			pclk    : in std_logic;
-			resetn	: in std_logic;
+			clk      : in std_logic;
+			clken	 : in std_logic;
+			pclk     : in std_logic;
+			resetn	 : in std_logic;
 
-			ivsync  : in std_logic;
-			ihsync  : in std_logic;
-			ide     : in std_logic;
-			ipix    : in std_logic_vector(15 downto 0);
+			ivsync   : in std_logic;
+			ihsync   : in std_logic;
+			ide      : in std_logic;
+			ipix     : in std_logic_vector(15 downto 0);
+			isound   : in std_logic_vector(15 downto 0);
+			isnd_clk : in std_logic;
 
-			ovsync  : out std_logic;
-			ohsync  : out std_logic;
-			ode     : out std_logic;
-			opix    : out std_logic_vector(15 downto 0)
+			ovsync   : out std_logic;
+			ohsync   : out std_logic;
+			ode      : out std_logic;
+			opix     : out std_logic_vector(15 downto 0);
+			osound   : out std_logic_vector(15 downto 0);
+			osnd_clk : out std_logic
 		);
 	end component;
 
@@ -228,6 +232,9 @@ architecture structure of zest_top is
 	end component;
 
 	component hdmi_tx is
+		generic (
+			SAMPLE_FREQ : integer := 48000
+		);
 		port (
 			clk      : in std_logic;	-- pixel clock
 			sclk     : in std_logic;	-- serial clock = 5x clk frequency
@@ -237,10 +244,15 @@ architecture structure of zest_top is
 			hsync    : in std_logic;
 			de       : in std_logic;
 
+			audio_en     : in std_logic;		-- audio enable
+			audio_l      : in std_logic_vector(23 downto 0);	-- left channel
+			audio_r      : in std_logic_vector(23 downto 0);	-- right channel
+			audio_clk    : in std_logic;		-- sample clock
+
 			tx_clk_n : out std_logic;	-- TMDS clock channel
 			tx_clk_p : out std_logic;
 			tx_d_n   : out std_logic_vector(2 downto 0);	-- TMDS data channels
-			tx_d_p   : out std_logic_vector(2 downto 0)		-- 0:red, 1:green, 2:blue
+			tx_d_p   : out std_logic_vector(2 downto 0)		-- 0:blue, 1:green, 2:red
 		);
 	end component;
 
@@ -314,18 +326,18 @@ architecture structure of zest_top is
 	signal phsync		: std_logic;
 	signal pde			: std_logic;
 
-	signal sound		: std_logic_vector(15 downto 0);
+	signal isound		: std_logic_vector(15 downto 0);
+	signal isound_clk	: std_logic;
+	signal isclk_cnt	: unsigned(15 downto 0);
+	signal osound		: std_logic_vector(15 downto 0);
+	signal osound_clk	: std_logic;
+	signal audio_lr		: std_logic_vector(23 downto 0);
 
 	signal opix			: std_logic_vector(15 downto 0);
 	signal opix24		: std_logic_vector(23 downto 0);
 	signal ovsync		: std_logic;
 	signal ohsync		: std_logic;
 	signal ode			: std_logic;
-
-	attribute dont_touch : string;
-	attribute dont_touch of sound : signal is "true";
-	attribute dont_touch of ram_iD : signal is "true";
-	attribute dont_touch of ram_oD : signal is "true";
 
 begin
 	soft_resetn <= out_reg0(0);
@@ -401,7 +413,7 @@ begin
 		hsync => hsync,
 		vsync => vsync,
 		rgb => rgb,
-		sound => sound,
+		sound => isound,
 		ikbd_clkren => ikbd_clkren,
 		ikbd_clkfen => ikbd_clkfen,
 		ikbd_rx => ikbd_rx,
@@ -482,10 +494,14 @@ begin
 		ihsync => hsync,
 		ide => de,
 		ipix => pix,
+		isound => isound,
+		isnd_clk => isound_clk,
 		ovsync => pvsync,
 		ohsync => phsync,
 		ode => pde,
-		opix => ppix
+		opix => ppix,
+		osound => osound,
+		osnd_clk => osound_clk
 	);
 
 	scandbl:scan_dbl port map (
@@ -502,6 +518,7 @@ begin
 		OUT_DE => ode
 	);
 
+	audio_lr <= osound & x"00";
 	hdmi:hdmi_tx port map (
 		clk => pclk,
 		sclk => p5clk,
@@ -510,11 +527,35 @@ begin
 		vsync => ovsync,
 		hsync => ohsync,
 		de => ode,
-
+		audio_en => '1',
+		audio_l => audio_lr,
+		audio_r => audio_lr,
+		audio_clk => osound_clk,
 		tx_clk_n => hdmi_tx_clk_n,
 		tx_clk_p => hdmi_tx_clk_p,
 		tx_d_n => hdmi_tx_d_n,
 		tx_d_p => hdmi_tx_d_p
 	);
+
+	soundclk:process(clk) is
+		constant SAMPLE_FREQ : integer := 48000;
+		-- NUM and DIV are integers such that 2*SAMPLE_FREQ*NUM/DIV = clk frequency
+		constant NUM : integer := 1000;
+		constant DIV : integer := 3;             -- 2*48000*1000/3 = 32 MHz
+		begin
+			if rising_edge(clk) then
+				if soft_resetn = '0' then
+						isound_clk <= '0';
+						isclk_cnt <= (others => '0');
+				elsif pclken = '1' then
+						if isclk_cnt + DIV < NUM then
+								isclk_cnt <= isclk_cnt + DIV;
+						else
+								isclk_cnt <= isclk_cnt + DIV - NUM;
+								isound_clk <= not isound_clk;
+						end if;
+				end if;
+			end if;
+		end process;
 
 end structure;
