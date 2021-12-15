@@ -1,5 +1,5 @@
-[submodule "fx68k"]
-	path = fx68k
+[submodule "hdl/fx68k"]
+	path = hdl/fx68k
 	url = https://github.com/ijor/fx68k.git
 [submodule "hdl/zhdmi"]
 	path = hdl/zhdmi
