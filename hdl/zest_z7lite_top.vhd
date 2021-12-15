@@ -20,6 +20,9 @@ use ieee.numeric_std.all;
 
 library zhdmi;
 
+library work;
+use work.all;
+
 entity zest_top is
 	port (
 		DDR_addr : inout std_logic_vector(14 downto 0 );
@@ -53,138 +56,6 @@ end zest_top;
 
 
 architecture structure of zest_top is
-	component ps_domain is
-		port (
-			A_0 : in std_logic_vector(31 downto 0);
-			DDR_addr : inout std_logic_vector(14 downto 0);
-			DDR_ba : inout std_logic_vector(2 downto 0);
-			DDR_cas_n : inout std_logic;
-			DDR_ck_n : inout std_logic;
-			DDR_ck_p : inout std_logic;
-			DDR_cke : inout std_logic;
-			DDR_cs_n : inout std_logic;
-			DDR_dm : inout std_logic_vector(3 downto 0);
-			DDR_dq : inout std_logic_vector(31 downto 0);
-			DDR_dqs_n : inout std_logic_vector(3 downto 0);
-			DDR_dqs_p : inout std_logic_vector(3 downto 0);
-			DDR_odt : inout std_logic;
-			DDR_ras_n : inout std_logic;
-			DDR_reset_n : inout std_logic;
-			DDR_we_n : inout std_logic;
-			DS_0 : in std_logic_vector(1 downto 0);
-			ERROR_0 : out std_logic;
-			FIXED_IO_ddr_vrn : inout std_logic;
-			FIXED_IO_ddr_vrp : inout std_logic;
-			FIXED_IO_mio : inout std_logic_vector(53 downto 0);
-			FIXED_IO_ps_clk : inout std_logic;
-			FIXED_IO_ps_porb : inout std_logic;
-			FIXED_IO_ps_srstb : inout std_logic;
-			IRQ_F2P_0 : in std_logic_vector(0 to 0);
-			OFFSET_0 : in std_logic_vector(31 downto 0);
-			OFFVALD_0 : in std_logic;
-			R_0 : in std_logic;
-			R_DONE_0 : out std_logic;
-			W_0 : in std_logic;
-			W_DONE_0 : out std_logic;
-			clk : out std_logic;
-			iD_0 : in std_logic_vector(15 downto 0);
-			in_reg0_0 : in std_logic_vector(31 downto 0);
-			in_reg1_0 : in std_logic_vector(31 downto 0);
-			oD_0 : out std_logic_vector(15 downto 0);
-			out_reg0_0 : out std_logic_vector(31 downto 0);
-			out_reg1_0 : out std_logic_vector(31 downto 0);
-			out_reg2_0 : out std_logic_vector(31 downto 0);
-			out_reg3_0 : out std_logic_vector(31 downto 0);
-			out_reg4_0 : out std_logic_vector(31 downto 0);
-			out_reg5_0 : out std_logic_vector(31 downto 0);
-			out_reg6_0 : out std_logic_vector(31 downto 0);
-			out_reg7_0 : out std_logic_vector(31 downto 0);
-			resetn : out std_logic;
-			vid5_clk : out std_logic;
-			vid_clk : out std_logic
-		);
-	end component;
-
-	component floppy_drive is
-		port (
-			clk			: in std_logic;
-			clken		: in std_logic;
-			resetn		: in std_logic;
-
-			read_datan	: out std_logic;
-			side0		: in std_logic;
-			indexn		: out std_logic;
-			drv_select	: in std_logic;
-			motor_on	: in std_logic;
-			direction	: in std_logic;
-			step		: in std_logic;
-			write_data	: in std_logic;
-			write_gate	: in std_logic;
-			track0n		: out std_logic;
-			write_protn	: out std_logic;
-
-			host_intr	: out std_logic;
-			host_din	: out std_logic_vector(31 downto 0);
-			host_dout	: in std_logic_vector(31 downto 0);
-			host_r		: out std_logic;
-			host_w		: out std_logic;
-			host_addr	: out std_logic_vector(10 downto 0);
-			host_track	: out std_logic_vector(7 downto 0)
-		);
-	end component;
-
-	component atari_ikbd is
-		port (
-			clk		: in std_logic;
-			clkren	: in std_logic;
-			clkfen	: in std_logic;
-			reset	: in std_logic;
-			rx		: in std_logic;
-			tx		: out std_logic;
-			j0		: in std_logic_vector(4 downto 0);
-			j1		: in std_logic_vector(4 downto 0);
-			k		: in std_logic_vector(94 downto 0)
-		);
-	end component;
-
-	component vclkconvert is
-		port (
-			clk      : in std_logic;
-			clken	 : in std_logic;
-			pclk     : in std_logic;
-			resetn	 : in std_logic;
-
-			ivsync   : in std_logic;
-			ihsync   : in std_logic;
-			ide      : in std_logic;
-			ipix     : in std_logic_vector(15 downto 0);
-			isound   : in std_logic_vector(15 downto 0);
-			isnd_clk : in std_logic;
-
-			ovsync   : out std_logic;
-			ohsync   : out std_logic;
-			ode      : out std_logic;
-			opix     : out std_logic_vector(15 downto 0);
-			osound   : out std_logic_vector(15 downto 0);
-			osnd_clk : out std_logic
-		);
-	end component;
-
-	component scan_dbl is
-		port (
-			clk 	: in std_logic;
-			resetn 	: in std_logic;
-			passthru : in std_logic;
-			IN_DATA : in std_logic_vector(15 downto 0);
-			IN_VSYNC : in std_logic;
-			IN_HSYNC : in std_logic;
-			IN_DE 	: in std_logic;
-			OUT_DATA : out std_logic_vector(15 downto 0);
-			OUT_VSYNC : out std_logic;
-			OUT_HSYNC : out std_logic;
-			OUT_DE	: out std_logic
-		);
-	end component;
 
 	signal clk			: std_logic;
 	signal resetn		: std_logic;
@@ -282,7 +153,7 @@ begin
 	ram_offset <= out_reg1;
 	in_reg0(10 downto 0) <= (others => '0');
 
-	psd:ps_domain port map(
+	psd:entity ps_domain port map(
 		DDR_addr => DDR_addr,
 		DDR_ba => DDR_ba,
 		DDR_cas_n => DDR_cas_n,
@@ -371,7 +242,7 @@ begin
 		id => ram_iD
 	);
 
-	fdd:floppy_drive port map (
+	fdd:entity floppy_drive port map (
 		clk => clk,
 		clken => fdd_clken,
 		resetn => soft_resetn,
@@ -402,7 +273,7 @@ begin
 	ikbd_j0 <= out_reg7(26 downto 22);
 	ikbd_j1 <= out_reg7(31 downto 27);
 	ikbd_k <= out_reg6(30 downto 0) & out_reg5 & out_reg4;
-	ikbd:atari_ikbd port map (
+	ikbd:entity atari_ikbd port map (
 		clk => ikbd_clk,
 		clkren => ikbd_clkren,
 		clkfen => ikbd_clkfen,
@@ -415,7 +286,7 @@ begin
 	);
 
 	pix <= rgb(8 downto 6) & "00" & rgb(5 downto 3) & "000" & rgb(2 downto 0) & "00";
-	clkconv:vclkconvert port map(
+	clkconv:entity vclkconvert port map(
 		clk => clk,
 		clken => pclken,
 		pclk => pclk,
@@ -434,7 +305,7 @@ begin
 		osnd_clk => osound_clk
 	);
 
-	scandbl:scan_dbl port map (
+	scandbl:entity scan_dbl port map (
 		clk => pclk,
 		resetn => soft_resetn,
 		passthru => monomon,
