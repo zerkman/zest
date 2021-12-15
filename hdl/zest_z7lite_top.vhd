@@ -105,53 +105,6 @@ architecture structure of zest_top is
 		);
 	end component;
 
-	component atarist_main is
-		port (
-			clk : in std_logic;
-			resetn : in std_logic;
-
-			clken_error : out std_logic;
-			monomon : in std_logic;
-			mem_top	: in std_logic_vector(3 downto 0);
-
-			pclken : out std_logic;
-			de : out std_logic;
-			hsync : out std_logic;
-			vsync : out std_logic;
-			rgb : out std_logic_vector(8 downto 0);
-
-			sound : out std_logic_vector(15 downto 0);
-
-			ikbd_clkren : out std_logic;
-			ikbd_clkfen : out std_logic;
-			ikbd_rx : in std_logic;
-			ikbd_tx : out std_logic;
-
-			fdd_clken : out std_logic;
-			fdd_read_datan : in std_logic;
-			fdd_side0 : out std_logic;
-			fdd_indexn : in std_logic;
-			fdd_drv0_select : out std_logic;
-			fdd_drv1_select : out std_logic;
-			fdd_motor_on : out std_logic;
-			fdd_direction : out std_logic;
-			fdd_step : out std_logic;
-			fdd_write_data : out std_logic;
-			fdd_write_gate : out std_logic;
-			fdd_track0n : in std_logic;
-			fdd_write_protn : in std_logic;
-
-			a : out std_logic_vector(23 downto 1);
-			ds : out std_logic_vector(1 downto 0);
-			r : out std_logic;
-			r_done : in std_logic;
-			w : out std_logic;
-			w_done : in std_logic;
-			od : in std_logic_vector(15 downto 0);
-			id : out std_logic_vector(15 downto 0)
-		);
-	end component;
-
 	component floppy_drive is
 		port (
 			clk			: in std_logic;
@@ -379,7 +332,7 @@ begin
 		R_DONE_0 => ram_R_DONE
 	);
 
-	atarist:atarist_main port map(
+	atarist:entity atarist_mb port map(
 		clk => clk,
 		resetn => soft_resetn,
 		clken_error => clken_err,

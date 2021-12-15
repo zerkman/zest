@@ -1,4 +1,4 @@
--- atarist_main.vhd - Main Atari ST-like architecture
+-- atarist_mb.vhd - Main Atari ST motherboard-like architecture
 --
 -- Copyright (c) 2020,2021 Francois Galea <fgalea at free.fr>
 -- This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity atarist_main is
+entity atarist_mb is
 	port (
 		clk : in std_logic;
 		resetn : in std_logic;
@@ -63,10 +63,10 @@ entity atarist_main is
 		od : in std_logic_vector(15 downto 0);
 		id : out std_logic_vector(15 downto 0)
 	);
-end atarist_main;
+end atarist_mb;
 
 
-architecture structure of atarist_main is
+architecture structure of atarist_mb is
 	component atarist_bus is
 		port (
 			cpu_d		: in std_logic_vector(15 downto 0);
