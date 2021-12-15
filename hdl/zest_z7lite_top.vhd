@@ -18,6 +18,8 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library zhdmi;
+
 entity zest_top is
 	port (
 		DDR_addr : inout std_logic_vector(14 downto 0 );
@@ -228,31 +230,6 @@ architecture structure of zest_top is
 			OUT_VSYNC : out std_logic;
 			OUT_HSYNC : out std_logic;
 			OUT_DE	: out std_logic
-		);
-	end component;
-
-	component hdmi_tx is
-		generic (
-			SAMPLE_FREQ : integer := 48000
-		);
-		port (
-			clk      : in std_logic;	-- pixel clock
-			sclk     : in std_logic;	-- serial clock = 5x clk frequency
-			reset    : in std_logic;
-			rgb      : in std_logic_vector(23 downto 0);	-- pixel data
-			vsync    : in std_logic;
-			hsync    : in std_logic;
-			de       : in std_logic;
-
-			audio_en     : in std_logic;		-- audio enable
-			audio_l      : in std_logic_vector(23 downto 0);	-- left channel
-			audio_r      : in std_logic_vector(23 downto 0);	-- right channel
-			audio_clk    : in std_logic;		-- sample clock
-
-			tx_clk_n : out std_logic;	-- TMDS clock channel
-			tx_clk_p : out std_logic;
-			tx_d_n   : out std_logic_vector(2 downto 0);	-- TMDS data channels
-			tx_d_p   : out std_logic_vector(2 downto 0)		-- 0:blue, 1:green, 2:red
 		);
 	end component;
 
@@ -519,7 +496,7 @@ begin
 	);
 
 	audio_lr <= osound & x"00";
-	hdmi:hdmi_tx port map (
+	hdmi:entity zhdmi.hdmi_tx port map (
 		clk => pclk,
 		sclk => p5clk,
 		reset => soft_reset,
