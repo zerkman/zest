@@ -30,6 +30,8 @@ Issue those commands:
 
 ### Download the board definition files
 
+This step is necessary (?) only to people using the Z-Turn board.
+
 To get the Z-Turn board definition files for Vivado, use the command:
 
     $ cd $HOME/src
@@ -39,26 +41,19 @@ The directory for the board definition files is `zturn-stuff/boards`.
 
 ### Create the Vivado project
 
- - Open Vivado
- - In **Tools -> Settings menu, Boards Repository** tab. Add the directory for your board definition files
- - From the main window, in the **Quick Start** section, click **Create Projet**.
-  - From the **New Project** wizard window, click **Next** to skip the first frame
-  - Set `zest` as the project name, as a location for the project, choose `$HOME/xilinx`. Enable the **Create project subdirectory** so all project files will be in the `$HOME/xilinx/zest` subdirectory. Click **Next**.
-  - As project type, choose **RTL project**. Ensure the **Do not specify sources at this time** checkbox stays unchecked. Click **Next**.
-  - Now you have to add the source files to the project. Click **Add files** and select all files from the `zest/hdl` directory in the zest source code tree. Click **Add files** again and add all files from the `fx68k` directory. Set target language as VHDL. Click **Next**.
-  - Now you need to add the constraint file corresponding to your FPGA board. Click **Add files** and select the constraint file for your board from the `zest/xdc` directory in the zest source code tree. Click **Next**.
-  - Now you have to choose the FPGA platform the project is for. Click **Boards** at the top, and select your board. Click **Next**.
-  - Click **Finish** to create the project.
- - Now you’ll have the Vivado project open with different panels and windows. You now need to import a block design file specific to your board (from the source `zest/tcl` subdirectory). In the bottom panel, select the **TCL Console** tab. Type the command line:
+In the `zest/vivado` directory, you will find a `create_project.sh` shell script and different TCL script files, each one corresponding to a specific FPGA board. You will need to identify the file that corresponds to your hardware.
 
-       source /path/to/zest/tcl/board_bd.tcl
+If, for instance, you choose to create the project corresponding to the zest_z7lite.tcl file, enter the command:
 
- - From the left panel, select the project manager, then in the Sources panel, right-click on `ps_domain` and select **Create HDL wrapper**. In the dialog box, leave all default options and click **OK**.
+    $ ./create_project.sh zest_z7lite
+
+This will create a `zest_z7lite` directory with all the project files in it.
 
 Now your Vivado project setup is complete.
 
 ### Generate the bitstream file
 
+Open the project in Vivado.
 From the left panel, in **Program and debug**, click **Generate Bitstream**. The process will take a few minutes to complete.
 
 When the generation is complete, copy the bitstream file to the zeST setup directory:
