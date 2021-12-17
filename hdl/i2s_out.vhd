@@ -20,7 +20,7 @@ use ieee.numeric_std.all;
 
 entity i2s_output is
 	generic (
-		MFREQ : integer := 100000000;	-- clock frequency
+		MFREQ : integer := 32_000_000;	-- clock frequency
 		FREQ  : integer := 48000;		-- sample frequency
 		NBITS : integer := 16			-- bit resolution (16/20/24)
 	);
