@@ -24,7 +24,7 @@ This documentation assumes the following file paths:
 Issue those commands:
 
     $ cd $HOME/src
-    $ git clone https://github.com/zerkman/zest.git
+    $ git clone --depth=1 --recursive https://github.com/zerkman/zest.git
 
 ## Create the Vivado project and generate the bitstream file
 
