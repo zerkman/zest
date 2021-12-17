@@ -128,10 +128,9 @@ architecture structure of zest_top is
 	signal pde			: std_logic;
 
 	signal isound		: std_logic_vector(15 downto 0);
-	signal isound_clk	: std_logic;
-	signal isclk_cnt	: unsigned(15 downto 0);
 	signal osound		: std_logic_vector(15 downto 0);
-	signal osound_clk	: std_logic;
+	signal sound_clk	: std_logic;
+	signal sclk_cnt		: unsigned(15 downto 0);
 	signal audio_lr		: std_logic_vector(23 downto 0);
 
 	signal opix			: std_logic_vector(15 downto 0);
@@ -296,13 +295,11 @@ begin
 		ide => de,
 		ipix => pix,
 		isound => isound,
-		isnd_clk => isound_clk,
 		ovsync => pvsync,
 		ohsync => phsync,
 		ode => pde,
 		opix => ppix,
-		osound => osound,
-		osnd_clk => osound_clk
+		osound => osound
 	);
 
 	scandbl:entity scan_dbl port map (
@@ -331,29 +328,29 @@ begin
 		audio_en => '1',
 		audio_l => audio_lr,
 		audio_r => audio_lr,
-		audio_clk => osound_clk,
+		audio_clk => sound_clk,
 		tx_clk_n => hdmi_tx_clk_n,
 		tx_clk_p => hdmi_tx_clk_p,
 		tx_d_n => hdmi_tx_d_n,
 		tx_d_p => hdmi_tx_d_p
 	);
 
-	soundclk:process(clk) is
+	soundclk:process(pclk) is
 		constant SAMPLE_FREQ : integer := 48000;
 		-- NUM and DIV are integers such that 2*SAMPLE_FREQ*NUM/DIV = clk frequency
 		constant NUM : integer := 1000;
 		constant DIV : integer := 3;             -- 2*48000*1000/3 = 32 MHz
 		begin
-			if rising_edge(clk) then
+			if rising_edge(pclk) then
 				if soft_resetn = '0' then
-						isound_clk <= '0';
-						isclk_cnt <= (others => '0');
-				elsif pclken = '1' then
-						if isclk_cnt + DIV < NUM then
-								isclk_cnt <= isclk_cnt + DIV;
+						sound_clk <= '0';
+						sclk_cnt <= (others => '0');
+				else
+						if sclk_cnt + DIV < NUM then
+								sclk_cnt <= sclk_cnt + DIV;
 						else
-								isclk_cnt <= isclk_cnt + DIV - NUM;
-								isound_clk <= not isound_clk;
+								sclk_cnt <= sclk_cnt + DIV - NUM;
+								sound_clk <= not sound_clk;
 						end if;
 				end if;
 			end if;

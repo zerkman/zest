@@ -30,14 +30,12 @@ entity vclkconvert is
 		ide      : in std_logic;
 		ipix     : in std_logic_vector(15 downto 0);
 		isound   : in std_logic_vector(15 downto 0);
-		isnd_clk : in std_logic;
 
 		ovsync   : out std_logic;
 		ohsync   : out std_logic;
 		ode      : out std_logic;
 		opix     : out std_logic_vector(15 downto 0);
-		osound   : out std_logic_vector(15 downto 0);
-		osnd_clk : out std_logic
+		osound   : out std_logic_vector(15 downto 0)
 	);
 end vclkconvert;
 
@@ -63,7 +61,7 @@ architecture behavioral of vclkconvert is
 		);
 	end component;
 
-	constant DATA_WIDTH : integer := 36;
+	constant DATA_WIDTH : integer := 35;
 	constant fifo_depth : integer := 8;
 
 	signal initcnt : unsigned(fifo_depth-1 downto 0);
@@ -76,8 +74,7 @@ architecture behavioral of vclkconvert is
 	signal clear : std_logic;
 
 begin
-	idata <= isnd_clk & isound & ivsync & ihsync & ide & ipix;
-	osnd_clk <= odata(35);
+	idata <= isound & ivsync & ihsync & ide & ipix;
 	osound <= odata(34 downto 19);
 	ovsync <= odata(18);
 	ohsync <= odata(17);
