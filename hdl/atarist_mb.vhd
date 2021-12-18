@@ -18,6 +18,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+use work.all;
+
 entity atarist_mb is
 	port (
 		clk : in std_logic;
@@ -67,28 +70,6 @@ end atarist_mb;
 
 
 architecture structure of atarist_mb is
-	component atarist_bus is
-		port (
-			cpu_d		: in std_logic_vector(15 downto 0);
-			cpu_e		: in std_logic;
-			shifter_d	: in std_logic_vector(15 downto 0);
-			ram_d		: in std_logic_vector(15 downto 0);
-			shifram_e	: in std_logic;
-			mfp_d		: in std_logic_vector(7 downto 0);
-			mmu_d		: in std_logic_vector(7 downto 0);
-			glue_d		: in std_logic_vector(1 downto 0);
-			acia_ikbd_d	: in std_logic_vector(7 downto 0);
-			acia_ikbd_e	: in std_logic;
-			acia_midi_d	: in std_logic_vector(7 downto 0);
-			acia_midi_e	: in std_logic;
-			dma_d		: in std_logic_vector(15 downto 0);
-			psg_d		: in std_logic_vector(7 downto 0);
-			psg_e		: in std_logic;
-
-			d			: out std_logic_vector(15 downto 0)
-		);
-	end component;
-
 	component fx68k is
 		port(
 			clk		: in std_logic;
@@ -123,279 +104,6 @@ architecture structure of atarist_mb is
 			iEdb		: in std_logic_vector (15 downto 0);
 			oEdb		: out std_logic_vector (15 downto 0);
 			eab			: out std_logic_vector (23 downto 1)
-		);
-	end component;
-
-	component glue is
-		port (
-			clk		: in std_logic;
-			enPhi1	: in std_logic;
-			enPhi2	: in std_logic;
-			resetn	: in std_logic;
-
-			iA		: in std_logic_vector(23 downto 1);
-			iASn	: in std_logic;
-			iRWn	: in std_logic;
-			iD		: in std_logic_vector(1 downto 0);
-			iUDSn	: in std_logic;
-			iLDSn	: in std_logic;
-			iDTACKn	: in std_logic;
-			oRWn	: out std_logic;
-			oDTACKn	: out std_logic;
-			BEER	: out std_logic;
-			oD		: out std_logic_vector(1 downto 0);
-
-			FC		: in std_logic_vector(2 downto 0);
-			IPLn	: out std_logic_vector(2 downto 1);
-			VPAn	: out std_logic;
-			VMAn	: in std_logic;
-			cs6850	: out std_logic;
-			FCSn	: out std_logic;
-			iRDY	: in std_logic;
-			oRDY	: out std_logic;
-			RAMn	: out std_logic;
-			DMAn	: out std_logic;
-			DEVn	: out std_logic;
-
-			BRn		: out std_logic;
-			BGn		: in std_logic;
-			BGACKn	: out std_logic;
-
-			MFPCSn	: out std_logic;
-			MFPINTn	: in std_logic;
-			IACKn	: out std_logic;
-
-			SNDCSn	: out std_logic;
-
-			VSYNC	: out std_logic;
-			HSYNC	: out std_logic;
-			BLANKn	: out std_logic;
-			DE		: out std_logic
-		);
-	end component;
-
-	component mmu is
-		port (
-			clk		: in std_logic;
-			enPhi1	: in std_logic;
-			enPhi2	: in std_logic;
-			resetn	: in std_logic;
-
-			RAMn	: in std_logic;
-			DMAn	: in std_logic;
-			DEVn	: in std_logic;
-
-			iA		: in std_logic_vector(23 downto 1);
-			iASn	: in std_logic;
-			iRWn	: in std_logic;
-			iD		: in std_logic_vector(7 downto 0);
-			iUDSn	: in std_logic;
-			iLDSn	: in std_logic;
-			oD		: out std_logic_vector(7 downto 0);
-			DTACKn	: out std_logic;
-
-			RDATn	: out std_logic;
-
-			-- load request from shifter
-			DCYCn	: in std_logic;
-			-- register request from bus
-			CMPCSn	: out std_logic;
-
-			-- vertical sync
-			VSYNC	: in std_logic;
-
-			-- max memory configuration
-			mem_top	: in std_logic_vector(3 downto 0);
-
-			-- interface to RAM. Using own signals instead of hardware specific ones
-			ram_A	: out std_logic_vector(23 downto 1);
-			ram_W	: out std_logic;
-			ram_R	: out std_logic;
-			ram_DS	: out std_logic_vector(1 downto 0)
-		);
-	end component;
-
-	component clock_enabler is
-		port (
-			clk			: in std_logic;
-			reset		: in std_logic;
-			enNC1		: in std_logic;
-			enNC2		: in std_logic;
-			en8rck		: out std_logic;
-			en8fck		: out std_logic;
-			en32ck		: out std_logic;
-			en4rck		: out std_logic;
-			en4fck		: out std_logic;
-			en2rck		: out std_logic;
-			en2fck		: out std_logic;
-			en2_4576	: out std_logic;
-			ck05		: out std_logic;
-			error		: out std_logic
-		);
-	end component;
-
-	component shifter is
-		port (
-			clk		: in std_logic;
-			enPhi1	: in std_logic;
-			enPhi2	: in std_logic;
-			en32ck	: in std_logic;
-
-			CSn		: in std_logic;
-			RWn		: in std_logic;
-			A		: in std_logic_vector(5 downto 1);
-			iD		: in std_logic_vector(15 downto 0);
-			oD		: out std_logic_vector(15 downto 0);
-			DE		: in std_logic;
-			LOADn	: out std_logic;
-
-			rgb		: out std_logic_vector(8 downto 0)
-		);
-	end component;
-
-	component mc68901 is
-		port (
-			clk		: in std_logic;
-			clkren	: in std_logic;
-			clkfen	: in std_logic;
-			xtlcken	: in std_logic;
-			resetn	: in std_logic;
-
-			-- cpu bus I/O
-			id		: in std_logic_vector(7 downto 0);
-			od		: out std_logic_vector(7 downto 0);
-			rs		: in std_logic_vector(5 downto 1);
-			csn		: in std_logic;
-			rwn		: in std_logic;
-			dsn		: in std_logic;
-			dtackn	: out std_logic;
-
-			-- interrupt control
-			irqn	: out std_logic;
-			iackn	: in std_logic;
-			iein	: in std_logic;
-			ieon	: out std_logic;
-
-			-- general purpose I/O -- interrupts
-			ii		: in std_logic_vector(7 downto 0);
-			io		: out std_logic_vector(7 downto 0);
-
-			-- timer control
-			tai		: in std_logic;
-			tbi		: in std_logic;
-			tao		: out std_logic;
-			tbo		: out std_logic;
-			tco		: out std_logic;
-			tdo		: out std_logic;
-
-			-- serial I/O control
-			si		: in std_logic;
-			rc		: in std_logic;
-			so		: out std_logic;
-			tc		: in std_logic;
-
-			-- DMA control
-			rrn		: out std_logic;
-			trn		: out std_logic
-		);
-	end component;
-
-	component acia6850 is
-		port (
-			--
-			-- CPU Interface signals
-			--
-			clk      : in  std_logic;                     -- System Clock
-			rst      : in  std_logic;                     -- Reset input (active high)
-			cs       : in  std_logic;                     -- miniUART Chip Select
-			addr     : in  std_logic;                     -- Register Select
-			rw       : in  std_logic;                     -- Read / Not Write
-			data_in  : in  std_logic_vector(7 downto 0);  -- Data Bus In
-			data_out : out std_logic_vector(7 downto 0);  -- Data Bus Out
-			irq      : out std_logic;                     -- Interrupt Request out
-			--
-			-- RS232 Interface Signals
-			--
-			RxC   : in  std_logic;              -- Receive Baud Clock
-			TxC   : in  std_logic;              -- Transmit Baud Clock
-			RxD   : in  std_logic;              -- Receive Data
-			TxD   : out std_logic;              -- Transmit Data
-			DCD_n : in  std_logic;              -- Data Carrier Detect
-			CTS_n : in  std_logic;              -- Clear To Send
-			RTS_n : out std_logic               -- Request To send
-		);
-	end component;
-
-	component dma_controller is
-		port (
-			clk		: in std_logic;
-			cken	: in std_logic;
-			resetn	: in std_logic;
-
-			FCSn	: in std_logic;
-			iRDY	: in std_logic;
-			oRDY	: out std_logic;
-			RWn		: in std_logic;
-
-			A1		: in std_logic;
-			iD		: in std_logic_vector(15 downto 0);
-			oD		: out std_logic_vector(15 downto 0);
-
-			HDCSn	: out std_logic;
-			HDRQ	: in std_logic;
-
-			FDCSn	: out std_logic;
-			FDRQ	: in std_logic;
-			CRWn	: out std_logic;
-			CA		: out std_logic_vector(1 downto 0);
-			oCD		: out std_logic_vector(7 downto 0);
-			iCD		: in std_logic_vector(7 downto 0)
-		);
-	end component;
-
-	component wd1772 is
-		port (
-			clk			: in std_logic;
-			clken		: in std_logic;
-			resetn		: in std_logic;
-
-			CSn			: in std_logic;
-			RWn			: in std_logic;
-			A			: in std_logic_vector(1 downto 0);
-			iDAL		: in std_logic_vector(7 downto 0);
-			oDAL		: out std_logic_vector(7 downto 0);
-			INTRQ		: out std_logic;
-			DRQ			: out std_logic;
-			DDENn		: in std_logic;
-			WPRTn		: in std_logic;
-			IPn			: in std_logic;
-			TR0n		: in std_logic;
-			WD			: out std_logic;
-			WG			: out std_logic;
-			MO			: out std_logic;
-			RDn			: in std_logic;
-			DIRC		: out std_logic;
-			STEP		: out std_logic
-		);
-	end component;
-
-	component ym2149 is
-		port (
-			clk		: in std_logic;
-			aclken	: in std_logic;
-			resetn	: in std_logic;
-			bdir	: in std_logic;
-			bc1		: in std_logic;
-			bc2		: in std_logic;
-			ida		: in std_logic_vector(7 downto 0);
-			oda		: out std_logic_vector(7 downto 0);
-			ia		: in std_logic_vector(7 downto 0);
-			oa		: out std_logic_vector(7 downto 0);
-			ib		: in std_logic_vector(7 downto 0);
-			ob		: out std_logic_vector(7 downto 0);
-			a		: out std_logic_vector(15 downto 0);
-			b		: out std_logic_vector(15 downto 0);
-			c		: out std_logic_vector(15 downto 0)
 		);
 	end component;
 
@@ -579,7 +287,7 @@ begin
 	ram_oD <= od;
 	id <= ram_iD;
 
-	stbus:atarist_bus port map(
+	stbus:entity atarist_bus port map(
 		cpu_d => cpu_oD,
 		cpu_e => cpu_RWn,
 		shifter_d => shifter_oD,
@@ -640,7 +348,7 @@ begin
 	cpu_HALTn <= '1';
 	cpu_IPLn(0) <= '1';
 
-	clkgen:clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2rck,en2fck,en2_4576ck,ck05,clken_err);
+	clkgen:entity clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2rck,en2fck,en2_4576ck,ck05,clken_err);
 	enNC1 <= '1';
 	enNC2 <= clken_bus and clken_video and clken_dma;
 	clken_bus <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or bus_DTACKn or clken_bus2;
@@ -655,7 +363,7 @@ begin
 		end if;
 	end process;
 
-	glu:glue port map(
+	glu:entity glue port map(
 		clk => clk,
 		enPhi1 => en8rck,
 		enPhi2 => en8fck,
@@ -703,7 +411,7 @@ begin
 	glue_iUDSn <= bus_UDSn;
 	glue_iLDSn <= bus_LDSn;
 
-	mm:mmu port map (
+	mm:entity mmu port map (
 		clk => clk,
 		enPhi1 => en8rck,
 		enPhi2 => en8fck,
@@ -744,7 +452,7 @@ begin
 
 	ram_iD <= bus_D;
 
-	shift:shifter port map (
+	shift:entity shifter port map (
 		clk => clk,
 		enPhi1 => en8rck,
 		enPhi2 => en8fck,
@@ -762,7 +470,7 @@ begin
 	shifter_RWn <= bus_RWn;
 	shifter_A <= bus_A(5 downto 1);
 
-	mfp:mc68901 port map (
+	mfp:entity mc68901 port map (
 		clk => clk,
 		clkren => en4rck,
 		clkfen => en4fck,
@@ -802,7 +510,7 @@ begin
 	mfp_rc <= '0';
 	mfp_tc <= '0';
 
-	acia_ikbd:acia6850 port map (
+	acia_ikbd:entity acia6850 port map (
 		clk => clk,
 		rst => reset,
 		cs => acia_ikbd_cs,
@@ -825,7 +533,7 @@ begin
 	acia_ikbd_dcd_n <= '0';
 	acia_ikbd_cts_n <= '0';
 
-	acia_midi:acia6850 port map (
+	acia_midi:entity acia6850 port map (
 		clk => clk,
 		rst => reset,
 		cs => acia_midi_cs,
@@ -848,7 +556,7 @@ begin
 	acia_midi_cts_n <= '0';
 	acia_irq <= acia_ikbd_irq nor acia_midi_irq;
 
-	dma:dma_controller port map (
+	dma:entity dma_controller port map (
 		clk => clk,
 		cken => en8rck,
 		resetn => resetn,
@@ -871,7 +579,7 @@ begin
 	dma_iD <= bus_D;
 	dma_HDRQ <= '0';
 
-	fdc:wd1772 port map (
+	fdc:entity wd1772 port map (
 		clk => clk,
 		clken => en8rck,
 		resetn => resetn,
@@ -905,7 +613,7 @@ begin
 	psg_ib <= (others => '0');
 	sndsum <= resize(signed(psg_a),sndsum'length) + resize(signed(psg_b),sndsum'length) + resize(signed(psg_c),sndsum'length);
 	sound <= std_logic_vector(sndsum(17 downto 2));
-	psg:ym2149 port map (
+	psg:entity ym2149 port map (
 		clk => clk,
 		aclken => en2rck,
 		resetn => resetn,
