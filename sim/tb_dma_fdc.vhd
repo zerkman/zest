@@ -1,6 +1,6 @@
 -- tb_dma_fdc.vhd - testbench for DMA, fdc and floppy drive
 --
--- Copyright (c) 2020,2021 Francois Galea <fgalea at free.fr>
+-- Copyright (c) 2020-2022 Francois Galea <fgalea at free.fr>
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
 -- the Free Software Foundation, either version 3 of the License, or
