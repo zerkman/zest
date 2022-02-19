@@ -15,9 +15,9 @@ My build system is a Debian bullseye Linux system, but I believe any GNU/Linux s
 
 This documentation assumes the following file paths:
 - The Xilinx tools (Vivado, SDK) installation directory is `/opt/Xilinx`.
-- Your Vivado project is in a subdirectory of `$HOME/xilinx`.
 - The Vitis workspace directory is `$HOME/xilinx/workspace`.
 - All source files and git clones are in `$HOME/src`.
+- Your Vivado project is in a subdirectory of `$HOME/src/vivado`. The project directory name depends on your FPGA board.
 
 ## Get the zeST source code
 
@@ -56,9 +56,9 @@ Now your Vivado project setup is complete.
 Open the project in Vivado.
 From the left panel, in **Program and debug**, click **Generate Bitstream**. The process will take a few minutes to complete.
 
-When the generation is complete, copy the bitstream file to the zeST setup directory:
+When the generation is complete, you need to copy the bitstream file to the zeST setup directory. If, depending on your FPGA board, your Vivado project name is for instance `zest_z7lite`, the command will be:
 
-    $ cp $HOME/xilinx/zest/zest.runs/impl_1/zest_top.bit $HOME/src/zest/setup
+    $ cp $HOME/src/vivado/zest_z7lite/zest_z7lite.runs/impl_1/zest_top.bit $HOME/src/zest/setup
 
 ### Export the hardware
 
@@ -142,7 +142,7 @@ The generation of the board support package (BSP) and first stage bootloader (FS
 
 ## Build the buildroot filesystem
 
-This process will create the whole filesystem for your Zynq board, as well as the build toolchain that can be used for builing the Linux kernel, u-boot and the userland applications.
+This process will create the whole Linux filesystem for your Zynq board, as well as the build toolchain that can be used for builing the Linux kernel, u-boot and the userland applications.
 
 TODO
 
