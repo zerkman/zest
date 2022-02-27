@@ -87,12 +87,12 @@ architecture behavioral of glue is
 	constant mode_50	: videomode_t := (
 		cycles_per_line		=> 512,
 		n_lines				=> 313,
-		vblank_off			=> 34,		-- measured = 25
+		vblank_off			=> 32,		-- measured = 25
 		vde_on				=> 63,
 		vde_off				=> 263,
-		vblank_on			=> 310,		-- measured = 308, but we keep 33->309 to only display 276 scanlines
+		vblank_on			=> 308,		-- measured = 308. we keep 32->308 to only display 276 scanlines
 		vvsync_on			=> 310,
-		hsync_on			=> 471,
+		hsync_on			=> 472,
 		hvsync_on			=> 64,
 		hblank_off			=> 40,
 		hde_on				=> 68,
