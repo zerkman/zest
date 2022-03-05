@@ -32,7 +32,7 @@
 #include <sys/time.h>
 
 extern volatile uint32_t *parmreg;
-extern int uiofd;
+extern int parmfd;
 extern volatile int thr_end;
 
 #define MAXTRACK 84
@@ -119,12 +119,12 @@ void * thread_floppy(void * arg) {
 	unsigned int pos=0,pos1=0,posw=0;
 	int wrb = 0;
 
-	struct pollfd pfd = { .fd=uiofd, .events=POLLIN };
+	struct pollfd pfd = { .fd=parmfd, .events=POLLIN };
 
 	for(;;) {
 		// unmask interrupt
 		uint32_t unmask = 1;
-		ssize_t rv = write(uiofd, &unmask, sizeof(unmask));
+		ssize_t rv = write(parmfd, &unmask, sizeof(unmask));
 		if (rv != (ssize_t)sizeof(unmask)) {
 			perror("unmask interrupt");
 			break;
@@ -137,7 +137,7 @@ void * thread_floppy(void * arg) {
 		} else if (status==0) {
 			continue;
 		}
-		if (read(uiofd,&n,4)==0) {
+		if (read(parmfd,&n,4)==0) {
 			printf("nok\n");
 			break;
 		}

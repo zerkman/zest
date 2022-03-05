@@ -58,6 +58,26 @@ void * thread_floppy(void * arg);
 #define CFG_4M   0x00f0
 
 volatile uint32_t *parmreg;
+int parmfd;
+
+volatile struct {
+	struct {
+		unsigned int show       : 1;    // show the OSD
+		unsigned int autocenter : 1;    // automatically set xpos and ypos to center the OSD
+		unsigned int reserved   : 30;   // reserved for future use
+	} flags;
+	uint16_t xchars;          // number of characters in the OSD (width)
+	uint16_t ychars;          // number of characters in the OSD (height)
+	uint16_t xpos;            // X position of the OSD from the left border
+	uint16_t ypos;            // Y position of the OSD from the top border
+	uint32_t config[13];      // reserved
+	struct {
+		uint16_t bg;            // background colour
+		uint16_t fg;            // foreground colour
+	} palette[240];
+	char text[3072];
+} *osdreg;
+int osdfd;
 
 int joy_emu = 0;
 
@@ -239,18 +259,17 @@ struct input_event {
 	unsigned int value;
 };
 
-int uiofd;
 void * thread_uio(void * arg) {
 	uint32_t n;
 	int s;
 	do {
 		// unmask interrupt
 		uint32_t unmask = 1;
-		ssize_t rv = write(uiofd, &unmask, sizeof(unmask));
+		ssize_t rv = write(parmfd, &unmask, sizeof(unmask));
 		if (rv != (ssize_t)sizeof(unmask)) {
 			perror("unmask interrupt");
 		}
-		s = read(uiofd,&n,4);
+		s = read(parmfd,&n,4);
 		if (s==0) {
 			printf("nok\n");
 		} else {
@@ -497,6 +516,21 @@ void * thread_kbd(void * arg) {
 	return NULL;
 }
 
+void *uio_map(const char *file, size_t length, int *fd) {
+	void *p;
+	*fd = open(file,O_RDWR);
+	if (*fd < 0) {
+		printf("Cannot open UIO device\n");
+		return NULL;
+	}
+	p = mmap(0,length,PROT_READ|PROT_WRITE,MAP_SHARED,*fd,0);
+	if (p == MAP_FAILED) {
+		printf("Cannot map UIO device\n");
+		return NULL;
+	}
+	return p;
+}
+
 int usage(const char *progname) {
 	printf("usage: %s [OPTIONS] rom.img [floppy.mfm]\n\n"
 		"OPTIONS are:\n"
@@ -553,14 +587,8 @@ int main(int argc, char **argv) {
 	}
 	int cfg = cfg_mem | cfg_video | 3;		/* end reset */
 
-	uiofd = open("/dev/uio0",O_RDWR);
-	if (uiofd < 0) {
-		printf("Cannot open UIO device\n");
-		return 1;
-	}
-	parmreg = mmap(0,0x20,PROT_READ|PROT_WRITE,MAP_SHARED,uiofd,0);
-	if (parmreg == MAP_FAILED) {
-		printf("Cannot map UIO device\n");
+	parmreg = uio_map("/dev/uio0",0x20,&parmfd);
+	if (parmreg == NULL) {
 		return 1;
 	}
 	parmreg[0] = 0;	/* software reset signal */
@@ -577,6 +605,11 @@ int main(int argc, char **argv) {
 	parmreg[1] = ST_MEM_ADDR;
 
 	joyemufd = open(JOY_EMU_LED_FILE,O_WRONLY|O_SYNC);
+
+	osdreg = uio_map("/dev/uio1",0x1000,&osdfd);
+	if (osdreg == NULL) {
+		return 1;
+	}
 
 #ifdef SIL9022A
 	int status;
