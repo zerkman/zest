@@ -17,7 +17,7 @@ This documentation assumes the following file paths:
 - The Xilinx tools (Vivado, SDK) installation directory is `/opt/Xilinx`.
 - The Vitis workspace directory is `$HOME/xilinx/workspace`.
 - All source files and git clones are in `$HOME/src`.
-- Your Vivado project is in a subdirectory of `$HOME/src/vivado`. The project directory name depends on your FPGA board.
+- Your Vivado project is in a subdirectory of `zest/vivado`. The project directory name depends on your FPGA board.
 
 ## Get the zeST source code
 
@@ -58,14 +58,14 @@ From the left panel, in **Program and debug**, click **Generate Bitstream**. The
 
 When the generation is complete, you need to copy the bitstream file to the zeST setup directory. If, depending on your FPGA board, your Vivado project name is for instance `zest_z7lite`, the command will be:
 
-    $ cp $HOME/src/vivado/zest_z7lite/zest_z7lite.runs/impl_1/zest_top.bit $HOME/src/zest/setup
+    $ cp $HOME/src/zest/vivado/zest_z7lite/zest_z7lite.runs/impl_1/zest_top.bit $HOME/src/zest/setup
 
 ### Export the hardware
 
 Click **File -> Export -> Export Hardware**. This opens the *Export Hardware Platform* dialog.
 - On the first page of the dialog, click **Next**.
 - As platform properties, choose **Pre-synthesis**, then click **Next**.
-- Now you can choose the export file name. The default is `$HOME/xilinx/zest/zest_top.xsa`. Just leave it as is and click **Next**.
+- Now you can choose the export file name. The default is `$HOME/src/zest/vivado/zest_z7lite/zest_top.xsa`, assuming your Vivado project name is `zest_z7lite`. Just leave it as is and click **Next**.
 - Click **Finish**.
 
 You have now generated the platform file to generate the bootloaders, as well as the Linux device tree.
@@ -97,7 +97,7 @@ At the first run of Vitis, you will be asked to choose a workspace directory. Ch
 
 - Click **File -> New -> Platform Project...**. This opens the *New Platform Project* dialog.
 - As Platform project name, enter the name `zest_devicetree`. Then, click **Next**.
-- In the *Create a new platform from hardware (XSA)* tab, choose the XSA file you exported from Vivado. If you kept the default file name, it should be `$HOME/xilinx/zest/zest_top.xsa`.
+- In the *Create a new platform from hardware (XSA)* tab, choose the XSA file you exported from Vivado. If you kept the default file name, it should be `$HOME/src/zest/vivado/project_name/zest_top.xsa`.
 - In *Software Specification*, as *Operating system*, choose **device_tree**. Leave the default setting for the processor. Leave the *Generate boot components* checkbox unchecked. Then, click **Finish**.
 - Click **Project -> Build All**. After a few seconds, the device tree source files will be generated.
 
