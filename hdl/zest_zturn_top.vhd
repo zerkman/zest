@@ -23,40 +23,40 @@ use work.all;
 
 entity zest_top is
 	port (
-		DDR_addr : inout STD_LOGIC_VECTOR ( 14 downto 0 );
-		DDR_ba : inout STD_LOGIC_VECTOR ( 2 downto 0 );
-		DDR_cas_n : inout STD_LOGIC;
-		DDR_ck_n : inout STD_LOGIC;
-		DDR_ck_p : inout STD_LOGIC;
-		DDR_cke : inout STD_LOGIC;
-		DDR_cs_n : inout STD_LOGIC;
-		DDR_dm : inout STD_LOGIC_VECTOR ( 3 downto 0 );
-		DDR_dq : inout STD_LOGIC_VECTOR ( 31 downto 0 );
-		DDR_dqs_n : inout STD_LOGIC_VECTOR ( 3 downto 0 );
-		DDR_dqs_p : inout STD_LOGIC_VECTOR ( 3 downto 0 );
-		DDR_odt : inout STD_LOGIC;
-		DDR_ras_n : inout STD_LOGIC;
-		DDR_reset_n : inout STD_LOGIC;
-		DDR_we_n : inout STD_LOGIC;
-		FIXED_IO_ddr_vrn : inout STD_LOGIC;
-		FIXED_IO_ddr_vrp : inout STD_LOGIC;
-		FIXED_IO_mio : inout STD_LOGIC_VECTOR ( 53 downto 0 );
-		FIXED_IO_ps_clk : inout STD_LOGIC;
-		FIXED_IO_ps_porb : inout STD_LOGIC;
-		FIXED_IO_ps_srstb : inout STD_LOGIC;
+		DDR_addr : inout std_logic_vector(14 downto 0);
+		DDR_ba : inout std_logic_vector(2 downto 0);
+		DDR_cas_n : inout std_logic;
+		DDR_ck_n : inout std_logic;
+		DDR_ck_p : inout std_logic;
+		DDR_cke : inout std_logic;
+		DDR_cs_n : inout std_logic;
+		DDR_dm : inout std_logic_vector(3 downto 0);
+		DDR_dq : inout std_logic_vector(31 downto 0);
+		DDR_dqs_n : inout std_logic_vector(3 downto 0);
+		DDR_dqs_p : inout std_logic_vector(3 downto 0);
+		DDR_odt : inout std_logic;
+		DDR_ras_n : inout std_logic;
+		DDR_reset_n : inout std_logic;
+		DDR_we_n : inout std_logic;
+		FIXED_IO_ddr_vrn : inout std_logic;
+		FIXED_IO_ddr_vrp : inout std_logic;
+		FIXED_IO_mio : inout std_logic_vector(53 downto 0);
+		FIXED_IO_ps_clk : inout std_logic;
+		FIXED_IO_ps_porb : inout std_logic;
+		FIXED_IO_ps_srstb : inout std_logic;
 		LCD_DATA : out std_logic_vector(15 downto 0);
 		LCD_VSYNC : out std_logic;
 		LCD_HSYNC : out std_logic;
 		LCD_DE : out std_logic;
 		LCD_PCLK : out std_logic;
-		LEDS : out std_logic_vector (2 downto 0);  -- (2=>Rn,1=>Bn,0=>Gn)
-		I2C0_SCL : inout STD_LOGIC;
-		I2C0_SDA : inout STD_LOGIC;
+		LEDS : out std_logic_vector(2 downto 0);  -- (2=>Rn,1=>Bn,0=>Gn)
+		I2C0_SCL : inout std_logic;
+		I2C0_SDA : inout std_logic;
 		I2S_SCLK : out std_logic;
 		I2S_FSYNC_OUT : out std_logic;
 		I2S_DOUT : out std_logic;
-		MEMS_INTn : in STD_LOGIC;
-		HDMI_INTn : in STD_LOGIC
+		MEMS_INTn : in std_logic;
+		HDMI_INTn : in std_logic
 	);
 end zest_top;
 
@@ -99,6 +99,14 @@ architecture structure of zest_top is
 			W_DONE_0 : out std_logic;
 			clk : out std_logic;
 			iD_0 : in std_logic_vector(15 downto 0);
+			idata : in std_logic_vector(15 downto 0);
+			ide : in std_logic;
+			ihsync : in std_logic;
+			ivsync : in std_logic;
+			odata : out std_logic_vector(15 downto 0);
+			ode : out std_logic;
+			ohsync : out std_logic;
+			ovsync : out std_logic;
 			in_reg0_0 : in std_logic_vector(31 downto 0);
 			in_reg1_0 : in std_logic_vector(31 downto 0);
 			oD_0 : out std_logic_vector(15 downto 0);
@@ -186,6 +194,10 @@ architecture structure of zest_top is
 	signal isound		: std_logic_vector(15 downto 0);
 	signal osound		: std_logic_vector(15 downto 0);
 
+	signal dblpix		: std_logic_vector(15 downto 0);
+	signal dblvsync		: std_logic;
+	signal dblhsync		: std_logic;
+	signal dblde		: std_logic;
 	signal opix			: std_logic_vector(15 downto 0);
 	signal ovsync		: std_logic;
 	signal ohsync		: std_logic;
@@ -255,7 +267,15 @@ begin
 		R_0 => ram_R,
 		DS_0 => ram_DS,
 		W_DONE_0 => ram_W_DONE,
-		R_DONE_0 => ram_R_DONE
+		R_DONE_0 => ram_R_DONE,
+		idata => dblpix,
+		ide => dblde,
+		ihsync => dblhsync,
+		ivsync => dblvsync,
+		odata => opix,
+		ode => ode,
+		ohsync => ohsync,
+		ovsync => ovsync
 	);
 
 	atarist:entity atarist_mb port map(
@@ -366,10 +386,10 @@ begin
 		IN_VSYNC => pvsync,
 		IN_HSYNC => phsync,
 		IN_DE => pde,
-		OUT_DATA => opix,
-		OUT_VSYNC => ovsync,
-		OUT_HSYNC => ohsync,
-		OUT_DE => ode
+		OUT_DATA => dblpix,
+		OUT_VSYNC => dblvsync,
+		OUT_HSYNC => dblhsync,
+		OUT_DE => dblde
 	);
 
 	sndout:entity i2s_output port map (
