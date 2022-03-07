@@ -267,6 +267,8 @@ architecture structure of atarist_mb is
 	signal psg_c			: std_logic_vector(15 downto 0);
 	signal sndsum			: signed(17 downto 0);
 
+	signal hsync1			: std_logic;
+
 begin
 	reset <= not resetn;
 	clken_error <= clken_err;
@@ -275,8 +277,7 @@ begin
 	ikbd_clkfen <= en2fck;
 	fdd_clken <= en8rck;
 	de <= blankn;
-	hsync <= not hsyncn;
-	vsync <= not vsyncn;
+	hsync <= hsync1;
 
 	a <= ram_A;
 	ds <= ram_DS;
@@ -286,6 +287,26 @@ begin
 	ram_W_DONE <= w_done;
 	ram_oD <= od;
 	id <= ram_iD;
+
+	-- synchronize output vsync with hsync for better hdmi compatibility
+	gensync : process(clk)
+	begin
+		if rising_edge(clk) then
+			if resetn = '0' then
+				hsync1 <= '0';
+				vsync <= '0';
+			else
+				hsync1 <= not hsyncn;
+				if hsyncn = '0' and hsync1 = '0' then
+					if vsyncn = '0' then
+						vsync <= '1';
+					else
+						vsync <= '0';
+					end if;
+				end if;
+			end if;
+		end if;
+	end process;
 
 	stbus:entity atarist_bus port map(
 		cpu_d => cpu_oD,
