@@ -406,10 +406,13 @@ architecture arch_imp of on_screen_display is
 	constant clr_offset : integer := 16#10#;
 	constant chr_offset : integer := 16#100#;
 
-	constant xdstart : integer := 100;	-- X display start (nb of pixels from the left border)
-	constant ydstart : integer := 50;	-- Y display start (nb of lines from the top border)
-	constant xchars  : integer := 60;	-- number of characters per line
-	constant ychars  : integer := 25;	-- number of lines of characters
+	signal varcnt    : integer range 0 to 7;    -- variable load counter
+	signal show      : std_logic;               -- show/hide the OSD
+	signal xdstart   : integer range 0 to 4095; -- X display start (nb of pixels from the left border)
+	signal ydstart   : integer range 0 to 4095; -- Y display start (nb of lines from the top border)
+	signal xchars    : integer range 0 to 127;  -- number of characters per line
+	signal ychars    : integer range 0 to 127;  -- number of lines of characters
+
 	constant bgcolr  : std_logic_vector(15 downto 0) := "0000000111000111";
 	constant fgcolr  : std_logic_vector(15 downto 0) := "1000011111011111";
 	signal xcnt      : signed(12 downto 0); -- X pixel counter
@@ -548,6 +551,14 @@ begin
 				chrp <= chr_offset*4;
 				transp <= '0';
 				pix <= x"00";
+				ram_re2 <= '0';
+				ram_addr2 <= (others => '0');
+				varcnt <= 0;
+				show <= '0';
+				xdstart <= 0;
+				ydstart <= 0;
+				xchars <= 0;
+				ychars <= 0;
 			else
 				s_vsync <= ivsync;
 				s_hsync <= ihsync;
@@ -566,7 +577,7 @@ begin
 						end if;
 					end if;
 					pxok <= '0';
-				elsif ide = '1' then
+				elsif ide = '1' and show = '1' then
 					pxok <= '1';
 					xcnt <= xcnt + 1;
 					odata <= idata;
@@ -601,6 +612,25 @@ begin
 				if ivsync = '1' and s_vsync = '0' then
 					ycnt <= to_signed(-ydstart,ycnt'length);
 					chrp <= chr_offset*4;
+
+					-- load variable values from the RAM
+					ram_addr2 <= (others => '0');
+					ram_re2 <= '1';
+					varcnt <= 1;
+				elsif varcnt > 0 then
+					ram_addr2 <= std_logic_vector(unsigned(ram_addr2)+1);
+					varcnt <= varcnt + 1;
+					if varcnt = 2 then
+						show <= ram_dout2(0);
+					elsif varcnt = 3 then
+						xchars <= to_integer(unsigned(ram_dout2(6 downto 0)));
+						ychars <= to_integer(unsigned(ram_dout2(22 downto 16)));
+						ram_re2 <= '0';
+					elsif varcnt = 4 then
+						xdstart <= to_integer(unsigned(ram_dout2(11 downto 0)));
+						ydstart <= to_integer(unsigned(ram_dout2(27 downto 16)));
+						varcnt <= 0;
+					end if;
 				end if;
 			end if;
 		end if;
