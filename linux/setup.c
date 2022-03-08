@@ -61,11 +61,8 @@ volatile uint32_t *parmreg;
 int parmfd;
 
 volatile struct {
-  struct {
-    unsigned int show       : 1;    // show the OSD
-    unsigned int autocenter : 1;    // automatically set xpos and ypos to center the OSD
-    unsigned int reserved   : 30;   // reserved for future use
-  } flags;
+  unsigned int show       : 1;    // show the OSD
+  unsigned int reserved   : 31;   // reserved for future use
   uint16_t xchars;          // number of characters in the OSD (width)
   uint16_t ychars;          // number of characters in the OSD (height)
   uint16_t xpos;            // X position of the OSD from the left border
