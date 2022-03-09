@@ -55,29 +55,13 @@ void * thread_ikbd(void * arg);
 volatile uint32_t *parmreg;
 int parmfd;
 
-volatile struct {
-  unsigned int show       : 1;    // show the OSD
-  unsigned int reserved   : 31;   // reserved for future use
-  uint16_t xchars;          // number of characters in the OSD (width)
-  uint16_t ychars;          // number of characters in the OSD (height)
-  uint16_t xpos;            // X position of the OSD from the left border
-  uint16_t ypos;            // Y position of the OSD from the top border
-  uint32_t config[13];      // reserved
-  struct {
-    uint16_t bg;            // background colour
-    uint16_t fg;            // foreground colour
-  } palette[240];
-  char text[3072];
-} *osdreg;
-int osdfd;
-
 volatile int thr_end = 0;
 
 void *uio_map(const char *file, size_t length, int *fd) {
   void *p;
   *fd = open(file,O_RDWR);
   if (*fd < 0) {
-    printf("Cannot open UIO device\n");
+    printf("Cannot open UIO device '%s'\n", file);
     return NULL;
   }
   p = mmap(0,length,PROT_READ|PROT_WRITE,MAP_SHARED,*fd,0);
@@ -161,10 +145,6 @@ int main(int argc, char **argv) {
   }
   parmreg[1] = ST_MEM_ADDR;
 
-  osdreg = uio_map("/dev/uio1",0x1000,&osdfd);
-  if (osdreg == NULL) {
-    return 1;
-  }
 
 #ifdef SIL9022A
   int status;

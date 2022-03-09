@@ -22,9 +22,11 @@ all: $(TARGETS)
 clean:
 	rm -f *.o $(TARGETS)
 
-setup: setup.o floppy.o ikbd.o
+setup: setup.o floppy.o ikbd.o osd.o
 
-setup_sil: setup_sil.o floppy.o ikbd.o sil9022a.o
+setup_sil: setup_sil.o floppy.o ikbd.o sil9022a.o osd.o
 
 setup_sil.o: setup.c sil9022a.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -DSIL9022A -c -o $@ $<
+
+osd.o: osd.c osd.h
