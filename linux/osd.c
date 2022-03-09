@@ -77,11 +77,23 @@ void osd_hide() {
   }
 }
 
-void osd_text(const char *text, int x, int y, int fgc, int bgc, unsigned int flags) {
+void osd_clear(int bgc) {
+  if (osdreg != NULL) {
+    int n = _xchars*_ychars;
+    int i;
+    int v = (bgc&3)<<10 | ' ';
+    volatile uint16_t *p = osdreg->text;
+    for (i=0; i<n; ++i) {
+      *p++ = v;
+    }
+  }
+}
+
+void osd_text(const char *text, int x, int y, int fgc, int bgc) {
   if (osdreg != NULL) {
     int i;
     int l = strlen(text);
-    int mode = (fgc&3) | (bgc&3)<<2 | flags<<4;
+    int mode = (fgc&3) | (bgc&3)<<2;
     mode <<= 8;
     volatile uint16_t *p = osdreg->text + y*_xchars + x;
     for (i=0; i<l; ++i) {

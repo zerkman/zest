@@ -24,8 +24,6 @@ int osd_init(void);
 
 #include <stdint.h>
 
-#define OSDFLG_INVERSE 0x1
-
 #define RGB(r,g,b) ((r&0x1f)<<11 | (g&0x3f)<<5 | (b&0x1f))
 
 int osd_init(void);
@@ -38,7 +36,9 @@ void osd_show();
 
 void osd_hide();
 
-void osd_text(const char *text, int x, int y, int fgc, int bgc, unsigned int flags);
+void osd_clear(int bgc);
+
+void osd_text(const char *text, int x, int y, int fgc, int bgc);
 
 void osd_set_colours(int row, int nrows, const uint16_t *data);
 

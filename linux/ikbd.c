@@ -36,6 +36,9 @@ extern volatile uint32_t *parmreg;
 
 extern volatile int thr_end;
 
+// From menu.c
+void menu(void);
+
 
 void led_status(int fd,int st) {
   if (fd>=0) {
@@ -241,6 +244,9 @@ void * thread_ikbd(void * arg) {
               joy_emu = !joy_emu;
               led_status(joyemufd,joy_emu);
             }
+            break;
+          case KEY_SCROLLLOCK:
+            menu();
             break;
           // default:
           //   printf("Key code:%d val:%d\n",evcode,evvalue);
