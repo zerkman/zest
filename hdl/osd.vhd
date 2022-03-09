@@ -403,8 +403,8 @@ architecture arch_imp of on_screen_display is
 	signal s_hsync   : std_logic;
 	signal s_de      : std_logic;
 
-	constant clr_offset : integer := 16#10#;
-	constant chr_offset : integer := 16#100#;
+	constant clr_offset : integer := 16;
+	constant chr_offset : integer := 400;
 
 	signal varcnt    : integer range 0 to 7;    -- variable load counter
 	signal show      : std_logic;               -- show/hide the OSD
@@ -412,9 +412,9 @@ architecture arch_imp of on_screen_display is
 	signal ydstart   : integer range 0 to 4095; -- Y display start (nb of lines from the top border)
 	signal xchars    : integer range 0 to 127;  -- number of characters per line
 	signal ychars    : integer range 0 to 127;  -- number of lines of characters
+	type colr_t is array (0 to 3) of std_logic_vector(15 downto 0);
+	signal colr      : colr_t;
 
-	constant bgcolr  : std_logic_vector(15 downto 0) := "0000000111000111";
-	constant fgcolr  : std_logic_vector(15 downto 0) := "1000011111011111";
 	signal xcnt      : signed(12 downto 0); -- X pixel counter
 	signal ycnt      : signed(12 downto 0); -- Y pixel counter
 	signal pxok      : std_logic;
@@ -422,9 +422,11 @@ architecture arch_imp of on_screen_display is
 	signal cpx       : unsigned(2 downto 0);  -- X position of the pixel in the character grid
 	signal cpy       : unsigned(3 downto 0);  -- Y position
 
-	signal transp    : std_logic;
 	signal chrp      : integer range 0 to 2**ADDR_WIDTH-chr_offset*4-1;	-- current character position
+	signal transp    : std_logic;
 	signal pix       : std_logic_vector(7 downto 0);
+	signal cfg       : integer range 0 to 3;    -- foreground colour
+	signal cbg       : integer range 0 to 3;    -- background colour
 
 begin
 
@@ -536,7 +538,9 @@ begin
 	cpy <= unsigned(ycnt(cpy'length-1 downto 0));
 
 	process(s_axi_aclk) is
-		variable chr : integer range 0 to 255;	-- current character
+		variable chrd    : std_logic_vector(15 downto 0);   -- character data
+		variable chr     : integer range 0 to 255;          -- current character
+
 	begin
 		if rising_edge(s_axi_aclk) then
 			if s_axi_aresetn = '0' then
@@ -548,9 +552,11 @@ begin
 				ycnt <= to_signed(-ydstart,ycnt'length);
 				pxok <= '0';
 				intr <= '0';
-				chrp <= chr_offset*4;
+				chrp <= chr_offset*2;
 				transp <= '0';
 				pix <= x"00";
+				cfg <= 0;
+				cbg <= 0;
 				ram_re2 <= '0';
 				ram_addr2 <= (others => '0');
 				varcnt <= 0;
@@ -563,6 +569,7 @@ begin
 				s_vsync <= ivsync;
 				s_hsync <= ihsync;
 				s_de <= ide;
+				odata <= idata;
 				if ihsync = '1' and s_hsync = '0' then
 					xcnt <= to_signed(-xdstart,xcnt'length);
 					if pxok = '1' then
@@ -580,16 +587,18 @@ begin
 				elsif ide = '1' and show = '1' then
 					pxok <= '1';
 					xcnt <= xcnt + 1;
-					odata <= idata;
 					if xcnt >= -3 and xcnt < xchars*8 and ycnt >= 0 and ycnt < ychars*8*2 then
 						if xcnt < xchars*8-3 then
 							if xcnt(2 downto 0) = "101" then
 								ram_re2 <= '1';
-								ram_addr2 <= std_logic_vector(to_unsigned(chrp/4,ram_addr2'length));
+								ram_addr2 <= std_logic_vector(to_unsigned(chrp/2,ram_addr2'length));
 							elsif xcnt(2 downto 0) = "110" then
 								ram_re2 <= '0';
 							elsif xcnt(2 downto 0) = "111" then
-								chr := to_integer(unsigned(ram_dout2((chrp mod 4)*8+7 downto (chrp mod 4)*8)));
+								chrd := ram_dout2((chrp mod 2)*16+15 downto (chrp mod 2)*16);
+								chr := to_integer(unsigned(chrd(7 downto 0)));
+								cfg <= to_integer(unsigned(chrd(9 downto 8)));
+								cbg <= to_integer(unsigned(chrd(11 downto 10)));
 								if chr = 0 then
 									transp <= '1';
 								else
@@ -601,9 +610,9 @@ begin
 						end if;
 						if xcnt >= 0 and transp = '0' then
 							if pix(7-to_integer(cpx)) = '1' then
-								odata <= fgcolr;
+								odata <= colr(cfg);
 							else
-								odata <= bgcolr;
+								odata <= colr(cbg);
 							end if;
 						end if;
 					end if;
@@ -611,7 +620,7 @@ begin
 
 				if ivsync = '1' and s_vsync = '0' then
 					ycnt <= to_signed(-ydstart,ycnt'length);
-					chrp <= chr_offset*4;
+					chrp <= chr_offset*2;
 
 					-- load variable values from the RAM
 					ram_addr2 <= (others => '0');
@@ -625,10 +634,17 @@ begin
 					elsif varcnt = 3 then
 						xchars <= to_integer(unsigned(ram_dout2(6 downto 0)));
 						ychars <= to_integer(unsigned(ram_dout2(22 downto 16)));
-						ram_re2 <= '0';
+						ram_addr2 <= std_logic_vector(to_unsigned(clr_offset,ram_addr2'length));
 					elsif varcnt = 4 then
 						xdstart <= to_integer(unsigned(ram_dout2(11 downto 0)));
 						ydstart <= to_integer(unsigned(ram_dout2(27 downto 16)));
+					elsif varcnt = 5 then
+						colr(0) <= ram_dout2(15 downto 0);
+						colr(1) <= ram_dout2(31 downto 16);
+						ram_re2 <= '0';
+					elsif varcnt = 6 then
+						colr(2) <= ram_dout2(15 downto 0);
+						colr(3) <= ram_dout2(31 downto 16);
 						varcnt <= 0;
 					end if;
 				end if;
