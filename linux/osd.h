@@ -24,22 +24,36 @@ int osd_init(void);
 
 #include <stdint.h>
 
-#define RGB(r,g,b) ((r&0x1f)<<11 | (g&0x3f)<<5 | (b&0x1f))
+#define RGB(r,g,b) ((r&0xf8)<<8 | (g&0xfc)<<3 | (b&0xf8)>>3)
 
+// Initialize the OSD system
 int osd_init(void);
 
+// set dimension of OSD (in characters)
 void osd_set_size(int xchars, int ychars);
 
+// set X and Y location of OSD (in pixels)
 void osd_set_position(int xpos, int ypos);
 
+// show OSD
 void osd_show();
 
+// hide OSD
 void osd_hide();
 
+// clear the OSD display (fill with spaces)
 void osd_clear(int bgc);
 
+// print string at specified location and colours
 void osd_text(const char *text, int x, int y, int fgc, int bgc);
 
-void osd_set_colours(int row, int nrows, const uint16_t *data);
+// print character at specified location and colours
+void osd_putchar(int c, int x, int y, int fgc, int bgc);
+
+// set same colour palette to all scanlines
+void osd_set_palette_all(const uint16_t data[4]);
+
+// set colour palettes to a group of scanlines
+void osd_set_palette(int row, int nrows, const uint16_t data[][4]);
 
 #endif

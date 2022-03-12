@@ -60,8 +60,7 @@ void menu_bar(int active_item) {
       bg = 1;
     }
     osd_text(buf,i*15,0,fg,bg);
-    sprintf(buf,"%c",headers[i][0]);
-    osd_text(buf,i*15+2,0,2,bg);
+    osd_putchar(headers[i][0],i*15+2,0,2,bg);
   }
 }
 
@@ -83,14 +82,14 @@ void display(int menuid) {
 }
 
 void menu(void) {
-  static const uint16_t osd_palette[] = { RGB(8,16,8), RGB(24,48,24), RGB(31,16,8), RGB(8,16,31) };
+  static const uint16_t osd_palette[] = { RGB(0x40,0x40,0x40), RGB(0xc0,0xc0,0xc0), RGB(0xff,0x40,0x40), RGB(0x40,0x40,0xff) };
   int quit = 0;
   int menuid = 3;
 
   osd_init();
   osd_set_size(XCHARS,YCHARS);
   osd_set_position(XPOS,YPOS);
-  osd_set_colours(0,1,osd_palette);
+  osd_set_palette_all(osd_palette);
   display(menuid);
   osd_show(1);
 
