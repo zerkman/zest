@@ -406,12 +406,13 @@ architecture arch_imp of on_screen_display is
 	constant clr_offset : integer := 16;
 	constant chr_offset : integer := 400;
 
-	signal varcnt    : integer range 0 to 7;    -- variable load counter
+	signal varcnt    : integer range 0 to 4;    -- variable load counter
 	signal show      : std_logic;               -- show/hide the OSD
 	signal xdstart   : integer range 0 to 4095; -- X display start (nb of pixels from the left border)
 	signal ydstart   : integer range 0 to 4095; -- Y display start (nb of lines from the top border)
 	signal xchars    : integer range 0 to 127;  -- number of characters per line
 	signal ychars    : integer range 0 to 127;  -- number of lines of characters
+	signal clrcnt    : integer range 0 to 5;    -- colours load counter
 	type colr_t is array (0 to 3) of std_logic_vector(15 downto 0);
 	signal colr      : colr_t;
 
@@ -422,7 +423,8 @@ architecture arch_imp of on_screen_display is
 	signal cpx       : unsigned(2 downto 0);  -- X position of the pixel in the character grid
 	signal cpy       : unsigned(3 downto 0);  -- Y position
 
-	signal chrp      : integer range 0 to 2**ADDR_WIDTH-chr_offset*4-1;	-- current character position
+	signal chrp      : integer range 0 to 2**(ADDR_WIDTH-1)-1;  -- character position
+	signal clrp      : integer range 0 to 2**(ADDR_WIDTH-2)-1;  -- colours position
 	signal transp    : std_logic;
 	signal pix       : std_logic_vector(7 downto 0);
 	signal cfg       : integer range 0 to 3;    -- foreground colour
@@ -540,6 +542,7 @@ begin
 	process(s_axi_aclk) is
 		variable chrd    : std_logic_vector(15 downto 0);   -- character data
 		variable chr     : integer range 0 to 255;          -- current character
+		variable vs_busy : std_logic;
 
 	begin
 		if rising_edge(s_axi_aclk) then
@@ -565,11 +568,44 @@ begin
 				ydstart <= 0;
 				xchars <= 0;
 				ychars <= 0;
+				clrp <= clr_offset;
+				clrcnt <= 0;
 			else
 				s_vsync <= ivsync;
 				s_hsync <= ihsync;
 				s_de <= ide;
 				odata <= idata;
+				vs_busy := '0';
+
+				if ivsync = '1' and s_vsync = '0' then
+					ycnt <= to_signed(-ydstart,ycnt'length);
+					chrp <= chr_offset*2;
+					clrp <= clr_offset;
+					clrcnt <= 1;
+
+					-- load variable values from the RAM
+					vs_busy := '1';
+					ram_addr2 <= (others => '0');
+					ram_re2 <= '1';
+					varcnt <= 1;
+				elsif varcnt > 0 then
+					vs_busy := '1';
+					ram_addr2 <= std_logic_vector(unsigned(ram_addr2)+1);
+					varcnt <= varcnt + 1;
+					if varcnt = 2 then
+						show <= ram_dout2(0);
+					elsif varcnt = 3 then
+						xchars <= to_integer(unsigned(ram_dout2(6 downto 0)));
+						ychars <= to_integer(unsigned(ram_dout2(22 downto 16)));
+						ram_addr2 <= (others => '0');
+						ram_re2 <= '0';
+					elsif varcnt = 4 then
+						xdstart <= to_integer(unsigned(ram_dout2(11 downto 0)));
+						ydstart <= to_integer(unsigned(ram_dout2(27 downto 16)));
+						varcnt <= 0;
+					end if;
+				end if;
+
 				if ihsync = '1' and s_hsync = '0' then
 					xcnt <= to_signed(-xdstart,xcnt'length);
 					if pxok = '1' then
@@ -579,11 +615,35 @@ begin
 						if ycnt+1 = ychars*8*2 then
 							intr <= '1';
 						end if;
-						if ycnt >= 0 and ycnt < ychars*8*2 and ycnt(3 downto 0) /= "1111" then
-							chrp <= chrp - xchars;
+						if ycnt >= 0 and ycnt < ychars*8*2 then
+							if ycnt(3 downto 0) /= "1111" then
+								chrp <= chrp - xchars;
+							end if;
+							if ycnt(0) = '1' then
+								clrcnt <= 1;
+							end if;
 						end if;
 					end if;
 					pxok <= '0';
+				elsif clrcnt > 0 and vs_busy = '0' then
+					clrcnt <= clrcnt + 1;
+					if clrcnt = 1 then
+						ram_re2 <= '1';
+						ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
+						clrp <= clrp + 1;
+					elsif clrcnt = 2 then
+						ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
+						clrp <= clrp + 1;
+					elsif clrcnt = 3 then
+						ram_addr2 <= (others => '0');
+						ram_re2 <= '0';
+						colr(0) <= ram_dout2(15 downto 0);
+						colr(1) <= ram_dout2(31 downto 16);
+					elsif clrcnt = 4 then
+						colr(2) <= ram_dout2(15 downto 0);
+						colr(3) <= ram_dout2(31 downto 16);
+						clrcnt <= 0;
+					end if;
 				elsif ide = '1' and show = '1' then
 					pxok <= '1';
 					xcnt <= xcnt + 1;
@@ -618,36 +678,6 @@ begin
 					end if;
 				end if;
 
-				if ivsync = '1' and s_vsync = '0' then
-					ycnt <= to_signed(-ydstart,ycnt'length);
-					chrp <= chr_offset*2;
-
-					-- load variable values from the RAM
-					ram_addr2 <= (others => '0');
-					ram_re2 <= '1';
-					varcnt <= 1;
-				elsif varcnt > 0 then
-					ram_addr2 <= std_logic_vector(unsigned(ram_addr2)+1);
-					varcnt <= varcnt + 1;
-					if varcnt = 2 then
-						show <= ram_dout2(0);
-					elsif varcnt = 3 then
-						xchars <= to_integer(unsigned(ram_dout2(6 downto 0)));
-						ychars <= to_integer(unsigned(ram_dout2(22 downto 16)));
-						ram_addr2 <= std_logic_vector(to_unsigned(clr_offset,ram_addr2'length));
-					elsif varcnt = 4 then
-						xdstart <= to_integer(unsigned(ram_dout2(11 downto 0)));
-						ydstart <= to_integer(unsigned(ram_dout2(27 downto 16)));
-					elsif varcnt = 5 then
-						colr(0) <= ram_dout2(15 downto 0);
-						colr(1) <= ram_dout2(31 downto 16);
-						ram_re2 <= '0';
-					elsif varcnt = 6 then
-						colr(2) <= ram_dout2(15 downto 0);
-						colr(3) <= ram_dout2(31 downto 16);
-						varcnt <= 0;
-					end if;
-				end if;
 			end if;
 		end if;
 	end process;
