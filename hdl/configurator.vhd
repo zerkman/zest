@@ -23,7 +23,7 @@ entity configurator is
 		-- Width of S_AXI data bus
 		C_S_AXI_DATA_WIDTH	: integer	:= 32;
 		-- Width of S_AXI address bus
-		C_S_AXI_ADDR_WIDTH	: integer	:= 5
+		C_S_AXI_ADDR_WIDTH	: integer	:= 6
 	);
 	port (
 		out_reg0	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
@@ -34,9 +34,11 @@ entity configurator is
 		out_reg5	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 		out_reg6	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 		out_reg7	: out std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		out_reg8_11	: out std_logic_vector(C_S_AXI_DATA_WIDTH*4-1 downto 0);
 
 		in_reg0		: in std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 		in_reg1		: in std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+		in_reg8_11  : in std_logic_vector(C_S_AXI_DATA_WIDTH*4-1 downto 0);
 
 		-- Global Clock Signal
 		S_AXI_ACLK	: in std_logic;
@@ -135,7 +137,7 @@ architecture arch_imp of configurator is
 	signal aw_en	: std_logic;
 
 	-- Input register array
-	type in_reg_t is array (0 to 1) of std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
+	type in_reg_t is array (0 to 2**(ADDR_MSB-ADDR_LSB+1)-1) of std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
 	signal in_reg : in_reg_t;
 
 begin
@@ -148,8 +150,23 @@ begin
 	out_reg5 <= out_reg(5);
 	out_reg6 <= out_reg(6);
 	out_reg7 <= out_reg(7);
+	out_reg8_11 <= out_reg(11) & out_reg(10) & out_reg(9) & out_reg(8);
 	in_reg(0) <= in_reg0;
 	in_reg(1) <= in_reg1;
+	in_reg(2) <= out_reg(2);
+	in_reg(3) <= out_reg(3);
+	in_reg(4) <= out_reg(4);
+	in_reg(5) <= out_reg(5);
+	in_reg(6) <= out_reg(6);
+	in_reg(7) <= out_reg(7);
+	in_reg(8) <= in_reg8_11(31 downto 0);
+	in_reg(9) <= in_reg8_11(63 downto 32);
+	in_reg(10) <= in_reg8_11(95 downto 64);
+	in_reg(11) <= in_reg8_11(127 downto 96);
+	in_reg(12) <= out_reg(12);
+	in_reg(13) <= out_reg(13);
+	in_reg(14) <= out_reg(14);
+	in_reg(15) <= out_reg(15);
 
 	S_AXI_AWREADY <= axi_awready;
 	S_AXI_WREADY <= axi_wready;
@@ -340,16 +357,12 @@ begin
 	-- and the slave is ready to accept the read address.
 	out_reg_rden <= axi_arready and S_AXI_ARVALID and (not axi_rvalid) ;
 
-	process (in_reg, out_reg, axi_araddr)
+	process (in_reg, axi_araddr)
 	variable loc_addr : integer;
 	begin
 		-- Address decoding for reading registers
 		loc_addr := to_integer(unsigned(axi_araddr(ADDR_MSB downto ADDR_LSB)));
-		if loc_addr >= in_reg'low and loc_addr <= in_reg'high then
-			reg_data_out <= in_reg(loc_addr);
-		else
-			reg_data_out <= out_reg(loc_addr);
-		end if;
+		reg_data_out <= in_reg(loc_addr);
 	end process;
 
 	-- Output register or memory read data
