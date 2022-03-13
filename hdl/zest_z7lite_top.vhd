@@ -101,6 +101,7 @@ architecture structure of zest_top is
 			ovsync : out std_logic;
 			in_reg0_0 : in std_logic_vector(31 downto 0);
 			in_reg1_0 : in std_logic_vector(31 downto 0);
+			in_reg8_11_0 : in std_logic_vector(127 downto 0);
 			oD_0 : out std_logic_vector(15 downto 0);
 			out_reg0_0 : out std_logic_vector(31 downto 0);
 			out_reg1_0 : out std_logic_vector(31 downto 0);
@@ -110,6 +111,7 @@ architecture structure of zest_top is
 			out_reg5_0 : out std_logic_vector(31 downto 0);
 			out_reg6_0 : out std_logic_vector(31 downto 0);
 			out_reg7_0 : out std_logic_vector(31 downto 0);
+			out_reg8_11_0 : out std_logic_vector(127 downto 0);
 			resetn : out std_logic;
 			vid5_clk : out std_logic;
 			vid_clk : out std_logic
@@ -167,6 +169,7 @@ architecture structure of zest_top is
 
 	signal in_reg0		: std_logic_vector(31 downto 0);
 	signal in_reg1		: std_logic_vector(31 downto 0);
+	signal in_reg8_11	: std_logic_vector(127 downto 0);
 	signal out_reg0		: std_logic_vector(31 downto 0);
 	signal out_reg1		: std_logic_vector(31 downto 0);
 	signal out_reg2		: std_logic_vector(31 downto 0);
@@ -175,6 +178,7 @@ architecture structure of zest_top is
 	signal out_reg5		: std_logic_vector(31 downto 0);
 	signal out_reg6		: std_logic_vector(31 downto 0);
 	signal out_reg7		: std_logic_vector(31 downto 0);
+	signal out_reg8_11	: std_logic_vector(127 downto 0);
 
 	signal pclken		: std_logic;
 	signal de			: std_logic;
@@ -213,7 +217,7 @@ begin
 	mem_top <= out_reg0(7 downto 4);
 
 	ram_offset <= out_reg1;
-	in_reg0(10 downto 0) <= (others => '0');
+	in_reg0(12 downto 0) <= (others => '0');
 
 	psd:ps_domain port map(
 		DDR_addr => DDR_addr,
@@ -241,6 +245,7 @@ begin
 		clk => clk,
 		in_reg0_0 => in_reg0,
 		in_reg1_0 => in_reg1,
+		in_reg8_11_0 => in_reg8_11,
 		out_reg0_0 => out_reg0,
 		out_reg1_0 => out_reg1,
 		out_reg2_0 => out_reg2,
@@ -249,6 +254,7 @@ begin
 		out_reg5_0 => out_reg5,
 		out_reg6_0 => out_reg6,
 		out_reg7_0 => out_reg7,
+		out_reg8_11_0 => out_reg8_11,
 		resetn => resetn,
 		vid_clk => pclk,
 		vid5_clk => p5clk,
@@ -330,12 +336,12 @@ begin
 		write_protn => fdd_write_protn,
 
 		host_intr => irq_f2p(0),
-		host_din => in_reg1,
-		host_dout => out_reg2,
+		host_din => in_reg8_11,
+		host_dout => out_reg8_11,
 		host_r => in_reg0(31),
 		host_w => in_reg0(30),
-		host_addr => in_reg0(29 downto 19),
-		host_track => in_reg0(18 downto 11)
+		host_addr => in_reg0(29 downto 21),
+		host_track => in_reg0(20 downto 13)
 	);
 
 	ikbd_clk <= clk;

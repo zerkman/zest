@@ -37,25 +37,28 @@ entity floppy_drive is
 		write_protn	: out std_logic;
 
 		host_intr	: out std_logic;
-		host_din	: out std_logic_vector(31 downto 0);
-		host_dout	: in std_logic_vector(31 downto 0);
+		host_din	: out std_logic_vector(127 downto 0);
+		host_dout	: in std_logic_vector(127 downto 0);
 		host_r		: out std_logic;
 		host_w		: out std_logic;
-		host_addr	: out std_logic_vector(10 downto 0);
+		host_addr	: out std_logic_vector(8 downto 0);
 		host_track	: out std_logic_vector(7 downto 0)
 	);
 end floppy_drive;
 
 architecture behavioral of floppy_drive is
-	signal ccnt		: unsigned(20 downto 0);
-	signal track	: unsigned(6 downto 0);
-	signal data_sr	: std_logic_vector(31 downto 0);
-	signal nextdata	: std_logic_vector(31 downto 0);
-	signal wrq		: std_logic;
-	signal step_ff	: std_logic;
+	constant NBITS    : integer := 128;
+	constant LOGNBITS : integer := 7;
+	signal ccnt       : unsigned(20 downto 0);
+	signal track      : unsigned(6 downto 0);
+	signal data_sr    : std_logic_vector(NBITS-1 downto 0);
+	signal nextdata   : std_logic_vector(NBITS-1 downto 0);
+	signal wrq        : std_logic;
+	signal step_ff    : std_logic;
+
 begin
 
-	read_datan <= not data_sr(31);
+	read_datan <= not data_sr(NBITS-1);
 	host_track <= std_logic_vector(track) & not side0;
 	write_protn <= '1';
 
@@ -63,9 +66,9 @@ begin
 process(data_sr,write_data,write_gate)
 begin
 	if write_gate = '1' then
-		nextdata <= data_sr(30 downto 0) & write_data;
+		nextdata <= data_sr(NBITS-2 downto 0) & write_data;
 	else
-		nextdata <= data_sr(30 downto 0) & data_sr(31);
+		nextdata <= data_sr(NBITS-2 downto 0) & data_sr(NBITS-1);
 	end if;
 end process;
 
@@ -118,18 +121,22 @@ begin
 							wrq <= '1';
 						end if;
 						data_sr <= nextdata;
-						if ccnt(9 downto 5) = "11111" or ccnt = 1599999 then
+						if ccnt(LOGNBITS+4 downto 5) = (LOGNBITS-1 downto 0 => '1') or ccnt = 1599999 then
 							-- shift register is full (write) or empty (read)
 							if ccnt = 1599999 then
 								host_addr <= (others => '0');
 							else
-								host_addr <= std_logic_vector(ccnt(20 downto 10)+1);
+								host_addr <= std_logic_vector(ccnt(20 downto LOGNBITS+5)+1);
 							end if;
 							host_w <= wrq;
 							host_r <= '1';
-							host_din <= nextdata;
+							for i in 0 to NBITS/8-1 loop
+								host_din(i*8+7 downto i*8) <= nextdata(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
+							end loop;
 							host_intr <= '1';
-							data_sr <= host_dout;
+							for i in 0 to NBITS/8-1 loop
+								data_sr(i*8+7 downto i*8) <= host_dout(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
+							end loop;
 							wrq <= '0';
 						end if;
 					end if;

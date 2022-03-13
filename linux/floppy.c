@@ -146,15 +146,15 @@ void * thread_floppy(void * arg) {
     uint32_t in = parmreg[0];
     unsigned int r = in>>31;
     unsigned int w = in>>30&1;
-    unsigned int addr = in>>19&0x7ff;
-    unsigned int track = in>>11&0xff;
+    unsigned int addr = in>>21&0x1ff;
+    unsigned int track = in>>13&0xff;
     if (oldn!=0 && n!=oldn+1) {
       printf("it=%u r=%u w=%u track=%u addr=%u\n",(unsigned)n,r,w,track,addr);
       fflush(stdout);
     }
     oldn = n;
-    unsigned int newaddr = oldaddr==1562?0:(oldaddr+1);
-    if (oldaddr<=1562 && addr!=newaddr) {
+    unsigned int newaddr = oldaddr==390?0:(oldaddr+1);
+    if (oldaddr<=390 && addr!=newaddr) {
       printf("missed addr=%u\n",newaddr);
       fflush(stdout);
     }
@@ -164,30 +164,19 @@ void * thread_floppy(void * arg) {
       uint8_t *trkp = buf+(track>>tks)*6250;
       posw = pos1;
       pos1 = pos;
-      pos = addr*4+4;
+      pos = addr*16+16;
       if (pos>=6250) {
         pos = 0;
       }
       uint8_t *p = trkp+pos;
-      uint32_t d;
-      d = *p++<<24;
-      d |= *p++<<16;
-      if (pos==6248) {
-        d |= 0x00004e4e;
-      } else {
-        d |= *p++<<8;
-        d |= *p++;
-      }
-      parmreg[2] = d;
+      int count = pos<6240?16:10;
+      memcpy((void*)&parmreg[8],p,count);
+
       if (w) {
-        d = parmreg[1];
-        uint8_t *p = trkp+posw;
-        *p++ = d>>24;
-        *p++ = d>>16;
-        if (posw<6248) {
-          *p++ = d>>8;
-          *p++ = d;
-        }
+        p = trkp+posw;
+        int count = posw<6240?16:10;
+        memcpy(p,(void*)&parmreg[8],count);
+
         wrb = 1;
       }
     }

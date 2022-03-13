@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
   }
   int cfg = cfg_mem | cfg_video | 3;    /* end reset */
 
-  parmreg = uio_map("/dev/uio0",0x20,&parmfd);
+  parmreg = uio_map("/dev/uio0",0x40,&parmfd);
   if (parmreg == NULL) {
     return 1;
   }
