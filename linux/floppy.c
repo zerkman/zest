@@ -166,7 +166,7 @@ void * thread_floppy(void * arg) {
       pos1 = pos;
       pos = addr*4+4;
       if (pos>=6250) {
-        pos -= 6250;
+        pos = 0;
       }
       uint8_t *p = trkp+pos;
       uint32_t d;
