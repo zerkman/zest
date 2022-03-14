@@ -74,10 +74,10 @@ int i2c_get(uint8_t offset, uint8_t *val) {
   return i2c_read(offset,1,val);
 }
 
-int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines) {
+int hdmi_init(void) {
   uint8_t tpi_id[3];
 
-  i2c_init();
+  if (i2c_init()) return 1;
 
   /* Initialize TPI mode */
   if (i2c_set(0xc7,0) != 0) return 1;
@@ -86,13 +86,17 @@ int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines) {
   if (i2c_read(0x1b,3,tpi_id) != 0) return 1;
 
   if (tpi_id[0]!=0xb0      /* Device ID */
-    || tpi_id[1]!=0x02    /* Device Production Revision ID */
+    || tpi_id[1]!=0x02     /* Device Production Revision ID */
     || tpi_id[2]!=0x03)    /* TPI Revision ID */
   {
-    printf("Failed identification of HDMI transmitter\n");
+    /* Wrong identification = failed to identify the sil9022a chip */
     return 1;
   }
 
+  return 0;
+}
+
+int hdmi_set_mode(int pxclock, int vfreq, int pixperline, int nlines) {
   // No TMDS, enable HDMI output mode
   if (i2c_set(0x1a,0x11) != 0) return 1;
 

@@ -28,9 +28,7 @@
 #include <sys/mman.h>
 #include <pthread.h>
 
-#ifdef SIL9022A
 #include "sil9022a.h"
-#endif
 
 /* from floppy.c */
 void * thread_floppy(void * arg);
@@ -86,6 +84,7 @@ int usage(const char *progname) {
 int main(int argc, char **argv) {
   int cfg_video = CFG_COLR;
   int cfg_mem = CFG_1M;
+  int has_sil;
 
   const char *binfilename = NULL;
   const char *floppyfilename = NULL;
@@ -145,26 +144,26 @@ int main(int argc, char **argv) {
   }
   parmreg[1] = ST_MEM_ADDR;
 
-
-#ifdef SIL9022A
-  int status;
-  /* Initialize HDMI, set up 1080p50 RGB mode */
-  // status = hdmi_init(14850,5000,2200,1350);
-  /* 1080p60 */
-  // status = hdmi_init(14850,6000,2200,1125);
-  if (cfg & CFG_MONO) {
-    /* Mono */
-    status = hdmi_init(3200,7129,896,501);
-  } else {
-    /* 576p */
-    status = hdmi_init(3200,5000,1024,625);
+  has_sil = !hdmi_init();
+  if (has_sil) {
+    int status;
+    /* Initialize HDMI, set up 1080p50 RGB mode */
+    // status = hdmi_init(14850,5000,2200,1350);
+    /* 1080p60 */
+    // status = hdmi_init(14850,6000,2200,1125);
+    if (cfg & CFG_MONO) {
+      /* Mono */
+      status = hdmi_set_mode(3200,7129,896,501);
+    } else {
+      /* 576p */
+      status = hdmi_set_mode(3200,5000,1024,625);
+    }
+    if (status != 0) {
+      printf("HDMI setup Failed\n");
+      return 1;
+    }
+    printf("HDMI setup successful\n");
   }
-  if (status != 0) {
-    printf("HDMI setup Failed\n");
-    return 1;
-  }
-  printf("HDMI setup successful\n");
-#endif
 
   memset(mem_array+0xfa0000,0xff,0x20000);
   int c;
@@ -192,9 +191,9 @@ int main(int argc, char **argv) {
   thr_end = 1;
   pthread_join(kbd_thr,NULL);
   pthread_join(floppy_thr,NULL);
-#ifdef SIL9022A
-  hdmi_stop();
-#endif
+  if (has_sil) {
+    hdmi_stop();
+  }
 
   return 0;
 }

@@ -21,8 +21,9 @@
 #define __SIL9022A_H__
 
 
-int hdmi_init(int pxclock, int vfreq, int pixperline, int nlines);
+int hdmi_init(void);
 
+int hdmi_set_mode(int pxclock, int vfreq, int pixperline, int nlines);
 
 int hdmi_stop(void);
 
