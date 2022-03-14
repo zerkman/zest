@@ -22,7 +22,7 @@ all: $(TARGETS)
 clean:
 	rm -f *.o $(TARGETS)
 
-zeST: setup.o floppy.o ikbd.o sil9022a.o osd.o menu.o
+zeST: setup.o floppy.o floppy_img.o ikbd.o sil9022a.o osd.o menu.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 setup.o: setup.c
@@ -30,3 +30,7 @@ setup.o: setup.c
 menu.o: menu.c osd.h
 
 osd.o: osd.c osd.h
+
+floppy.o: floppy.c floppy_img.h
+
+floppy_img.o: floppy_img.c floppy_img.h

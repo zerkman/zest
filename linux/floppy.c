@@ -20,104 +20,30 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <pthread.h>
 #include <dirent.h>
 #include <poll.h>
 #include <sys/time.h>
+#include <unistd.h>
+
+#include "floppy_img.h"
 
 extern volatile uint32_t *parmreg;
 extern int parmfd;
 extern volatile int thr_end;
 
-#define MAXTRACK 84
-
-static const uint8_t * findam(const uint8_t *p, const uint8_t *buf_end) {
-  static const uint8_t head[] = {0,0,0,0,0,0,0,0,0,0,0,0,0xa1,0xa1,0xa1};
-  buf_end -= sizeof(head);
-  while (p<buf_end) {
-    if (memcmp(p,head,sizeof(head))==0) {
-      return p;
-    }
-    p++;
-  }
-  return NULL;
-}
-
-static int open_image(const char *filename, void *buf, int *ntracks, int *nsides) {
-  int fd = open(filename,O_RDWR);
-  if (fd == -1) return -1;
-
-  *ntracks = 0;
-  *nsides = 0;
-  read(fd,buf,6250*2*MAXTRACK);
-
-  // find first sector
-  const uint8_t *p = buf;
-  const uint8_t *p_end = buf+6250;
-  int ok = 0;
-  while (!ok) {
-    p = findam(p,p_end);
-    if (p==NULL || p[15]!=0xfe || p[16]!=0 || p[17]!=0) {
-      printf("wrong ID address mark\n");
-      ok = 2;
-      break;
-    }
-    else {
-      ok = p[18]==1?1:0;
-    }
-
-    p += 20;
-    p = findam(p,p_end);
-    if (p==NULL || p[15]!=0xfb) {
-      printf("wrong data address mark\n");
-      ok = 2;
-      break;
-    }
-    if (!ok) p += 514;
-  }
-
-  int sectors = 0;
-  if (ok==1) {
-    p += 16;
-    sectors = p[0x19]<<8|p[0x18];
-    *nsides = p[0x1b]<<8|p[0x1a];
-    *ntracks = (p[0x14]<<8|p[0x13])/(sectors**nsides);
-  } else {
-    int pos = lseek(fd,0,SEEK_CUR);
-    if (pos>6250*100) {
-      *nsides = 2;
-      *ntracks = pos/(6250*2);
-    } else {
-      *nsides = 1;
-      *ntracks = pos/6250;
-    }
-  }
-
-  printf("Successfully opened image file '%s', %d tracks, %d sides, %d sectors\n",filename,*ntracks,*nsides,sectors);
-
-  return fd;
-}
-
 void * thread_floppy(void * arg) {
   uint32_t n,oldn=0;
   unsigned int oldaddr=2000;
-  uint8_t buf[6250*2*MAXTRACK];
-  int ntracks,nsides;
 
-  int fd = open_image(arg,buf,&ntracks,&nsides);
-  if (fd==-1) {
+  Flopimg *img = flopimg_open(arg,0);
+  if (img==NULL) {
     printf("Error opening floppy image file\n");
     return NULL;
   }
-  unsigned int tks = nsides==1;
   unsigned int pos=0,pos1=0,posw=0;
-  int wrb = 0;
 
   struct pollfd pfd = { .fd=parmfd, .events=POLLIN };
 
@@ -161,7 +87,8 @@ void * thread_floppy(void * arg) {
     oldaddr = addr;
 
     if (r) {
-      uint8_t *trkp = buf+(track>>tks)*6250;
+      uint8_t *trkp = flopimg_trackpos(img,track>>1,track&1);
+
       posw = pos1;
       pos1 = pos;
       pos = addr*16+16;
@@ -177,16 +104,12 @@ void * thread_floppy(void * arg) {
         int count = posw<6240?16:10;
         memcpy(p,(void*)&parmreg[8],count);
 
-        wrb = 1;
+        flopimg_writeback(img);
       }
     }
   }
 
-  if (wrb) {
-    lseek(fd,0,SEEK_SET);
-    write(fd,buf,6250*nsides*ntracks);
-  }
-  close(fd);
+  flopimg_close(img);
 
   return NULL;
 }
