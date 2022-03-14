@@ -49,6 +49,7 @@ end floppy_drive;
 architecture behavioral of floppy_drive is
 	constant NBITS    : integer := 128;
 	constant LOGNBITS : integer := 7;
+	constant LASTNB   : integer := 6250 mod (NBITS/8);
 	signal ccnt       : unsigned(20 downto 0);
 	signal track      : unsigned(6 downto 0);
 	signal data_sr    : std_logic_vector(NBITS-1 downto 0);
@@ -107,7 +108,7 @@ begin
 				if motor_on = '1' then
 					if ccnt < 1599999 then
 						ccnt <= ccnt + 1;
-						if ccnt = 176-1 then	-- minimun 160 = 20 us
+						if ccnt = 176-1 then	-- minimun 160 = 20 us
 							indexn <= '1';
 						end if;
 					else
@@ -125,14 +126,18 @@ begin
 							-- shift register is full (write) or empty (read)
 							if ccnt = 1599999 then
 								host_addr <= (others => '0');
+								for i in 0 to LASTNB-1 loop
+									host_din(i*8+7 downto i*8) <= nextdata(((LASTNB-1)-i)*8+7 downto ((LASTNB-1)-i)*8);
+								end loop;
+								host_din(NBITS-1 downto LASTNB*8) <= (others => '0');
 							else
 								host_addr <= std_logic_vector(ccnt(20 downto LOGNBITS+5)+1);
+								for i in 0 to NBITS/8-1 loop
+									host_din(i*8+7 downto i*8) <= nextdata(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
+								end loop;
 							end if;
 							host_w <= wrq;
 							host_r <= '1';
-							for i in 0 to NBITS/8-1 loop
-								host_din(i*8+7 downto i*8) <= nextdata(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
-							end loop;
 							host_intr <= '1';
 							for i in 0 to NBITS/8-1 loop
 								data_sr(i*8+7 downto i*8) <= host_dout(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
