@@ -40,6 +40,14 @@ int i2c_init(void) {
   return 0;
 }
 
+int i2c_set_timeout(int timeout) {
+  if (ioctl(i2cfd,I2C_TIMEOUT,timeout)<0) {
+    printf("I2C set timeout failed\n");
+    return 1;
+  }
+  return 0;
+}
+
 int i2c_read(uint8_t offset, unsigned int size, uint8_t *buffer) {
   struct i2c_msg msgs[2] = {
     {.addr = HDMI_TX_ADDR, .flags = 0, .len = 1, .buf = &offset},
@@ -47,7 +55,7 @@ int i2c_read(uint8_t offset, unsigned int size, uint8_t *buffer) {
   };
   struct i2c_rdwr_ioctl_data data = {.msgs = msgs, .nmsgs = 2};
   if (ioctl(i2cfd,I2C_RDWR,&data)<0) {
-    printf("I2C RDWR read transaction failed\n");
+    // printf("I2C RDWR read transaction failed\n");
     return 1;
   }
   return 0;
@@ -59,7 +67,7 @@ int i2c_write(unsigned int size, uint8_t *buffer) {
   };
   struct i2c_rdwr_ioctl_data data = {.msgs = &msg, .nmsgs = 1};
   if (ioctl(i2cfd,I2C_RDWR,&data)<0) {
-    printf("I2C RDWR write transaction failed\n");
+    // printf("I2C RDWR write transaction failed\n");
     return 1;
   }
   return 0;
@@ -79,6 +87,8 @@ int hdmi_init(void) {
 
   if (i2c_init()) return 1;
 
+  if (i2c_set_timeout(10)) return 1;
+
   /* Initialize TPI mode */
   if (i2c_set(0xc7,0) != 0) return 1;
 
@@ -92,6 +102,8 @@ int hdmi_init(void) {
     /* Wrong identification = failed to identify the sil9022a chip */
     return 1;
   }
+
+  if (i2c_set_timeout(100)) return 1;
 
   return 0;
 }
