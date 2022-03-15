@@ -38,7 +38,7 @@ void * thread_floppy(void * arg) {
   uint32_t n,oldn=0;
   unsigned int oldaddr=2000;
 
-  Flopimg *img = flopimg_open(arg,0);
+  Flopimg *img = flopimg_open(arg,0,3);
   if (img==NULL) {
     printf("Error opening floppy image file\n");
     return NULL;

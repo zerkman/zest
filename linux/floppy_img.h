@@ -26,6 +26,7 @@
 
 typedef struct {
   int fd;         // file descriptor
+  int format;     // 0:mfm 1:st
   int rdonly;
   int wrb;
   int ntracks;
@@ -34,12 +35,14 @@ typedef struct {
 
 } Flopimg;
 
-Flopimg * flopimg_open(const char *filename, int rdonly);
+Flopimg * flopimg_open(const char *filename, int rdonly, int skew);
 
 /* set writeback flag = rewrite image file when closed */
 void flopimg_writeback(Flopimg *img);
 
 uint8_t * flopimg_trackpos(Flopimg *img, int track, int side);
+
+void flopimg_sync(Flopimg *img);
 
 void flopimg_close(Flopimg *img);
 
