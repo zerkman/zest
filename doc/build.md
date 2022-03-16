@@ -56,7 +56,7 @@ Now your Vivado project setup is complete.
 Open the project in Vivado.
 From the left panel, in **Program and debug**, click **Generate Bitstream**. The process will take a few minutes to complete.
 
-When the generation is complete, you need to copy the bitstream file to the zeST setup directory. If, depending on your FPGA board, your Vivado project name is for instance `zest_z7lite`, the command will be:
+When the generation is complete, you need to copy the bitstream file to the zeST setup directory. If, depending on your FPGA board, your Vivado project name is for instance `zest_z7lite`, the command will be:
 
     $ cp $HOME/src/zest/vivado/zest_z7lite/zest_z7lite.runs/impl_1/zest_top.bit $HOME/src/zest/setup
 
@@ -121,7 +121,7 @@ Now, you can build the device tree blob:
     $ cpp -nostdinc -I include -I arch -undef -x assembler-with-cpp zest.dts > devicetree.dts
     $ dtc -I dts -O dtb -i . -o ../devicetree.dtb devicetree.dts
 
-This generates the `$HOME/src/zest/setup/devicetree.dtb` device tree blob file.
+This generates the `$HOME/src/zest/setup/devicetree.dtb` device tree blob file.
 
 
 ## Build the first stage bootloader
@@ -140,16 +140,42 @@ The generation of the board support package (BSP) and first stage bootloader (FS
 <!-- For early information when booting, you may add `FSBL_DEBUG_INFO` in the C preprocessor defines in the fsbl project properties. -->
 
 
-## Build the buildroot filesystem
+## Build the Linux filesystem
 
 This process will create the whole Linux filesystem for your Zynq board, as well as the build toolchain that can be used for builing the Linux kernel, u-boot and the userland applications.
 
-TODO
+This procedure has been successfully tested using buildroot version 2022.02.
+It should most probably work on more recent versions.
 
-From now on, you can set up the environement for the specific toolchain:
+Fetch the buildroot sources:
+
+    $ cd $HOME/src
+    $ wget https://buildroot.org/downloads/buildroot-2022.02.tar.xz
+    $ tar xf buildroot-2022.02.tar.xz
+
+Now a bit of configuration must be done. Issue the commands:
+
+    $ cd buildroot-2022.02
+    $ make menuconfig
+
+In the configuration menu, choose **Target options**. In this menu:
+ - In **Target Architecture**, choose **ARM (little endian)**.
+ - As **Target Architecture Variant**, select **cortex-A9**.
+ - Enable **NEON SIMD** and **VFP** extension support options.
+
+Then you can choose some additional tools to be installed on the Linux system.
+For this, go back to the main menu, then choose **Target packages**.
+I strongly suggest you add at least `lrzsz` (in **Networking Applications**) so you can transfer files through Zmodem between your computer and the Zynq's Linux system.
+
+When everything is set up, exit the menu, and save your settings when asked.
+Type the command `make` to build everything. This will take quite a while.
+
+The Linux filesystem tarball will be created as the `buildroot-2022.02/output/images/rootfs.tar` file.
+
+For the following steps (u-boot and Linux kernel), you can set up the environement to use the buildroot cross compilation toolchain:
 
     $ export ARCH=arm
-    $ export CROSS_COMPILE=$HOME/src/buildroot/output/host/bin/arm-linux-
+    $ export CROSS_COMPILE=$HOME/src/buildroot-2022.02/output/host/bin/arm-linux-
 
 ## Build the u-boot bootloader
 
@@ -208,7 +234,7 @@ Issue the command:
 
 If everything went correctly, now you’ve got the required `BOOT.bin` file.
 
-## Make boot.scr
+## Make boot.scr
 
 TODO
 
