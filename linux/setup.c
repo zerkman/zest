@@ -70,6 +70,21 @@ void *uio_map(const char *file, size_t length, int *fd) {
   return p;
 }
 
+#define FPGA_RST_CTRL (0x00000240/4)
+void pl_reset(void) {
+  int fd = open("/dev/mem",O_RDWR|O_SYNC);
+  if (fd < 0) {
+    printf("pl_reset: Cannot open memory device\n");
+    return;
+  }
+  volatile uint32_t *slcr = mmap(NULL,0x1000,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0xF8000000);
+  slcr[FPGA_RST_CTRL] = 0xf;  // all 4 PL resets
+  usleep(10);
+  slcr[FPGA_RST_CTRL] = 0;
+  munmap((void*)slcr,0x1000);
+  close(fd);
+}
+
 int usage(const char *progname) {
   printf("usage: %s [OPTIONS] rom.img [floppy.mfm]\n\n"
     "OPTIONS are:\n"
@@ -126,6 +141,8 @@ int main(int argc, char **argv) {
     return 1;
   }
   int cfg = cfg_mem | cfg_video | 3;    /* end reset */
+
+  pl_reset();
 
   parmreg = uio_map("/dev/uio0",0x40,&parmfd);
   if (parmreg == NULL) {
