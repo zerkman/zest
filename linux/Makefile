@@ -14,6 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# export PATH:=$(HOME)/src/buildroot-2020.05/output/host/bin:$(PATH)
+TOOLCHAIN=arm-buildroot-linux-uclibcgnueabihf-
+CC=$(TOOLCHAIN)gcc
+CXX=$(TOOLCHAIN)g++
+LD=$(TOOLCHAIN)ld
+AR=$(TOOLCHAIN)ar
+
 TARGETS=zeST
 CFLAGS=-g -Wall -Os
 
