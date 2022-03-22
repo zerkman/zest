@@ -47,6 +47,15 @@ entity zest_top is
 		FIXED_IO_ps_porb : inout std_logic;
 		FIXED_IO_ps_srstb : inout std_logic;
 		led : out std_logic_vector(1 downto 0);
+		reset_rtl_0 : out std_logic;
+		mdio_rtl_0_mdc : out std_logic;
+		mdio_rtl_0_mdio_io : inout std_logic;
+		mii_tx_clk_0 : in std_logic;
+		mii_tx_en_0 : out std_logic;
+		mii_txd_0 : out std_logic_vector(3 downto 0);
+		mii_rx_clk_0 : in std_logic;
+		mii_rx_dv_0 : in std_logic;
+		mii_rxd_0 : in std_logic_vector(3 downto 0);
 		hdmi_tx_clk_n : out std_logic;
 		hdmi_tx_clk_p : out std_logic;
 		hdmi_tx_d_n : out std_logic_vector(2 downto 0);
@@ -82,7 +91,21 @@ architecture structure of zest_top is
 			FIXED_IO_ps_clk : inout std_logic;
 			FIXED_IO_ps_porb : inout std_logic;
 			FIXED_IO_ps_srstb : inout std_logic;
+			GMII_ETHERNET_0_0_col : in std_logic;
+			GMII_ETHERNET_0_0_crs : in std_logic;
+			GMII_ETHERNET_0_0_rx_clk : in std_logic;
+			GMII_ETHERNET_0_0_rx_dv : in std_logic;
+			GMII_ETHERNET_0_0_rx_er : in std_logic;
+			GMII_ETHERNET_0_0_rxd : in std_logic_vector(7 downto 0);
+			GMII_ETHERNET_0_0_tx_clk : in std_logic;
+			GMII_ETHERNET_0_0_tx_en : out std_logic_vector(0 to 0);
+			GMII_ETHERNET_0_0_tx_er : out std_logic_vector(0 to 0);
+			GMII_ETHERNET_0_0_txd : out std_logic_vector(7 downto 0);
 			IRQ_F2P_0 : in std_logic_vector(0 to 0);
+			MDIO_ETHERNET_0_0_mdc : out std_logic;
+			MDIO_ETHERNET_0_0_mdio_i : in std_logic;
+			MDIO_ETHERNET_0_0_mdio_o : out std_logic;
+			MDIO_ETHERNET_0_0_mdio_t : out std_logic;
 			OFFSET_0 : in std_logic_vector(31 downto 0);
 			OFFVALD_0 : in std_logic;
 			R_0 : in std_logic;
@@ -125,6 +148,21 @@ architecture structure of zest_top is
 	signal soft_resetn	: std_logic;
 	signal soft_reset	: std_logic;
 	signal irq_f2p		: std_logic_vector(0 downto 0);
+
+	signal GMII_ETHERNET_0_0_col    : std_logic;
+	signal GMII_ETHERNET_0_0_crs    : std_logic;
+	signal GMII_ETHERNET_0_0_rx_clk : std_logic;
+	signal GMII_ETHERNET_0_0_rx_dv  : std_logic;
+	signal GMII_ETHERNET_0_0_rx_er  : std_logic;
+	signal GMII_ETHERNET_0_0_rxd    : std_logic_vector(7 downto 0);
+	signal GMII_ETHERNET_0_0_tx_clk : std_logic;
+	signal GMII_ETHERNET_0_0_tx_en  : std_logic_vector(0 to 0);
+	signal GMII_ETHERNET_0_0_tx_er  : std_logic_vector(0 to 0);
+	signal GMII_ETHERNET_0_0_txd    : std_logic_vector(7 downto 0);
+	signal MDIO_ETHERNET_0_0_mdc    : std_logic;
+	signal MDIO_ETHERNET_0_0_mdio_i : std_logic;
+	signal MDIO_ETHERNET_0_0_mdio_o : std_logic;
+	signal MDIO_ETHERNET_0_0_mdio_t : std_logic;
 
 	signal clken_err	: std_logic;
 	signal rgb 			: std_logic_vector(8 downto 0);
@@ -241,6 +279,20 @@ begin
 		FIXED_IO_ps_clk => FIXED_IO_ps_clk,
 		FIXED_IO_ps_porb => FIXED_IO_ps_porb,
 		FIXED_IO_ps_srstb => FIXED_IO_ps_srstb,
+		GMII_ETHERNET_0_0_col => GMII_ETHERNET_0_0_col,
+		GMII_ETHERNET_0_0_crs => GMII_ETHERNET_0_0_crs,
+		GMII_ETHERNET_0_0_rx_clk => GMII_ETHERNET_0_0_rx_clk,
+		GMII_ETHERNET_0_0_rx_dv => GMII_ETHERNET_0_0_rx_dv,
+		GMII_ETHERNET_0_0_rx_er => GMII_ETHERNET_0_0_rx_er,
+		GMII_ETHERNET_0_0_rxd => GMII_ETHERNET_0_0_rxd,
+		GMII_ETHERNET_0_0_tx_clk => GMII_ETHERNET_0_0_tx_clk,
+		GMII_ETHERNET_0_0_tx_en => GMII_ETHERNET_0_0_tx_en,
+		GMII_ETHERNET_0_0_tx_er => GMII_ETHERNET_0_0_tx_er,
+		GMII_ETHERNET_0_0_txd => GMII_ETHERNET_0_0_txd,
+		MDIO_ETHERNET_0_0_mdc => MDIO_ETHERNET_0_0_mdc,
+		MDIO_ETHERNET_0_0_mdio_i => MDIO_ETHERNET_0_0_mdio_i,
+		MDIO_ETHERNET_0_0_mdio_o => MDIO_ETHERNET_0_0_mdio_o,
+		MDIO_ETHERNET_0_0_mdio_t => MDIO_ETHERNET_0_0_mdio_t,
 		IRQ_F2P_0 => irq_f2p,
 		clk => clk,
 		in_reg0_0 => in_reg0,
@@ -416,7 +468,7 @@ begin
 		constant SAMPLE_FREQ : integer := 48000;
 		-- NUM and DIV are integers such that 2*SAMPLE_FREQ*NUM/DIV = clk frequency
 		constant NUM : integer := 1000;
-		constant DIV : integer := 3;             -- 2*48000*1000/3 = 32 MHz
+		constant DIV : integer := 3;             -- 2*48000*1000/3 = 32 MHz
 		begin
 			if rising_edge(pclk) then
 				if soft_resetn = '0' then
@@ -432,5 +484,23 @@ begin
 				end if;
 			end if;
 		end process;
+
+	-- On the Z7-Lite board, Ethernet PHY is connected to the PL.
+	-- As the PHY is 10/100mbit it uses MII (Media-independent interface).
+	-- Zynq's Ethernet is gigabit so it uses GMII (Gigabit MII), which is backwards
+	-- compatible.
+	reset_rtl_0 <= not resetn;
+	mdio_rtl_0_mdc <= MDIO_ETHERNET_0_0_mdc;
+	mdio_rtl_0_mdio_io <= MDIO_ETHERNET_0_0_mdio_o when MDIO_ETHERNET_0_0_mdio_t = '0' else 'Z';
+	MDIO_ETHERNET_0_0_mdio_i <= mdio_rtl_0_mdio_io;
+	GMII_ETHERNET_0_0_tx_clk <= mii_tx_clk_0;
+	mii_tx_en_0 <= GMII_ETHERNET_0_0_tx_en(0);
+	mii_txd_0 <= GMII_ETHERNET_0_0_txd(3 downto 0);
+	GMII_ETHERNET_0_0_rx_clk <= mii_rx_clk_0;
+	GMII_ETHERNET_0_0_rx_dv <= mii_rx_dv_0;
+	GMII_ETHERNET_0_0_rxd <= "0000" & mii_rxd_0;
+	GMII_ETHERNET_0_0_col <= '0';
+	GMII_ETHERNET_0_0_crs <= '0';
+	GMII_ETHERNET_0_0_rx_er <= '0';
 
 end structure;
