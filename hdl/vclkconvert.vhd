@@ -125,7 +125,7 @@ begin
 	begin
 		if rising_edge(pclk) then
 			if presetn = '0' then
-				initcnt <= (others => '1');
+				initcnt <= (fifo_depth-1 => '1', others => '0');
 				readen <= '0';
 			else
 				readen <= '0';
