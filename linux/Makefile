@@ -14,7 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-# export PATH:=$(HOME)/src/buildroot-2020.05/output/host/bin:$(PATH)
+# You can set the path to your local buildroot toolchain by uncommenting the
+# following line and setting the correct path.
+#export PATH:=$(HOME)/src/buildroot-2021.11/output/host/bin:$(PATH)
+
 TOOLCHAIN=arm-buildroot-linux-uclibcgnueabihf-
 CC=$(TOOLCHAIN)gcc
 CXX=$(TOOLCHAIN)g++
