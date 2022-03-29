@@ -24,8 +24,6 @@ int osd_init(void);
 
 #include <stdint.h>
 
-#define RGB(r,g,b) ((r&0xf8)<<8 | (g&0xfc)<<3 | (b&0xf8)>>3)
-
 // Initialize the OSD system
 int osd_init(void);
 
@@ -51,7 +49,7 @@ void osd_text(const char *text, int x, int y, int fgc, int bgc);
 void osd_putchar(int c, int x, int y, int fgc, int bgc);
 
 // set same colour palette to all scanlines
-void osd_set_palette_all(const uint16_t data[4]);
+void osd_set_palette_all(const uint8_t data[4*3]);
 
 // set colour palettes to a group of scanlines
 void osd_set_palette(int row, int nrows, const uint16_t data[][4]);

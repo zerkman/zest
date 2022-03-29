@@ -117,11 +117,19 @@ void osd_putchar(int c, int x, int y, int fgc, int bgc) {
   }
 }
 
-void osd_set_palette_all(const uint16_t data[4]) {
+void osd_set_palette_all(const uint8_t data[4*3]) {
   if (osdreg != NULL) {
+    const uint8_t *pdata = data;
+    uint16_t palette[4];
     int i;
+    for (i=0; i<4; ++i) {
+      unsigned int r = *pdata++;
+      unsigned int g = *pdata++;
+      unsigned int b = *pdata++;
+      palette[i] = (r&0xf8)<<8 | (g&0xfc)<<3 | (b&0xf8)>>3;
+    }
     for (i=0; i<MAX_SCANLINES; ++i) {
-      memcpy((void*)osdreg->palette[i],data,8);
+      memcpy((void*)osdreg->palette[i],palette,8);
     }
   }
 }
