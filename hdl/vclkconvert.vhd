@@ -72,6 +72,8 @@ architecture behavioral of vclkconvert is
 	signal readen : std_logic;
 	signal writeen : std_logic;
 	signal clear : std_logic;
+	signal presetn : std_logic;
+	signal presetn1 : std_logic;
 
 begin
 	idata <= isound & ivsync & ihsync & ide & ipix;
@@ -114,7 +116,15 @@ begin
 	process(pclk)
 	begin
 		if rising_edge(pclk) then
-			if resetn = '0' then
+			presetn1 <= resetn;
+			presetn <= presetn1;
+		end if;
+	end process;
+
+	process(pclk)
+	begin
+		if rising_edge(pclk) then
+			if presetn = '0' then
 				initcnt <= (others => '1');
 				readen <= '0';
 			else
