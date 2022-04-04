@@ -411,49 +411,50 @@ begin
 end process;
 
 -- interrupt control
+process(FC,iA,iASn)
+begin
+	ack_vbl <= '0';
+	ack_hbl <= '0';
+	if FC = "111" and iA(19 downto 16) = "1111" and iASn = '0' then
+		case iA(3 downto 2) is
+			when "10" => ack_vbl <= '1';
+			when "01" => ack_hbl <= '1';
+			when others =>
+		end case;
+	end if;
+end process;
+
 process(clk)
 begin
 	if rising_edge(clk) then
 		if resetn = '0' then
 			irq_hbl <= '0';
 			irq_vbl <= '0';
-			ack_hbl <= '0';
-			ack_vbl <= '0';
-		elsif enPhi2 = '1' then
+		elsif enPhi1 = '1' then
 			if vcnt = 0 and nexthcnt = mode(mode_id).hvsync_on then
 				irq_vbl <= '1';
 			end if;
 			if nexthcnt = 0 then
 				irq_hbl <= '1';
 			end if;
-			if FC = "111" and iA(19 downto 16) = "1111" and iASn = '0' then
-				case iA(3 downto 2) is
-					when "10" => ack_vbl <= '1';
-					when "01" => ack_hbl <= '1';
-					when others =>
-				end case;
-			else
-				if ack_vbl = '1' then
-					irq_vbl <= '0';
-					ack_vbl <= '0';
-				end if;
-				if ack_hbl = '1' then
-					irq_hbl <= '0';
-					ack_hbl <= '0';
-				end if;
+			if ack_vbl = '1' then
+				irq_vbl <= '0';
+			end if;
+			if ack_hbl = '1' then
+				irq_hbl <= '0';
 			end if;
 		end if;
 	end if;
 end process;
 
 -- compute IPL
-process(irq_hbl,irq_vbl,MFPINTn)
+process(irq_hbl,irq_vbl,ack_vbl,ack_hbl,MFPINTn)
 begin
 	if MFPINTn = '0' then
 		IPLn <= "00";
-	elsif irq_vbl = '1' then
+	elsif irq_vbl = '1' and ack_vbl = '0' then
 		IPLn <= "01";
-	elsif irq_hbl = '1' then
+	elsif irq_hbl = '1' and ack_hbl = '0' then
 		IPLn <= "10";
 	else
 		IPLn <= "11";
