@@ -151,9 +151,11 @@ architecture behavioral of glue is
 	signal irq_hbl	: std_logic;
 	signal svsync	: std_logic;
 	signal shsync	: std_logic;
-	signal iack_cnt	: unsigned(2 downto 0);
+	signal iack_cnt	: integer range 0 to 8;
+	signal siackn   : std_logic;
 	signal ack_vbl	: std_logic;
 	signal ack_hbl	: std_logic;
+	signal ack_mfp	: std_logic;
 	signal vpa_irqn	: std_logic;
 	signal vpa_acia	: std_logic;
 	signal sdtackn	: std_logic;
@@ -413,10 +415,12 @@ end process;
 -- interrupt control
 process(FC,iA,iASn)
 begin
+	ack_mfp <= '0';
 	ack_vbl <= '0';
 	ack_hbl <= '0';
 	if FC = "111" and iA(19 downto 16) = "1111" and iASn = '0' then
 		case iA(3 downto 2) is
+			when "11" => ack_mfp <= '1';
 			when "10" => ack_vbl <= '1';
 			when "01" => ack_hbl <= '1';
 			when others =>
@@ -471,22 +475,28 @@ begin
 end process;
 
 -- Vectored interrupt acknowledge (for MFP)
+IACKn <= siackn;
 process(clk)
 begin
 	if rising_edge(clk) then
 		if resetn = '0' then
-			iack_cnt <= (others => '0');
-			IACKn <= '1';
+			iack_cnt <= 0;
+			siackn <= '1';
 		elsif enPhi1 = '1' then
-			IACKn <= '1';
-			if FC = "111" and iA(19 downto 16) = "1111" and iA(3 downto 2) = "11" and iASn = '0' then
+			if siackn = '1' and (ack_mfp = '1' or iack_cnt /= 0) then
 				if iack_cnt = 7 then
-					IACKn <= '0';
+					siackn <= '0';
+					iack_cnt <= 0;
 				else
 					iack_cnt <= iack_cnt + 1;
 				end if;
-			else
-				iack_cnt <= (others => '0');
+			elsif siackn = '0' then
+				if iack_cnt = 8 then
+					siackn <= '1';
+					iack_cnt <= 0;
+				else
+					iack_cnt <= iack_cnt + 1;
+				end if;
 			end if;
 		end if;
 	end if;
