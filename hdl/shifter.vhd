@@ -40,24 +40,7 @@ end shifter;
 architecture behavioral of shifter is
 
 	type palette_t is array(0 to 15) of std_logic_vector(8 downto 0);
-	signal palette	: palette_t := (
-		"000010010",	-- 022
-		"011010010",	-- 322
-		"100011011",	-- 433
-		"011011010",	-- 332
-		"101100100",	-- 544
-		"100100011",	-- 443
-		"101101100",	-- 554
-		"110101101",	-- 655
-		"110110101",	-- 665
-		"010010000",	-- 220
-		"111110110",	-- 766
-		"111111111",	-- 777
-		"111111110",	-- 776
-		"010000000",	-- 200
-		"000000000",	-- 000
-		"000000000"		-- 000
-	);
+	signal palette	: palette_t;
 
 	signal monopal	: std_logic;
 	signal address	: integer;
