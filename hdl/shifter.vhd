@@ -21,8 +21,8 @@ use ieee.numeric_std.all;
 entity shifter is
 	port (
 		clk		: in std_logic;
-		enPhi1	: in std_logic;
-		enPhi2	: in std_logic;
+		resetn	: in std_logic;
+		en8ck	: in std_logic;
 		en32ck	: in std_logic;
 
 		CSn		: in std_logic;
@@ -45,7 +45,7 @@ architecture behavioral of shifter is
 	signal monopal	: std_logic;
 	signal address	: integer;
 	-- 32 MHz quarter/half/full pixel counter, depending on resolution (0,1 or 2)
-	signal cnt32	: unsigned(5 downto 0) := "000000";
+	signal cnt32	: unsigned(5 downto 0);
 	-- resolution
 	signal res		: std_logic_vector(1 downto 0) := "00";
 	signal sh0		: std_logic_vector(15 downto 0);
@@ -68,7 +68,7 @@ begin
 process(clk)
 begin
 	if rising_edge(clk) then
-		if enPhi1 = '1' then
+		if en8ck = '1' then
 			oD <= x"ffff";
 			if CSn = '0' then
 				if RWn = '1' then
@@ -98,9 +98,9 @@ end process;
 process(clk)
 begin
 	if rising_edge(clk) then
-		if enPhi2 = '1' then
+		if en8ck = '1' then
 			sloadn <= '1';
-			if DE = '1' and cnt32(3 downto 2) = "10" then
+			if sde = '1' and cnt32(3 downto 2) = "10" then
 				sloadn <= '0';
 			elsif cnt32(3 downto 2) = "11" then
 				if sloadn = '0' then
@@ -132,16 +132,22 @@ begin
 end process;
 
 -- pixel counter
-process(clk)
+process(clk,resetn)
 begin
-	if rising_edge(clk) then
+	if resetn = '0' then
+		cnt32 <= "000000";
+	elsif rising_edge(clk) then
 		if en32ck = '1' then
-			sde <= DE;
-			if DE = '1' and sde = '0' then
-				-- sync counter to MMU and 8 MHz clock
-				cnt32 <= "111110";
-			else
-				cnt32 <= cnt32 + 1;
+			cnt32 <= cnt32 + 1;
+			if cnt32(3 downto 0) = "0000" then
+				sde <= DE;
+				if DE = '1' and sde = '0' then
+					cnt32(5 downto 4) <= "00";
+				end if;
+			end if;
+			if en8ck = '1' and cnt32(5 downto 2) = "1111" then
+				-- sync with 8 mhz clock
+				cnt32(1 downto 0) <= "01";
 			end if;
 		end if;
 	end if;

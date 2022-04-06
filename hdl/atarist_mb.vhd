@@ -475,8 +475,8 @@ begin
 
 	shift:entity shifter port map (
 		clk => clk,
-		enPhi1 => en8rck,
-		enPhi2 => en8fck,
+		resetn => resetn,
+		en8ck => en8rck,
 		en32ck => en32ck,
 		CSn => shifter_CSn,
 		RWn => shifter_RWn,
