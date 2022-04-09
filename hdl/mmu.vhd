@@ -42,6 +42,7 @@ entity mmu is
 		DTACKn	: out std_logic;
 
 		RDATn	: out std_logic;
+		LATCH	: out std_logic;
 
 		-- data cycle to shifter
 		DCYCn	: out std_logic;
@@ -84,11 +85,12 @@ begin
 	mode_bus <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
+	RDATn <= RAMn or delay_loadn;
 
 	-- RAM access control
 	process(mode_load,delay_bus,delay_loadn,video_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
 	begin
-		RDATn <= '1';
+		LATCH <= '1';
 		ram_A <= (others => '0');
 		ram_DS <= "00";
 		ram_R <= '0';
@@ -112,7 +114,7 @@ begin
 				ram_R <= iRWn;
 				ram_W <= not iRWn;
 			end if;
-			RDATn <= not iRWn;
+			LATCH <= not iRWn;
 		end if;
 	end process;
 
@@ -148,6 +150,7 @@ begin
 			if cnt = 1 and loadn = '0' then
 				loadn <= '1';
 				mode_load <= '0';
+				delay_loadn <= '1';
 				video_ptr <= std_logic_vector(unsigned(video_ptr)+1);
 			end if;
 		elsif en8fck = '1' then
@@ -155,7 +158,7 @@ begin
 			cnt <= cnt + 1;
 			CMPCSn <= '1';
 			oD <= x"ff";
-			if cnt = 3 then
+			if cnt = 2 then
 				mode_bus_ff <= '0';
 			end if;
 
@@ -226,7 +229,7 @@ begin
 				mode_load <= '1';
 			end if;
 
-			if mode_bus_ff = '1' and cnt = 3 then
+			if mode_bus_ff = '1' and cnt = 2 then
 				delay_bus <= '1';
 				if DMAn = '0' then
 					dma_ptr <= std_logic_vector(unsigned(dma_ptr)+1);

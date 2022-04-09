@@ -180,6 +180,7 @@ architecture structure of atarist_mb is
 	signal mmu_oD		: std_logic_vector(7 downto 0);
 	signal mmu_DTACKn	: std_logic;
 	signal RDATn		: std_logic;
+	signal LATCH		: std_logic;
 
 	signal ram_A		: std_logic_vector(23 downto 1);
 	signal ram_iD		: std_logic_vector(15 downto 0);
@@ -313,7 +314,8 @@ begin
 		cpu_e => cpu_RWn,
 		shifter_d => shifter_oD,
 		ram_d => ram_oD,
-		shifram_e => RDATn,
+		ram_e => RDATn,
+		ram_latch => LATCH,
 		mfp_d => mfp_oD,
 		mmu_d => mmu_oD,
 		glue_d => glue_oD,
@@ -452,6 +454,7 @@ begin
 		DTACKn => mmu_DTACKn,
 
 		RDATn => RDATn,
+		LATCH => LATCH,
 
 		DCYCn => loadn,
 		CMPCSn => shifter_CSn,

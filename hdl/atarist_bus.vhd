@@ -24,7 +24,8 @@ entity atarist_bus is
 		cpu_e		: in std_logic;
 		shifter_d	: in std_logic_vector(15 downto 0);
 		ram_d		: in std_logic_vector(15 downto 0);
-		shifram_e	: in std_logic;
+		ram_e		: in std_logic;
+		ram_latch	: in std_logic;
 		mfp_d		: in std_logic_vector(7 downto 0);
 		mmu_d		: in std_logic_vector(7 downto 0);
 		glue_d		: in std_logic_vector(1 downto 0);
@@ -41,11 +42,18 @@ entity atarist_bus is
 end atarist_bus;
 
 architecture rtl of atarist_bus is
-	signal dmux		: std_logic_vector(15 downto 0);
+	signal ram_ds	: std_logic_vector(15 downto 0);
 begin
 
+	process(ram_latch,ram_d)
+	begin
+		if ram_latch = '0' then
+			ram_ds <= ram_d;
+		end if;
+	end process;
+
 d <= (cpu_d or (15 downto 0 => cpu_e)) and shifter_d
-		and (ram_d or (15 downto 0 => shifram_e))
+		and (ram_ds or (15 downto 0 => ram_e))
 		and (x"ff" & (mmu_d and mfp_d)) and ("111111" & glue_d & x"ff")
 		and ((acia_ikbd_d or (7 downto 0 => acia_ikbd_e nand cpu_e)) & x"ff")
 		and ((acia_midi_d or (7 downto 0 => acia_midi_e nand cpu_e)) & x"ff")
