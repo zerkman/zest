@@ -372,8 +372,8 @@ begin
 	cpu_IPLn(0) <= '1';
 
 	clkgen:entity clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2rck,en2fck,en2_4576ck,ck05,clken_err);
-	enNC1 <= '1';
-	enNC2 <= clken_bus and clken_video and clken_dma;
+	enNC1 <= clken_video;
+	enNC2 <= clken_bus and clken_dma;
 	clken_bus <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or bus_DTACKn or clken_bus2;
 	clken_video <= loadn or not ram_R or ram_R_DONE;
 	clken_dma <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or mmu_DMAn;
