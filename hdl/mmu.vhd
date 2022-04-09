@@ -21,8 +21,8 @@ use ieee.numeric_std.all;
 entity mmu is
 	port (
 		clk		: in std_logic;
-		enPhi1	: in std_logic;
-		enPhi2	: in std_logic;
+		en8rck	: in std_logic;
+		en8fck	: in std_logic;
 		resetn	: in std_logic;
 
 		-- regular RAM access
@@ -43,12 +43,12 @@ entity mmu is
 
 		RDATn	: out std_logic;
 
-		-- load request from shifter
-		DCYCn	: in std_logic;
+		-- data cycle to shifter
+		DCYCn	: out std_logic;
 		-- register request to shifter
 		CMPCSn	: out std_logic;
 
-		-- vertical sync
+		DE		: in std_logic;
 		VSYNC	: in std_logic;
 
 		-- max memory configuration
@@ -65,37 +65,41 @@ end mmu;
 architecture behavioral of mmu is
 	signal memcfg			: std_logic_vector(3 downto 0);
 	signal cnt				: unsigned(1 downto 0);
-	signal screen_adr_high	: std_logic_vector(7 downto 0);
-	signal screen_adr_mid	: std_logic_vector(7 downto 0);
-	signal screen_adr_ptr	: std_logic_vector(23 downto 1);
+	signal screen_adr		: std_logic_vector(23 downto 8);
+	signal video_ptr		: std_logic_vector(23 downto 1);
 	signal dma_ptr			: std_logic_vector(23 downto 1);
 	signal al				: std_logic_vector(7 downto 0);
-	signal delay_dcycn		: std_logic;
+	signal delay_loadn		: std_logic;
 	signal delay_bus		: std_logic;
 	signal mode_bus			: std_logic;
 	signal mode_bus_ff		: std_logic;
+	signal mode_load		: std_logic;
 	signal sdtackn			: std_logic;
+	signal sde				: std_logic;
+	signal loadn			: std_logic;
 
 begin
 
 	al <= iA(7 downto 1) & '1';
 	mode_bus <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
 	DTACKn <= sdtackn;
+	DCYCn <= loadn;
 
-	process(DCYCn,delay_bus,delay_dcycn,screen_adr_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
+	-- RAM access control
+	process(mode_load,delay_bus,delay_loadn,video_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
 	begin
 		RDATn <= '1';
 		ram_A <= (others => '0');
 		ram_DS <= "00";
 		ram_R <= '0';
 		ram_W <= '0';
-		if DCYCn = '0' and delay_bus = '0' then
+		if mode_load = '1' and delay_bus = '0' then
 			-- get shifter data
-			ram_A <= screen_adr_ptr;
+			ram_A <= video_ptr;
 			ram_DS <= "11";
 			ram_R <= '1';
 			ram_W <= '0';
-		elsif (mode_bus = '1' or mode_bus_ff = '1') and delay_dcycn = '0' then
+		elsif (mode_bus = '1' or mode_bus_ff = '1') and delay_loadn = '0' then
 			-- valid ST RAM/ROM address
 			if RAMn = '0' then
 				ram_A <= iA;
@@ -112,10 +116,11 @@ begin
 		end if;
 	end process;
 
+	-- MMU sequence
 	process(clk)
 	begin
 	if rising_edge(clk) then
-		delay_dcycn <= '0';
+		delay_loadn <= '0';
 		delay_bus <= '0';
 		if resetn = '0' then
 			sdtackn <= '1';
@@ -123,19 +128,29 @@ begin
 			CMPCSn <= '1';
 			oD <= x"ff";
 			mode_bus_ff <= '0';
-			screen_adr_ptr <= (others => '0');
-			screen_adr_high <= (others => '0');
-			screen_adr_mid <= (others => '0');
+			mode_load <= '0';
+			screen_adr <= (others => '0');
+			video_ptr <= (others => '0');
 			memcfg <= (others => '0');
 			dma_ptr <= (others => '0');
-		elsif enPhi1 = '1' then
+			loadn <= '1';
+		elsif en8rck = '1' then
 			if (RAMn = '0' or DEVn = '0') and cnt = 2 then
 				sdtackn <= '0';
 			end if;
 			if cnt = 0 then
 				sdtackn <= '1';
+				sde <= DE;
 			end if;
-		elsif enPhi2 = '1' then
+			if cnt = 0 and mode_load = '1' then
+				loadn <= '0';
+			end if;
+			if cnt = 1 and loadn = '0' then
+				loadn <= '1';
+				mode_load <= '0';
+				video_ptr <= std_logic_vector(unsigned(video_ptr)+1);
+			end if;
+		elsif en8fck = '1' then
 			mode_bus_ff <= mode_bus or mode_bus_ff;
 			cnt <= cnt + 1;
 			CMPCSn <= '1';
@@ -145,7 +160,7 @@ begin
 			end if;
 
 			if VSYNC = '0' then
-				screen_adr_ptr <= screen_adr_high & screen_adr_mid & "0000000";
+				video_ptr <= screen_adr & "0000000";
 			end if;
 
 			oD <= (others => '1');
@@ -160,18 +175,18 @@ begin
 						if iRWn = '1' then
 							-- read
 							case al is
-								when x"01" => oD <= screen_adr_high;
-								when x"03" => oD <= screen_adr_mid;
-								when x"05" => oD <= screen_adr_ptr(23 downto 16);
-								when x"07" => oD <= screen_adr_ptr(15 downto 8);
-								when x"09" => oD <= screen_adr_ptr(7 downto 1) & '0';
+								when x"01" => oD <= screen_adr(23 downto 16);
+								when x"03" => oD <= screen_adr(15 downto 8);
+								when x"05" => oD <= video_ptr(23 downto 16);
+								when x"07" => oD <= video_ptr(15 downto 8);
+								when x"09" => oD <= video_ptr(7 downto 1) & '0';
 								when others => oD <= x"ff";
 							end case;
 						elsif iRWn = '0' and cnt = 2 then
 							-- write
 							case al is
-								when x"01" => screen_adr_high <= iD;
-								when x"03" => screen_adr_mid <= iD;
+								when x"01" => screen_adr(23 downto 16) <= iD;
+								when x"03" => screen_adr(15 downto 8) <= iD;
 								when others =>
 							end case;
 						end if;
@@ -207,15 +222,15 @@ begin
 				end if;
 			end if;
 
+			if cnt = 3 and sde = '1' then
+				mode_load <= '1';
+			end if;
+
 			if mode_bus_ff = '1' and cnt = 3 then
 				delay_bus <= '1';
 				if DMAn = '0' then
 					dma_ptr <= std_logic_vector(unsigned(dma_ptr)+1);
 				end if;
-			end if;
-			if DCYCn = '0' then
-				screen_adr_ptr <= std_logic_vector(unsigned(screen_adr_ptr)+1);
-				delay_dcycn <= '1';
 			end if;
 		end if;
 	end if;

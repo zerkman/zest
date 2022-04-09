@@ -31,7 +31,7 @@ entity shifter is
 		iD		: in std_logic_vector(15 downto 0);
 		oD		: out std_logic_vector(15 downto 0);
 		DE		: in std_logic;
-		LOADn	: out std_logic;
+		LOADn	: in std_logic;
 
 		rgb		: out std_logic_vector(8 downto 0)
 	);
@@ -59,9 +59,9 @@ architecture behavioral of shifter is
 	signal pixel	: std_logic_vector(3 downto 0);
 	signal sloadn	: std_logic;
 	signal sde		: std_logic;
+	signal lnbegin	: std_logic;
 
 begin
-	LOADn <= sloadn;
 	address <= to_integer(unsigned(A));
 
 -- read/write in palette or resolution registers
@@ -98,20 +98,15 @@ end process;
 process(clk)
 begin
 	if rising_edge(clk) then
-		if en8ck = '1' then
-			sloadn <= '1';
-			if sde = '1' and cnt32(3 downto 2) = "10" then
-				sloadn <= '0';
-			elsif cnt32(3 downto 2) = "11" then
-				if sloadn = '0' then
-					nsh3 <= iD;
-				else
-					nsh3 <= x"0000";
-				end if;
-				nsh2 <= nsh3;
-				nsh1 <= nsh2;
-				nsh0 <= nsh1;
+		if en8ck = '1' and cnt32(3 downto 2) = "00" then
+			if LOADn = '0' then
+				nsh3 <= iD;
+			else
+				nsh3 <= x"0000";
 			end if;
+			nsh2 <= nsh3;
+			nsh1 <= nsh2;
+			nsh0 <= nsh1;
 		end if;
 	end if;
 end process;
@@ -136,18 +131,21 @@ process(clk,resetn)
 begin
 	if resetn = '0' then
 		cnt32 <= "000000";
+		lnbegin <= '0';
+		sloadn <= '0';
+		sde <= '0';
 	elsif rising_edge(clk) then
 		if en32ck = '1' then
 			cnt32 <= cnt32 + 1;
-			if cnt32(3 downto 0) = "0000" then
-				sde <= DE;
-				if DE = '1' and sde = '0' then
-					cnt32(5 downto 4) <= "00";
-				end if;
+			sloadn <= LOADn;
+			sde <= DE;
+			if DE = '1' and sde = '0' then
+				lnbegin <= '1';
 			end if;
-			if en8ck = '1' and cnt32(5 downto 2) = "1111" then
-				-- sync with 8 mhz clock
-				cnt32(1 downto 0) <= "01";
+			if lnbegin = '1' and LOADn = '0' and sloadn = '1' then
+				-- sync with 8 mhz clock and LOADn sequence
+				cnt32 <= "000001";
+				lnbegin <= '0';
 			end if;
 		end if;
 	end if;

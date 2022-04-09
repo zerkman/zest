@@ -434,8 +434,8 @@ begin
 
 	mm:entity mmu port map (
 		clk => clk,
-		enPhi1 => en8rck,
-		enPhi2 => en8fck,
+		en8rck => en8rck,
+		en8fck => en8fck,
 		resetn => resetn,
 
 		RAMn => mmu_RAMn,
@@ -456,6 +456,7 @@ begin
 		DCYCn => loadn,
 		CMPCSn => shifter_CSn,
 
+		DE => sde,
 		vsync => vsyncn,
 
 		mem_top	=> mem_top,
