@@ -126,7 +126,7 @@ begin
 		delay_bus <= '0';
 		if resetn = '0' then
 			sdtackn <= '1';
-			cnt <= "00";
+			cnt <= "10";
 			CMPCSn <= '1';
 			oD <= x"ff";
 			mode_bus_ff <= '0';
