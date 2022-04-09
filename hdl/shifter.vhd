@@ -48,14 +48,10 @@ architecture behavioral of shifter is
 	signal cnt32	: unsigned(5 downto 0);
 	-- resolution
 	signal res		: std_logic_vector(1 downto 0) := "00";
-	signal sh0		: std_logic_vector(15 downto 0);
-	signal sh1		: std_logic_vector(15 downto 0);
-	signal sh2		: std_logic_vector(15 downto 0);
-	signal sh3		: std_logic_vector(15 downto 0);
-	signal nsh0		: std_logic_vector(15 downto 0);
-	signal nsh1		: std_logic_vector(15 downto 0);
-	signal nsh2		: std_logic_vector(15 downto 0);
-	signal nsh3		: std_logic_vector(15 downto 0);
+	-- pixel registers
+	type pxregs_t is array (0 to 3) of std_logic_vector(15 downto 0);
+	signal rr		: pxregs_t;
+	signal ir		: pxregs_t;
 	signal pixel	: std_logic_vector(3 downto 0);
 	signal sloadn	: std_logic;
 	signal sde		: std_logic;
@@ -100,27 +96,27 @@ begin
 	if rising_edge(clk) then
 		if en8ck = '1' and cnt32(3 downto 2) = "00" then
 			if LOADn = '0' then
-				nsh3 <= iD;
+				ir(3) <= iD;
 			else
-				nsh3 <= x"0000";
+				ir(3) <= x"0000";
 			end if;
-			nsh2 <= nsh3;
-			nsh1 <= nsh2;
-			nsh0 <= nsh1;
+			ir(2) <= ir(3);
+			ir(1) <= ir(2);
+			ir(0) <= ir(1);
 		end if;
 	end if;
 end process;
 
 -- pixel value, depending on resolution
-process(sh3,sh2,sh1,sh0,res)
+process(rr(3),rr(2),rr(1),rr(0),res)
 begin
 	case res is
 	when "00" =>
-		pixel <= sh3(15) & sh2(15) & sh1(15) & sh0(15);
+		pixel <= rr(3)(15) & rr(2)(15) & rr(1)(15) & rr(0)(15);
 	when "01" =>
-		pixel <= "00" & sh1(15) & sh0(15);
+		pixel <= "00" & rr(1)(15) & rr(0)(15);
 	when "10" =>
-		pixel <= "000" & sh0(15);
+		pixel <= "000" & rr(0)(15);
 	when others =>
 		pixel <= "0000";
 	end case;
@@ -162,28 +158,28 @@ begin
 				rgb <= palette(to_integer(unsigned(pixel)));
 			end if;
 			if cnt32 = "111111" then
-				sh0 <= nsh0;
-				sh1 <= nsh1;
-				sh2 <= nsh2;
-				sh3 <= nsh3;
+				rr(0) <= ir(0);
+				rr(1) <= ir(1);
+				rr(2) <= ir(2);
+				rr(3) <= ir(3);
 			elsif res = "00" and cnt32(1 downto 0) = "11" then
 				-- low resolution
-				sh0 <= sh0(14 downto 0) & '0';
-				sh1 <= sh1(14 downto 0) & '0';
-				sh2 <= sh2(14 downto 0) & '0';
-				sh3 <= sh3(14 downto 0) & '0';
+				rr(0) <= rr(0)(14 downto 0) & '0';
+				rr(1) <= rr(1)(14 downto 0) & '0';
+				rr(2) <= rr(2)(14 downto 0) & '0';
+				rr(3) <= rr(3)(14 downto 0) & '0';
 			elsif res = "01" and cnt32(0) = '1' then
 				-- medium resolution
-				sh0 <= sh0(14 downto 0) & sh2(15);
-				sh1 <= sh1(14 downto 0) & sh3(15);
-				sh2 <= sh2(14 downto 0) & '0';
-				sh3 <= sh3(14 downto 0) & '0';
+				rr(0) <= rr(0)(14 downto 0) & rr(2)(15);
+				rr(1) <= rr(1)(14 downto 0) & rr(3)(15);
+				rr(2) <= rr(2)(14 downto 0) & '0';
+				rr(3) <= rr(3)(14 downto 0) & '0';
 			elsif res = "10" then
 				-- high resolution
-				sh0 <= sh0(14 downto 0) & sh1(15);
-				sh1 <= sh1(14 downto 0) & sh2(15);
-				sh2 <= sh2(14 downto 0) & sh3(15);
-				sh3 <= sh3(14 downto 0) & '0';
+				rr(0) <= rr(0)(14 downto 0) & rr(1)(15);
+				rr(1) <= rr(1)(14 downto 0) & rr(2)(15);
+				rr(2) <= rr(2)(14 downto 0) & rr(3)(15);
+				rr(3) <= rr(3)(14 downto 0) & '0';
 			end if;
 		end if;
 	end if;
