@@ -125,6 +125,37 @@ static void save_mfm(Flopimg *img) {
   write(img->fd,img->buf,6250*img->nsides*img->ntracks);
 }
 
+static int guess_size(Flopimg *img) {
+  if (img->image_size % 512) {
+    return 0;
+  }
+  int tracks, sectors;
+  int temp_size;
+  for (tracks = 86; tracks > 0; tracks--) {
+    for (sectors = 11; sectors >= 9; sectors--) {
+      temp_size = img->image_size / tracks;
+      if (!(img->image_size % tracks)) {
+        if (!(temp_size % (sectors*2))) {
+          img->ntracks = tracks;
+          img->nsides = 2;
+          img->nsectors = sectors;
+          printf("Geometry guessed: %d tracks, %d sides, %d sectors\n", tracks, 2, sectors);
+          return 1;
+        }
+        else if (!(temp_size % sectors)) {
+          img->ntracks = tracks;
+          img->nsides = 1;
+          img->nsectors = sectors;
+          printf("Geometry guessed: %d tracks, %d sides, %d sectors\n", tracks, 2, sectors);
+          return 1;
+        }
+      }
+    }
+  }
+  printf("Failed to guess disk geometry\n");
+  return 0;
+}
+
 static void load_st(Flopimg *img, int skew) {
   unsigned int bps;
   int track,side;
@@ -132,28 +163,41 @@ static void load_st(Flopimg *img, int skew) {
 
   crc16_init();
 
+  img->image_size = lseek(img->fd, 0, SEEK_END);
+  lseek(img->fd, 0, SEEK_SET);
   read(img->fd,buf,32);
 
-  int sectors = readw(buf+0x18);
+  img->nsectors = readw(buf+0x18);
   img->nsides = readw(buf+0x1a);
-  img->ntracks = readw(buf+0x13)/(sectors*img->nsides);
-  printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,sectors);
+  img->ntracks = readw(buf+0x13)/(img->nsectors*img->nsides);
+  printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,img->nsectors);
 
   bps = readw(buf+0x0b);
   if (bps!=512) {
     printf("invalid sector size:%u\n",bps);
-    return;
+    if (!guess_size(img)) {
+      return;
+    }
   }
 
-  if (sectors<9 || sectors>11) {
-    printf("unsupported number of sectors per track:%u\n",sectors);
-    return;
+  if (img->nsectors<9 || img->nsectors>11) {
+    printf("unsupported number of sectors per track:%u\n",img->nsectors);
+    if (!guess_size(img)) {
+      return;
+    }
+  }
+
+  if (img->ntracks > 85 || img->ntracks < 0) {
+      printf("unsupported number of tracks:%u\n", img->ntracks);
+      if (!guess_size(img)) {
+          return;
+      }
   }
 
   lseek(img->fd,0,SEEK_SET);
 
   int gap1,gap2,gap4,gap5;
-  if (sectors==11) {
+  if (img->nsectors==11) {
     gap1 = 10;
     gap2 = 3;
     gap4 = 1;
@@ -162,7 +206,7 @@ static void load_st(Flopimg *img, int skew) {
     gap1 = 60;
     gap2 = 12;
     gap4 = 40;
-    if (sectors==10) {
+    if (img->nsectors==10) {
       gap5 = 50;
     } else {
       gap5 = 664;
@@ -171,18 +215,18 @@ static void load_st(Flopimg *img, int skew) {
 
   crc16_init();
 
-  int sec_shift = skew ? sectors-1 : 0;
+  int sec_shift = skew ? img->nsectors-1 : 0;
   for (track=0; track<img->ntracks; ++track) {
     for (side=0; side<img->nsides; ++side) {
       int sector,i;
       uint8_t *p0 = flopimg_trackpos(img,track,side);
       uint8_t *p = p0;
       unsigned int crc;
-      read(img->fd,buf,512*sectors);
+      read(img->fd,buf,512*img->nsectors);
       for (i=0; i<gap1; ++i) *p++ = 0x4E;
-      for (sector=0; sector<sectors; ++sector) {
+      for (sector=0; sector<img->nsectors; ++sector) {
         int sec_no = sector+sec_shift;
-        if (sec_no>=sectors) sec_no -= sectors;
+        if (sec_no>=img->nsectors) sec_no -= img->nsectors;
         for (i=0; i<gap2; ++i) *p++ = 0x00;
         for (i=0; i<3; ++i) *p++ = 0xA1;
         *p++ = 0xFE;
@@ -209,8 +253,8 @@ static void load_st(Flopimg *img, int skew) {
         printf("format error\n");
       }
     }
-    sec_shift += sectors-skew;
-    if (sec_shift>=sectors) sec_shift -= sectors;
+    sec_shift += img->nsectors-skew;
+    if (sec_shift>=img->nsectors) sec_shift -= img->nsectors;
   }
 
 }

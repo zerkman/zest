@@ -31,6 +31,8 @@ typedef struct {
   int wrb;
   int ntracks;
   int nsides;
+  int nsectors;
+  int image_size;
   uint8_t buf[6250*2*MAXTRACK];
 
 } Flopimg;
