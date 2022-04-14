@@ -23,6 +23,7 @@ entity shifter is
 		clk		: in std_logic;
 		resetn	: in std_logic;
 		en8ck	: in std_logic;
+		en16ck	: in std_logic;
 		en32ck	: in std_logic;
 
 		CSn		: in std_logic;
@@ -31,7 +32,7 @@ entity shifter is
 		iD		: in std_logic_vector(15 downto 0);
 		oD		: out std_logic_vector(15 downto 0);
 		DE		: in std_logic;
-		LOADn	: in std_logic;
+		LOAD	: in std_logic;
 
 		rgb		: out std_logic_vector(8 downto 0)
 	);
@@ -44,21 +45,38 @@ architecture behavioral of shifter is
 
 	signal monopal	: std_logic;
 	signal address	: integer;
-	-- 32 MHz quarter/half/full pixel counter, depending on resolution (0,1 or 2)
-	signal cnt32	: unsigned(5 downto 0);
 	-- resolution
 	signal res		: std_logic_vector(1 downto 0) := "00";
 	-- pixel registers
 	type pxregs_t is array (0 to 3) of std_logic_vector(15 downto 0);
 	signal rr		: pxregs_t;
 	signal ir		: pxregs_t;
+	signal idff		: std_logic_vector(15 downto 0);
 	signal pixel	: std_logic_vector(3 downto 0);
-	signal sloadn	: std_logic;
+	signal load1	: std_logic;
 	signal sde		: std_logic;
+	signal enpxck   : std_logic;
 	signal lnbegin	: std_logic;
+	signal pxctenff	: std_logic;
+	signal reload	: std_logic;
+	signal reload1	: std_logic;
+	signal pxcnt	: unsigned(3 downto 0);
+	signal loadsr	: std_logic_vector(3 downto 0);
 
 begin
 	address <= to_integer(unsigned(A));
+
+-- pixel clock enable
+process(res,en8ck,en16ck,en32ck)
+begin
+	if res = "00" then
+		enpxck <= en8ck;
+	elsif res = "01" then
+		enpxck <= en16ck;
+	else
+		enpxck <= en32ck;
+	end if;
+end process;
 
 -- read/write in palette or resolution registers
 process(clk)
@@ -90,25 +108,8 @@ begin
 	end if;
 end process;
 
--- load next shift registers
-process(clk)
-begin
-	if rising_edge(clk) then
-		if en8ck = '1' and cnt32(3 downto 2) = "00" then
-			if LOADn = '0' then
-				ir(3) <= iD;
-			else
-				ir(3) <= x"0000";
-			end if;
-			ir(2) <= ir(3);
-			ir(1) <= ir(2);
-			ir(0) <= ir(1);
-		end if;
-	end if;
-end process;
-
 -- pixel value, depending on resolution
-process(rr(3),rr(2),rr(1),rr(0),res)
+process(rr,res)
 begin
 	case res is
 	when "00" =>
@@ -122,26 +123,66 @@ begin
 	end case;
 end process;
 
--- pixel counter
+-- reload
 process(clk,resetn)
+	variable pxcten		: std_logic;
+	variable vloadsr	: std_logic_vector(3 downto 0);
 begin
 	if resetn = '0' then
-		cnt32 <= "000000";
 		lnbegin <= '0';
-		sloadn <= '0';
-		sde <= '0';
+		pxctenff <= '0';
+		load1 <= '0';
+		reload <= '0';
+		reload1 <= '0';
 	elsif rising_edge(clk) then
-		if en32ck = '1' then
-			cnt32 <= cnt32 + 1;
-			sloadn <= LOADn;
-			sde <= DE;
-			if DE = '1' and sde = '0' then
+		if enpxck = '1' then
+			reload1 <= reload;
+			load1 <= LOAD;
+			if DE = '0' then
+				lnbegin <= '0';
+			elsif LOAD = '1' and load1 = '0' then
 				lnbegin <= '1';
 			end if;
-			if lnbegin = '1' and LOADn = '0' and sloadn = '1' then
-				-- sync with 8 mhz clock and LOADn sequence
-				cnt32 <= "000001";
-				lnbegin <= '0';
+
+			pxcten := pxctenff;
+			if reload1 = '1' and reload = '0' then
+				pxcten := lnbegin;
+			end if;
+			if lnbegin = '1' then
+				pxcten := '1';
+			end if;
+			pxctenff <= pxcten;
+
+			if pxcten = '1' then
+				pxcnt <= pxcnt + 1;
+			else
+				pxcnt <= x"4";
+			end if;
+
+			vloadsr := loadsr;
+			if reload1 = '1' then
+				vloadsr := "0000";
+			elsif load1 = '0' and LOAD = '1' then
+				vloadsr := loadsr(2 downto 0) & '1';
+			end if;
+			loadsr <= vloadsr;
+
+			if pxcnt = 15 and vloadsr(3) = '1' then
+				reload <= '1';
+			else
+				reload <= '0';
+			end if;
+		end if;
+	end if;
+end process;
+
+-- data bus latch
+process(clk)
+begin
+	if rising_edge(clk) then
+		if en8ck = '1' then
+			if LOAD = '0' then
+				idff <= iD;
 			end if;
 		end if;
 	end if;
@@ -149,26 +190,34 @@ end process;
 
 -- output RGB pixels
 process(clk)
+	variable vir : pxregs_t;
 begin
 	if rising_edge(clk) then
-		if en32ck = '1' then
+		if enpxck = '1' then
 			if res(1) = '1' then
 				rgb <= (8 downto 0 => pixel(0) xor monopal);
 			else
 				rgb <= palette(to_integer(unsigned(pixel)));
 			end if;
-			if cnt32 = "111111" then
-				rr(0) <= ir(0);
-				rr(1) <= ir(1);
-				rr(2) <= ir(2);
-				rr(3) <= ir(3);
-			elsif res = "00" and cnt32(1 downto 0) = "11" then
+
+			vir := ir;
+			if LOAD = '1' and load1 = '0' then
+				vir(3) := idff;
+				vir(2) := ir(3);
+				vir(1) := ir(2);
+				vir(0) := ir(1);
+				ir <= vir;
+			end if;
+
+			if reload = '1' then
+				rr <= vir;
+			elsif res = "00" then
 				-- low resolution
 				rr(0) <= rr(0)(14 downto 0) & '0';
 				rr(1) <= rr(1)(14 downto 0) & '0';
 				rr(2) <= rr(2)(14 downto 0) & '0';
 				rr(3) <= rr(3)(14 downto 0) & '0';
-			elsif res = "01" and cnt32(0) = '1' then
+			elsif res = "01" then
 				-- medium resolution
 				rr(0) <= rr(0)(14 downto 0) & rr(2)(15);
 				rr(1) <= rr(1)(14 downto 0) & rr(3)(15);

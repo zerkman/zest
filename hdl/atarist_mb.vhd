@@ -111,6 +111,8 @@ architecture structure of atarist_mb is
 
 	signal enNC1		: std_logic;
 	signal enNC2		: std_logic;
+	signal en16rck		: std_logic;
+	signal en16fck		: std_logic;
 	signal en8rck		: std_logic;
 	signal en8fck		: std_logic;
 	signal en4rck		: std_logic;
@@ -196,7 +198,7 @@ architecture structure of atarist_mb is
 	signal shifter_A	: std_logic_vector(5 downto 1);
 	signal shifter_iD	: std_logic_vector(15 downto 0);
 	signal shifter_oD	: std_logic_vector(15 downto 0);
-	signal loadn		: std_logic;
+	signal load			: std_logic;
 
 	signal mfp_oD		: std_logic_vector(7 downto 0);
 	signal mfp_csn		: std_logic;
@@ -371,11 +373,29 @@ begin
 	cpu_HALTn <= '1';
 	cpu_IPLn(0) <= '1';
 
-	clkgen:entity clock_enabler port map (clk,reset,enNC1,enNC2,en8rck,en8fck,en32ck,en4rck,en4fck,en2rck,en2fck,en2_4576ck,ck05,clken_err);
+	clkgen:entity clock_enabler
+		port map (
+			clk => clk,
+			reset => reset,
+			enNC1 => enNC1,         -- enable 8 MHz rising edges
+			enNC2 => enNC2,         -- enable 8 MHz falling edges
+			en16rck => en16rck,     -- 16 MHz rising edge
+			en16fck => en16fck,     -- 16 MHz falling edge
+			en8rck => en8rck,       -- 8 MHz rising edge
+			en8fck => en8fck,       -- 8 MHz falling edge
+			en32ck => en32ck,       -- 32 MHz rising edge
+			en4rck => en4rck,       -- 4 MHz rising edge
+			en4fck => en4fck,       -- 4 MHz falling edge
+			en2rck => en2rck,       -- 2 MHz rising edge
+			en2fck => en2fck,       -- 2 MHz falling edge
+			en2_4576 => en2_4576ck, -- 2.4576 MHz rising edge
+			ck05 => ck05,           -- 500 kHz clock
+			error => clken_err	    -- time out error
+		);
 	enNC1 <= clken_video;
 	enNC2 <= clken_bus and clken_dma;
 	clken_bus <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or bus_DTACKn or clken_bus2;
-	clken_video <= loadn or not ram_R or ram_R_DONE;
+	clken_video <= load or not ram_R or ram_R_DONE;
 	clken_dma <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or mmu_DMAn;
 	process(cpu_A)
 	begin
@@ -456,7 +476,7 @@ begin
 		RDATn => RDATn,
 		LATCH => LATCH,
 
-		DCYCn => loadn,
+		DCYCn => load,
 		CMPCSn => shifter_CSn,
 
 		DE => sde,
@@ -481,6 +501,7 @@ begin
 		clk => clk,
 		resetn => resetn,
 		en8ck => en8rck,
+		en16ck => en16fck,
 		en32ck => en32ck,
 		CSn => shifter_CSn,
 		RWn => shifter_RWn,
@@ -488,7 +509,7 @@ begin
 		iD => shifter_iD,
 		oD => shifter_oD,
 		DE => sde,
-		LOADn => loadn,
+		LOAD => load,
 		rgb => rgb
 	);
 	shifter_iD <= (bus_D or (15 downto 0 => shifter_CSn)) and ram_oD;

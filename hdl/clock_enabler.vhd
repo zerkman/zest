@@ -25,7 +25,7 @@ entity clock_enabler is
 		CLK_FREQ_DIV	: integer := 1;		-- 100/1 = 100 MHz
 		-- clock we want to simulate
 		CPU_FREQ_NUM	: integer := 8000;
-		CPU_FREQ_DIV	: integer := 1000;	-- 8.017 MHz
+		CPU_FREQ_DIV	: integer := 1000;	-- 8.017 MHz
 		-- counter bits
 		CPT_BITS	: integer := 24
 	);
@@ -33,9 +33,11 @@ entity clock_enabler is
 		clk			: in std_logic;
 		reset		: in std_logic;
 		enNC1		: in std_logic;		-- enable 8 MHz rising edges
-		enNC2		: in std_logic;		-- enable 8 MHz falling edges
+		enNC2		: in std_logic;		-- enable 8 MHz falling edges
 		en8rck		: out std_logic;	-- 8 MHz rising edge
 		en8fck		: out std_logic;	-- 8 MHz falling edge
+		en16rck		: out std_logic;	-- 16 MHz rising edge
+		en16fck		: out std_logic;	-- 16 MHz falling edge
 		en32ck		: out std_logic;	-- 32 MHz rising edge
 		en4rck		: out std_logic;	-- 4 MHz rising edge
 		en4fck		: out std_logic;	-- 4 MHz falling edge
@@ -67,7 +69,7 @@ architecture behavioral of clock_enabler is
 	signal new_phase	: std_logic;
 
 begin
-	-- TODO remove the 1 cycle delay between enNC and enPhi
+	-- TODO remove the 1 cycle delay between enNC and enPhi
 
 	en8rck <= en1;
 	en8fck <= en2;
@@ -114,11 +116,15 @@ begin
 				en32 <= '0';
 				en24 <= '0';
 				err <= '0';
+				en16fck <= '0';
+				en16rck <= '0';
 			else
 				en1 <= '0';
 				en2 <= '0';
 				en32 <= '0';
 				en24 <= '0';
+				en16fck <= '0';
+				en16rck <= '0';
 				if new_phase = '1' then
 					if phase = '0' then
 						en1 <= '1';
@@ -126,6 +132,7 @@ begin
 						en2 <= '1';
 					end if;
 					en32 <= '1';
+					en16fck <= '1';
 					phase <= not phase;
 					cnt <= cnt + incr - CLK_FREQ_NUM*CPU_FREQ_DIV;
 					delay <= '1';
@@ -133,6 +140,7 @@ begin
 					cnt <= cnt + incr;
 					if delay = '1' then
 						en32 <= '1';
+						en16rck <= '1';
 					end if;
 					delay <= '0';
 				end if;
