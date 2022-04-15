@@ -156,45 +156,127 @@ static int guess_size(Flopimg *img) {
   return 0;
 }
 
-static void load_st(Flopimg *img, int skew) {
+typedef struct msa_
+{
+  unsigned char *current_byte_into_buf;
+  int current_sector;
+  int sectors_per_track;
+  unsigned char unpacked_track[11*512];
+  unsigned short track_length;
+} MSA;
+
+uint8_t buf[512*11*2*86];
+MSA msa;
+
+static void *get_msa_sector(void *restrict dest, const void *restrict src, size_t size) {
+  if (!msa.current_sector) {
+    printf("Offset=%x\n", msa.current_byte_into_buf-buf);
+    msa.track_length=(msa.current_byte_into_buf[0]<<8)|msa.current_byte_into_buf[1];
+    printf("Track length=%d %X\n", msa.track_length, msa.track_length);
+    msa.current_byte_into_buf += 2;
+    if (msa.track_length==msa.sectors_per_track*512) {
+      memcpy(msa.unpacked_track, msa.current_byte_into_buf, msa.sectors_per_track*512);
+      msa.current_byte_into_buf += msa.sectors_per_track*512;
+    } else {
+      unsigned char *msa_current_depack = msa.unpacked_track;
+      unsigned char *msa_track_end = msa.unpacked_track + msa.sectors_per_track*512;
+      unsigned char b;
+      while (msa_current_depack != msa_track_end) {
+        b = *msa.current_byte_into_buf++;
+        if (b!=0xe5) {
+          *msa_current_depack++ = b;
+        } else {
+          b=*msa.current_byte_into_buf++;
+          unsigned short run_length = (msa.current_byte_into_buf[0]<<8)|msa.current_byte_into_buf[1];
+          msa.current_byte_into_buf += 2;
+          int i;
+          for (i = 0; i<run_length; i++) {
+            *msa_current_depack++ = b;
+          }
+        }
+      }
+    }
+  }
+  memcpy(dest, msa.unpacked_track+msa.current_sector*512, 512);
+  msa.current_sector++;
+  if (msa.current_sector==msa.sectors_per_track) {
+    msa.current_sector = 0;
+  }
+  return dest;
+}
+
+static void load_st(Flopimg *img, int skew, int format) {
   unsigned int bps;
   int track,side;
-  uint8_t buf[512*11];
 
+  void *(*get_sector)(void *restrict,const void *restrict,size_t);
   crc16_init();
 
-  img->image_size = lseek(img->fd, 0, SEEK_END);
-  lseek(img->fd, 0, SEEK_SET);
-  read(img->fd,buf,32);
+  if (format==1)
+  {
+    img->image_size = lseek(img->fd, 0, SEEK_END);
+    lseek(img->fd, 0, SEEK_SET);
+    read(img->fd,buf,32);
+    lseek(img->fd, 0, SEEK_SET);
 
-  img->nsectors = readw(buf+0x18);
-  img->nsides = readw(buf+0x1a);
-  img->ntracks = readw(buf+0x13)/(img->nsectors*img->nsides);
-  printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,img->nsectors);
+    img->nsectors = readw(buf+0x18);
+    img->nsides = readw(buf+0x1a);
+    img->ntracks = readw(buf+0x13)/(img->nsectors*img->nsides);
+    printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,img->nsectors);
 
-  bps = readw(buf+0x0b);
-  if (bps!=512) {
-    printf("invalid sector size:%u\n",bps);
-    if (!guess_size(img)) {
-      return;
+    bps = readw(buf+0x0b);
+    if (bps!=512) {
+      printf("invalid sector size:%u\n",bps);
+      if (!guess_size(img)) {
+        return;
+      }
     }
-  }
 
-  if (img->nsectors<9 || img->nsectors>11) {
-    printf("unsupported number of sectors per track:%u\n",img->nsectors);
-    if (!guess_size(img)) {
-      return;
+    if (img->nsectors<9 || img->nsectors>11) {
+      printf("unsupported number of sectors per track:%u\n",img->nsectors);
+      if (!guess_size(img)) {
+        return;
+      }
     }
-  }
 
-  if (img->ntracks > 85 || img->ntracks < 0) {
+    if (img->ntracks > 85 || img->ntracks < 0) {
       printf("unsupported number of tracks:%u\n", img->ntracks);
       if (!guess_size(img)) {
-          return;
+        return;
       }
-  }
+    }
 
-  lseek(img->fd,0,SEEK_SET);
+    get_sector = memcpy;
+  } else {
+    img->image_size = lseek(img->fd, 0, SEEK_END);
+    lseek(img->fd, 0, SEEK_SET);
+    read(img->fd,buf,10);
+    if (((buf[0]<<8)|buf[1])!=0x0e0f)
+    {
+      printf("Error: not a valid .MSA file\n");
+      return;
+    }
+    img->nsectors = (buf[2]<<8)|buf[3];
+    printf("%d\n", img->nsectors);
+    img->nsides = ((buf[4]<<8)|buf[5])+1;
+    printf("%d\n", img->nsides);
+    unsigned short start_track = (buf[6]<<8)|buf[7];
+    printf("%d\n", start_track);
+    if (start_track != 0)
+    {
+      printf("Partial .msa file supplied. It starts at track %d. This is currently not supported\n", start_track + 1);
+      return;
+    }
+    img->ntracks = ((buf[8]<<8)|buf[9])+1;
+    printf("%d\n", img->ntracks);
+
+    read(img->fd,buf,img->image_size-10);
+
+    get_sector = get_msa_sector;
+    msa.current_byte_into_buf = buf;
+    msa.current_sector = 0;
+    msa.sectors_per_track = img->nsectors;
+  }
 
   int gap1,gap2,gap4,gap5;
   if (img->nsectors==11) {
@@ -222,7 +304,9 @@ static void load_st(Flopimg *img, int skew) {
       uint8_t *p0 = flopimg_trackpos(img,track,side);
       uint8_t *p = p0;
       unsigned int crc;
-      read(img->fd,buf,512*img->nsectors);
+      if (format==1) {
+        read(img->fd,buf,512*img->nsectors);
+      }
       for (i=0; i<gap1; ++i) *p++ = 0x4E;
       for (sector=0; sector<img->nsectors; ++sector) {
         int sec_no = sector+sec_shift;
@@ -241,7 +325,7 @@ static void load_st(Flopimg *img, int skew) {
         for (i=0; i<12; ++i) *p++ = 0x00;
         for (i=0; i<3; ++i) *p++ = 0xA1;
         *p++ = 0xFB;
-        memcpy(p,buf+512*sec_no,512);
+        get_sector(p, buf + 512*sec_no, 512);
         p += 512;
         crc = crc16(p-513,513);
         *p++ = crc>>8;
@@ -293,6 +377,8 @@ Flopimg * flopimg_open(const char *filename, int rdonly, int skew) {
     format = 0;
   } else if (rpp && (strcmp(rpp,".st")==0 || strcmp(rpp,".ST")==0)) {
     format = 1;
+  } else if (rpp && (strcmp(rpp,".msa")==0 || strcmp(rpp,".MSA")==0)) {
+    format = 2;
   } else {
     printf("Could not determine the floppy image file format\n");
     return NULL;
@@ -309,8 +395,8 @@ Flopimg * flopimg_open(const char *filename, int rdonly, int skew) {
 
   if (format==0) {
     load_mfm(img);
-  } else {
-    load_st(img,3);
+  } else if (format==1 || format==2) {
+    load_st(img,3,format);
   }
 
   return img;
