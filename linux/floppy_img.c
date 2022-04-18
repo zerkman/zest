@@ -96,6 +96,13 @@ static unsigned int readw(const unsigned char *ptr) {
   return v;
 }
 
+static unsigned int readwb(const unsigned char *ptr) {
+  unsigned int v;
+  v = ((unsigned int)ptr[0])<<8;
+  v |= ((unsigned int)ptr[1]);
+  return v;
+}
+
 static void load_mfm(Flopimg *img) {
   int size = read(img->fd,img->buf,6250*2*MAXTRACK);
   int sectors = 0;
@@ -156,64 +163,16 @@ static int guess_size(Flopimg *img) {
   return 0;
 }
 
-typedef struct msa_
-{
-  unsigned char *current_byte_into_buf;
-  int current_sector;
-  int sectors_per_track;
-  unsigned char unpacked_track[11*512];
-  unsigned short track_length;
-} MSA;
-
-uint8_t buf[512*11*2*86];
-MSA msa;
-
-static void *get_msa_sector(void *restrict dest, const void *restrict src, size_t size) {
-  if (!msa.current_sector) {
-    printf("Offset=%x\n", msa.current_byte_into_buf-buf);
-    msa.track_length=(msa.current_byte_into_buf[0]<<8)|msa.current_byte_into_buf[1];
-    printf("Track length=%d %X\n", msa.track_length, msa.track_length);
-    msa.current_byte_into_buf += 2;
-    if (msa.track_length==msa.sectors_per_track*512) {
-      memcpy(msa.unpacked_track, msa.current_byte_into_buf, msa.sectors_per_track*512);
-      msa.current_byte_into_buf += msa.sectors_per_track*512;
-    } else {
-      unsigned char *msa_current_depack = msa.unpacked_track;
-      unsigned char *msa_track_end = msa.unpacked_track + msa.sectors_per_track*512;
-      unsigned char b;
-      while (msa_current_depack != msa_track_end) {
-        b = *msa.current_byte_into_buf++;
-        if (b!=0xe5) {
-          *msa_current_depack++ = b;
-        } else {
-          b=*msa.current_byte_into_buf++;
-          unsigned short run_length = (msa.current_byte_into_buf[0]<<8)|msa.current_byte_into_buf[1];
-          msa.current_byte_into_buf += 2;
-          int i;
-          for (i = 0; i<run_length; i++) {
-            *msa_current_depack++ = b;
-          }
-        }
-      }
-    }
-  }
-  memcpy(dest, msa.unpacked_track+msa.current_sector*512, 512);
-  msa.current_sector++;
-  if (msa.current_sector==msa.sectors_per_track) {
-    msa.current_sector = 0;
-  }
-  return dest;
-}
-
-static void load_st(Flopimg *img, int skew, int format) {
+static void load_st(Flopimg *img, int skew) {
   unsigned int bps;
   int track,side;
+  uint8_t buf[512*11];
 
-  void *(*get_sector)(void *restrict,const void *restrict,size_t);
   crc16_init();
 
-  if (format==1)
+  if (img->format==1)
   {
+    // ST file format
     img->image_size = lseek(img->fd, 0, SEEK_END);
     lseek(img->fd, 0, SEEK_SET);
     read(img->fd,buf,32);
@@ -245,37 +204,24 @@ static void load_st(Flopimg *img, int skew, int format) {
         return;
       }
     }
-
-    get_sector = memcpy;
   } else {
+    // MSA image file format
     img->image_size = lseek(img->fd, 0, SEEK_END);
     lseek(img->fd, 0, SEEK_SET);
     read(img->fd,buf,10);
-    if (((buf[0]<<8)|buf[1])!=0x0e0f)
-    {
+    if (readwb(buf)!=0x0e0f) {
       printf("Error: not a valid .MSA file\n");
       return;
     }
-    img->nsectors = (buf[2]<<8)|buf[3];
-    printf("%d\n", img->nsectors);
-    img->nsides = ((buf[4]<<8)|buf[5])+1;
-    printf("%d\n", img->nsides);
-    unsigned short start_track = (buf[6]<<8)|buf[7];
-    printf("%d\n", start_track);
-    if (start_track != 0)
-    {
+    img->nsectors = readwb(buf+2);
+    img->nsides = readwb(buf+4)+1;
+    unsigned short start_track = readwb(buf+6);
+    if (start_track != 0) {
       printf("Partial .msa file supplied. It starts at track %d. This is currently not supported\n", start_track + 1);
       return;
     }
-    img->ntracks = ((buf[8]<<8)|buf[9])+1;
-    printf("%d\n", img->ntracks);
-
-    read(img->fd,buf,img->image_size-10);
-
-    get_sector = get_msa_sector;
-    msa.current_byte_into_buf = buf;
-    msa.current_sector = 0;
-    msa.sectors_per_track = img->nsectors;
+    img->ntracks = readwb(buf+8)+1;
+    printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,img->nsectors);
   }
 
   int gap1,gap2,gap4,gap5;
@@ -304,8 +250,37 @@ static void load_st(Flopimg *img, int skew, int format) {
       uint8_t *p0 = flopimg_trackpos(img,track,side);
       uint8_t *p = p0;
       unsigned int crc;
-      if (format==1) {
+      if (img->format==1) {
         read(img->fd,buf,512*img->nsectors);
+      } else {
+        // decode next MSA track
+        unsigned int tracksize = 512*img->nsectors;
+        read(img->fd,buf,2);
+        unsigned int datalen = readwb(buf);
+        if (datalen==tracksize) {
+          // uncompressed track
+          read(img->fd,buf,tracksize);
+        } else {
+          // compressed track
+          uint8_t msa_buf[512*11];
+          uint8_t *src = msa_buf;
+          uint8_t *dest = buf;
+          read(img->fd,msa_buf,datalen);
+          while ((dest-buf)<tracksize) {
+            uint8_t b = *src++;
+            if (b==0xe5) {
+              b = *src++;
+              unsigned int length = readwb(src);
+              src += 2;
+              unsigned int i;
+              for (i=0; i<length; ++i) {
+                *dest++ = b;
+              }
+            } else {
+              *dest++ = b;
+            }
+          }
+        }
       }
       for (i=0; i<gap1; ++i) *p++ = 0x4E;
       for (sector=0; sector<img->nsectors; ++sector) {
@@ -325,7 +300,7 @@ static void load_st(Flopimg *img, int skew, int format) {
         for (i=0; i<12; ++i) *p++ = 0x00;
         for (i=0; i<3; ++i) *p++ = 0xA1;
         *p++ = 0xFB;
-        get_sector(p, buf + 512*sec_no, 512);
+        memcpy(p,buf+512*sec_no,512);
         p += 512;
         crc = crc16(p-513,513);
         *p++ = crc>>8;
@@ -396,7 +371,7 @@ Flopimg * flopimg_open(const char *filename, int rdonly, int skew) {
   if (format==0) {
     load_mfm(img);
   } else if (format==1 || format==2) {
-    load_st(img,3,format);
+    load_st(img,3);
   }
 
   return img;
