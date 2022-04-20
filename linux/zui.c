@@ -134,7 +134,8 @@ static void display_panel(ZuiPanel *obj) {
   }
 }
 
-static void display_text(ZuiText *obj) {
+//static void display_text(ZuiText *obj) {
+void display_text(ZuiText *obj) {
   osd_text(obj->text,obj->widget.x,obj->widget.y,1,0);
 }
 
@@ -285,11 +286,18 @@ void zui_run(int xpos, int ypos, ZuiWidget *obj) {
           case KEY_ESC:
             quit = 1;
             break;
+          case KEY_UP:
+            cycle_focus(obj,1);
+            break;
+          case KEY_DOWN:
+            cycle_focus(obj,0);
+            break;
           case KEY_TAB:
             cycle_focus(obj,shift);
             break;
           case KEY_ENTER:
             select_focused(1);
+            //quit = 1;
             break;
           case KEY_LEFTSHIFT:
             shift |= 1;

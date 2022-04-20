@@ -33,6 +33,8 @@
 extern volatile uint32_t *parmreg;
 extern int parmfd;
 extern volatile int thr_end;
+int disk_image_changed = 0;
+void *disk_image_filename;
 
 void * thread_floppy(void * arg) {
   uint32_t n,oldn=0;
@@ -106,6 +108,14 @@ void * thread_floppy(void * arg) {
 
         flopimg_writeback(img);
       }
+    }
+
+    // detect image change
+    if (disk_image_changed)
+    {
+        flopimg_close(img);
+        img = flopimg_open(disk_image_filename,0,3);
+        disk_image_changed = 0;
     }
   }
 

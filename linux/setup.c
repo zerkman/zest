@@ -96,12 +96,34 @@ int usage(const char *progname) {
   return 1;
 }
 
+const char *binfilename = NULL;
+uint8_t *mem_array;
+int cfg;
+void do_reset()
+{
+    memset(mem_array,0,0x20000);
+    FILE *bootfd = fopen(binfilename,"rb");
+    fread(mem_array+0xfc0000,1,0x30000,bootfd);
+    fclose(bootfd);
+    memcpy(mem_array,mem_array+0xfc0000,8);
+    int i;
+    for (i=4; i<8; ++i) {
+        parmreg[i] = 0xffffffff;
+    }
+
+    parmreg[0] = cfg;
+}
+
+#include <limits.h>
+char current_directory[PATH_MAX];
 int main(int argc, char **argv) {
   int cfg_video = CFG_COLR;
   int cfg_mem = CFG_1M;
   int has_sil;
+  getcwd(current_directory, sizeof(current_directory));
+  strcat(current_directory, "/");
+printf("%s\n", current_directory);
 
-  const char *binfilename = NULL;
   const char *floppyfilename = NULL;
   int a = 0;
   while (++a<argc) {
@@ -140,7 +162,7 @@ int main(int argc, char **argv) {
     usage(argv[0]);
     return 1;
   }
-  int cfg = cfg_mem | cfg_video | 3;    /* end reset */
+  cfg = cfg_mem | cfg_video | 3;    /* end reset */
 
   pl_reset();
 
@@ -155,7 +177,7 @@ int main(int argc, char **argv) {
     printf("Cannot open memory device\n");
     return 1;
   }
-  uint8_t *mem_array = mmap(NULL,ST_MEM_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,memfd,ST_MEM_ADDR);
+  mem_array = mmap(NULL,ST_MEM_SIZE,PROT_READ|PROT_WRITE,MAP_SHARED,memfd,ST_MEM_ADDR);
   if (mem_array == MAP_FAILED) {
     printf("Could not allocate the shared memory block: %s\n", strerror(errno));
   }
@@ -189,17 +211,7 @@ int main(int argc, char **argv) {
   pthread_t floppy_thr;
   pthread_create(&floppy_thr,NULL,thread_floppy,(void*)floppyfilename);
   do {
-    memset(mem_array,0,0x20000);
-    FILE *bootfd = fopen(binfilename,"rb");
-    fread(mem_array+0xfc0000,1,0x30000,bootfd);
-    fclose(bootfd);
-    memcpy(mem_array,mem_array+0xfc0000,8);
-    int i;
-    for (i=4; i<8; ++i) {
-      parmreg[i] = 0xffffffff;
-    }
-
-    parmreg[0] = cfg;
+    do_reset();
     c = getchar();
     printf("new reset\n");
     parmreg[0] = 0;
