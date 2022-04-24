@@ -329,6 +329,33 @@ ZuiWidget * menu_form(void) {
 }
 
 void menu(void) {
+  static const uint8_t osd_palette[] = {
+    0x40,0x40,0x40,
+    0xc0,0xc0,0xc0,
+    0xff,0xff,0x80,
+    0x40,0x40,0xff
+  };
+  static const uint8_t colour1[8*3] = {
+    253,0,0,
+    253,0,0,
+    253,151,0,
+    253,253,0,
+    47,253,0,
+    0,152,253,
+    102,51,254,
+    102,51,254
+  };
+  uint8_t osd_palette0[8][12];
+
+  osd_init();
+  osd_set_palette_all(osd_palette);
+  int i;
+  for (i=0; i<8; ++i) {
+    memcpy(osd_palette0[i],osd_palette,12);
+    memcpy(&osd_palette0[i][3],&colour1[i*3],3);
+  }
+  osd_set_palette(0,8,osd_palette0);
+
   ZuiWidget *form=menu_form();
 
   zui_run(XPOS,YPOS,form);

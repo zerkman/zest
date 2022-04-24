@@ -249,12 +249,6 @@ extern volatile int thr_end;
 
 
 void zui_run(int xpos, int ypos, ZuiWidget *obj) {
-  static const uint8_t osd_palette[] = {
-    0x40,0x40,0x40,
-    0xc0,0xc0,0xc0,
-    0xff,0xff,0x80,
-    0x40,0x40,0xff
-  };
   int quit = 0;
 
   osd_init();
@@ -265,7 +259,6 @@ void zui_run(int xpos, int ypos, ZuiWidget *obj) {
   ZuiPanel *panel = (ZuiPanel*)obj;
   osd_set_size(panel->width,panel->height);
   osd_set_position(xpos,ypos);
-  osd_set_palette_all(osd_palette);
   display(obj);
   osd_show(1);
   int shift = 0;
