@@ -117,25 +117,36 @@ void osd_putchar(int c, int x, int y, int fgc, int bgc) {
   }
 }
 
+// convert standard 24-bit palette into low level format
+static void convert_palette(uint16_t palette[4], const uint8_t data[4*3]) {
+  const uint8_t *pdata = data;
+  int i;
+  for (i=0; i<4; ++i) {
+    unsigned int r = *pdata++;
+    unsigned int g = *pdata++;
+    unsigned int b = *pdata++;
+    palette[i] = (r&0xf8)<<8 | (g&0xfc)<<3 | (b&0xf8)>>3;
+  }
+}
+
 void osd_set_palette_all(const uint8_t data[4*3]) {
   if (osdreg != NULL) {
-    const uint8_t *pdata = data;
     uint16_t palette[4];
+    convert_palette(palette,data);
     int i;
-    for (i=0; i<4; ++i) {
-      unsigned int r = *pdata++;
-      unsigned int g = *pdata++;
-      unsigned int b = *pdata++;
-      palette[i] = (r&0xf8)<<8 | (g&0xfc)<<3 | (b&0xf8)>>3;
-    }
     for (i=0; i<MAX_SCANLINES; ++i) {
       memcpy((void*)osdreg->palette[i],palette,8);
     }
   }
 }
 
-void osd_set_palette(int row, int nrows, const uint16_t data[][4]) {
+void osd_set_palette(int row, int nrows, const uint8_t data[][4*3]) {
   if (osdreg != NULL) {
-    memcpy((void*)osdreg->palette[row],data,nrows*8);
+    int i;
+    for (i=0; i<nrows; ++i) {
+      uint16_t palette[4];
+      convert_palette(palette,data[i]);
+      memcpy((void*)osdreg->palette[row+i],palette,8);
+    }
   }
 }

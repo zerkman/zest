@@ -52,6 +52,6 @@ void osd_putchar(int c, int x, int y, int fgc, int bgc);
 void osd_set_palette_all(const uint8_t data[4*3]);
 
 // set colour palettes to a group of scanlines
-void osd_set_palette(int row, int nrows, const uint16_t data[][4]);
+void osd_set_palette(int row, int nrows, const uint8_t data[][4*3]);
 
 #endif
