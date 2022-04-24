@@ -39,6 +39,9 @@ ZuiWidget * zui_button(int x, int y, const char *text, void (*onclick)(ZuiWidget
 // Button widget
 ZuiWidget * zui_button_ext(int x, int y, const char *text, void (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol);
 
+// Change widget text
+void zui_set_text(ZuiWidget *obj, const char *text);
+
 // Add child to container widget
 void zui_add_child(ZuiWidget * parent, ZuiWidget * child);
 

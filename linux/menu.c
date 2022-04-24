@@ -71,6 +71,8 @@ extern char current_directory[PATH_MAX]; // From setup.c
 #error Too many characters (XCHARS*YCHARS)
 #endif
 
+ZuiWidget *lolwidget;
+
 static void buttonclick_lol(ZuiWidget* obj) {
   printf("lol\n");
 }
@@ -306,9 +308,11 @@ static void buttonclick_insert_floppy_a(ZuiWidget* obj) {
 }
 
 static void buttonclick_select_tos(ZuiWidget* obj) {
+  zui_set_text(lolwidget, " NYAN ");
 }
 
 static void buttonclick_change_ram_size(ZuiWidget* obj) {
+  zui_set_text(lolwidget, "~=[,,_,,]:3");
 }
 
 ZuiWidget * menu_form(void) {
@@ -324,7 +328,8 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,4,"Eject A",buttonclick_eject_floppy_a));
   zui_add_child(form,zui_button_ext(1,5,"TOS image",buttonclick_select_tos,1,3,2,1));
   zui_add_child(form,zui_button(1,6,"RAM size",buttonclick_change_ram_size));
-  zui_add_child(form,zui_button(1,7," LOL  ",buttonclick_lol));
+  lolwidget = zui_button(1,7," LOL  ",buttonclick_lol);
+  zui_add_child(form,lolwidget);
   return form;
 }
 

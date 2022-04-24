@@ -51,7 +51,7 @@ typedef struct {
 
 typedef struct {
   ZuiWidget widget;
-  const char *text;
+  char *text;
   int fgcol;
   int bgcol;
 } ZuiText;
@@ -83,7 +83,7 @@ static void zui_text_init(ZuiText *obj, int x, int y, const char *text, int fgco
   obj->widget.visible = 1;
   obj->widget.x = x;
   obj->widget.y = y;
-  obj->text = text;
+  obj->text = strdup(text);
   obj->fgcol = fgcol;
   obj->bgcol = bgcol;
 }
@@ -141,6 +141,10 @@ void zui_free(ZuiWidget * root) {
     zui_free(obj);
     obj = next;
   }
+  if (root->type==ZUI_TEXT || root->type==ZUI_BUTTON) {
+    ZuiText *t = (ZuiText*)root;
+    free(t->text);
+  }
   free(root);
 }
 
@@ -165,8 +169,8 @@ static void display_button(ZuiButton *obj) {
   ZuiText *t = (ZuiText*)obj;
   int fg = t->fgcol;
   int bg = t->bgcol;
-  if (w->has_focus) bg = 2;
-  if (w->enabled) bg = 3;
+  if (w->has_focus) bg = obj->fccol;
+  if (w->enabled) bg = obj->encol;
   osd_text(t->text,w->x,w->y,fg,bg);
 }
 
@@ -182,6 +186,16 @@ static void display(ZuiWidget *obj) {
   while (child!=NULL) {
     display(child);
     child = child->next;
+  }
+}
+
+void zui_set_text(ZuiWidget *obj, const char *text) {
+  if (obj->type==ZUI_TEXT || obj->type==ZUI_BUTTON) {
+    ZuiText *t = (ZuiText*)obj;
+    osd_text(t->text,obj->x,obj->y,0,0);
+    free(t->text);
+    t->text = strdup(text);
+    display(obj);
   }
 }
 
