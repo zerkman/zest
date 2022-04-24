@@ -60,7 +60,7 @@ typedef struct {
   ZuiText text;
   int fccol;    // focused background colour
   int encol;    // enabled background colour
-  void (*onclick)(ZuiWidget *);
+  int (*onclick)(ZuiWidget *);
 } ZuiButton;
 
 
@@ -98,7 +98,7 @@ ZuiWidget * zui_text(int x, int y, const char *text) {
   return zui_text_ext(x,y,text,1,0);
 }
 
-static void zui_button_init(ZuiButton *obj, int x, int y, const char *text, void (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol) {
+static void zui_button_init(ZuiButton *obj, int x, int y, const char *text, int (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol) {
   ZuiWidget *w = (ZuiWidget*)obj;
   zui_text_init(&obj->text,x,y,text,fgcol,bgcol);
   w->type = ZUI_BUTTON;
@@ -109,13 +109,13 @@ static void zui_button_init(ZuiButton *obj, int x, int y, const char *text, void
   obj->onclick = onclick;
 }
 
-ZuiWidget * zui_button_ext(int x, int y, const char *text, void (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol) {
+ZuiWidget * zui_button_ext(int x, int y, const char *text, int (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol) {
   ZuiButton * obj = malloc(sizeof(ZuiButton));
   zui_button_init(obj,x,y,text,onclick,fgcol,bgcol,fccol,encol);
   return (ZuiWidget*)obj;
 }
 
-ZuiWidget * zui_button(int x, int y, const char *text, void (*onclick)(ZuiWidget*)) {
+ZuiWidget * zui_button(int x, int y, const char *text, int (*onclick)(ZuiWidget*)) {
   return zui_button_ext(x,y,text,onclick,0,1,2,3);
 }
 
@@ -268,15 +268,16 @@ void cycle_focus(ZuiWidget *root, int direction) {
   }
 }
 
-void select_focused(int sel) {
-  if (!focused) return;
+int select_focused(int sel) {
+  if (!focused) return 0;
   focused->enabled = sel;
   if (focused->type==ZUI_BUTTON) {
     ZuiButton *butt = (ZuiButton*)focused;
     if (sel==0 && butt->onclick) {
-      butt->onclick(focused);
+      return butt->onclick(focused);
     }
   }
+  return 0;
 }
 
 // From ikbd.c
@@ -285,13 +286,13 @@ int input_event(int timeout, int *type, int *code, int *value);
 extern volatile int thr_end;
 
 
-void zui_run(int xpos, int ypos, ZuiWidget *obj) {
+int zui_run(int xpos, int ypos, ZuiWidget *obj) {
   int quit = 0;
 
   osd_init();
   if (obj->type!=ZUI_PANEL) {
     printf("Root object is not a panel\n");
-    return;
+    return -1;
   }
   ZuiPanel *panel = (ZuiPanel*)obj;
   osd_set_size(panel->width,panel->height);
@@ -343,7 +344,7 @@ void zui_run(int xpos, int ypos, ZuiWidget *obj) {
         // key is released
         switch (evcode) {
           case KEY_ENTER:
-            select_focused(0);
+            quit = select_focused(0);
             break;
           case KEY_LEFTSHIFT:
             shift &= ~1;
@@ -357,5 +358,5 @@ void zui_run(int xpos, int ypos, ZuiWidget *obj) {
   }
 
   osd_hide();
-
+  return quit;
 }

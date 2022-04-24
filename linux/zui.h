@@ -34,10 +34,10 @@ ZuiWidget * zui_text(int x, int y, const char *text);
 ZuiWidget * zui_text_ext(int x, int y, const char *text, int fgcol, int bgcol);
 
 // Button widget with default values
-ZuiWidget * zui_button(int x, int y, const char *text, void (*onclick)(ZuiWidget*));
+ZuiWidget * zui_button(int x, int y, const char *text, int (*onclick)(ZuiWidget*));
 
 // Button widget
-ZuiWidget * zui_button_ext(int x, int y, const char *text, void (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol);
+ZuiWidget * zui_button_ext(int x, int y, const char *text, int (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol);
 
 // Change widget text
 void zui_set_text(ZuiWidget *obj, const char *text);
@@ -46,7 +46,7 @@ void zui_set_text(ZuiWidget *obj, const char *text);
 void zui_add_child(ZuiWidget * parent, ZuiWidget * child);
 
 // Run the UI
-void zui_run(int xpos, int ypos, ZuiWidget *obj);
+int zui_run(int xpos, int ypos, ZuiWidget *obj);
 
 // Deallocate a hierarchy of widgets
 void zui_free(ZuiWidget * root);

@@ -73,20 +73,23 @@ extern char current_directory[PATH_MAX]; // From setup.c
 
 ZuiWidget *lolwidget;
 
-static void buttonclick_lol(ZuiWidget* obj) {
+static int buttonclick_lol(ZuiWidget* obj) {
   printf("lol\n");
+  return 0;
 }
 
-static void buttonclick_warm_reset(ZuiWidget* obj)
+static int buttonclick_warm_reset(ZuiWidget* obj)
 {
   parmreg[0]=cfg&0xfffffffe;    // Bit 0 clear=reset
   parmreg[0]=cfg|3;  // |3="end reset"
+  return 0;
 }
 
-static void buttonclick_cold_reset(ZuiWidget* obj) {
+static int buttonclick_cold_reset(ZuiWidget* obj) {
   parmreg[0]=0;
   usleep(10000);
   do_reset();
+  return 0;
 }
 
 // File selector state
@@ -139,7 +142,7 @@ void update_file_listing() {
   }
 }
 
-static void buttonclick_fsel_up_arrow(ZuiWidget* obj) {
+static int buttonclick_fsel_up_arrow(ZuiWidget* obj) {
   if (file_selector_cursor_position) {
     file_selector_cursor_position--;
     update_file_listing();
@@ -149,9 +152,10 @@ static void buttonclick_fsel_up_arrow(ZuiWidget* obj) {
       update_file_listing();
     }
   }
+  return 0;
 }
 
-static void buttonclick_fsel_down_arrow(ZuiWidget* obj) {
+static int buttonclick_fsel_down_arrow(ZuiWidget* obj) {
   if (file_selector_cursor_position < FSEL_YCHARS-3 && (file_selector_cursor_position + file_selector_current_top-1) < total_listing_files) {
     file_selector_cursor_position++;
     update_file_listing();
@@ -162,6 +166,7 @@ static void buttonclick_fsel_down_arrow(ZuiWidget* obj) {
       update_file_listing();
     }
   }
+  return 0;
 }
 
 void read_directory(char *path) {
@@ -233,11 +238,11 @@ void read_directory(char *path) {
   globfree(&glob_info);
 }
 
-static void buttonclick_fsel_dir_up(ZuiWidget* obj) {
+static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
   int i=strlen(current_directory);
   if (i==1) {
     // We're at /
-    return;
+    return 0;
   }
   char *p=current_directory + i-2;
   while (*p != '/') {
@@ -249,9 +254,10 @@ static void buttonclick_fsel_dir_up(ZuiWidget* obj) {
   read_directory(current_directory);
   file_selector_cursor_position=0;
   update_file_listing();
+  return 0;
 }
 
-static void buttonclick_fsel_ok(ZuiWidget* obj) {
+static int buttonclick_fsel_ok(ZuiWidget* obj) {
   // TODO: Since the file selector will be called by multiple sites
   //       (like disk image A, disk image B, TOS image, etc) there should
   //       probably be no logic here (unless we have a global variable that
@@ -269,14 +275,17 @@ static void buttonclick_fsel_ok(ZuiWidget* obj) {
     disk_image_filename=selected_item;
     disk_image_changed=1;
   }
+  return 0;
 }
 
-static void buttonclick_fsel_cancel(ZuiWidget* obj) {
+static int buttonclick_fsel_cancel(ZuiWidget* obj) {
   // TODO: for now we have to press ESC to exit the form :/
+  return 0;
 }
 
-static void buttonclick_eject_floppy_a(ZuiWidget* obj) {
+static int buttonclick_eject_floppy_a(ZuiWidget* obj) {
   // TODO: call save image + change disk_image_filename to empty (I guess?)
+  return 0;
 }
 
 ZuiWidget * menu_file_selector(void) {
@@ -298,21 +307,28 @@ ZuiWidget * menu_file_selector(void) {
   return form;
 }
 
-static void buttonclick_insert_floppy_a(ZuiWidget* obj) {
+static int buttonclick_insert_floppy_a(ZuiWidget* obj) {
   read_directory(current_directory);
 
   // Reset file selector variables
   file_selector_cursor_position=0;
   display_file_selector=1;
   // TODO: for now we have to press ESC to exit the form :/
+  return 0;
 }
 
-static void buttonclick_select_tos(ZuiWidget* obj) {
+static int buttonclick_select_tos(ZuiWidget* obj) {
   zui_set_text(lolwidget, " NYAN ");
+  return 0;
 }
 
-static void buttonclick_change_ram_size(ZuiWidget* obj) {
+static int buttonclick_change_ram_size(ZuiWidget* obj) {
   zui_set_text(lolwidget, "~=[,,_,,]:3");
+  return 0;
+}
+
+static int buttonclick_exit_menu(ZuiWidget* obj) {
+  return 1;
 }
 
 ZuiWidget * menu_form(void) {
@@ -330,6 +346,7 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,6,"RAM size",buttonclick_change_ram_size));
   lolwidget = zui_button(1,7," LOL  ",buttonclick_lol);
   zui_add_child(form,lolwidget);
+  zui_add_child(form,zui_button(1,9,"Exit menu",buttonclick_exit_menu));
   return form;
 }
 
