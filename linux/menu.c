@@ -99,7 +99,6 @@ int file_selector_selected_file=0;
 #define MAX_FILENAME_CHARS 32
 #define MAX_FILENAMES 128
 char directory_filenames[MAX_FILENAMES][MAX_FILENAME_CHARS];
-int display_file_selector=0;
 int total_listing_files=0;
 int file_selector_cursor_position;
 
@@ -312,9 +311,7 @@ static int buttonclick_insert_floppy_a(ZuiWidget* obj) {
 
   // Reset file selector variables
   file_selector_cursor_position=0;
-  display_file_selector=1;
-  // TODO: for now we have to press ESC to exit the form :/
-  return 0;
+  return 2;
 }
 
 static int buttonclick_select_tos(ZuiWidget* obj) {
@@ -380,16 +377,14 @@ void menu(void) {
 
   ZuiWidget *form=menu_form();
 
-  zui_run(XPOS,YPOS,form);
+  int retval = zui_run(XPOS,YPOS,form);
 
   zui_free(form);
 
-  if (display_file_selector)
-  {
-    // Not great, admittedly, but we'll make it better soon!
+  if (retval==2) {
+    // The 'Insert floppy A' button has been pushed
     ZuiWidget *form=menu_file_selector();
     zui_run(FSEL_XPOS,FSEL_YPOS,form);
     zui_free(form);
-    display_file_selector=0;
   }
 }
