@@ -322,7 +322,7 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,2,"Cold reset",buttonclick_cold_reset));
   zui_add_child(form,zui_button(1,3,"Disk A",buttonclick_insert_floppy_a));
   zui_add_child(form,zui_button(1,4,"Eject A",buttonclick_eject_floppy_a));
-  zui_add_child(form,zui_button(1,5,"TOS image",buttonclick_select_tos));
+  zui_add_child(form,zui_button_ext(1,5,"TOS image",buttonclick_select_tos,1,3,2,1));
   zui_add_child(form,zui_button(1,6,"RAM size",buttonclick_change_ram_size));
   zui_add_child(form,zui_button(1,7," LOL  ",buttonclick_lol));
   return form;

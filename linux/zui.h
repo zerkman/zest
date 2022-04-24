@@ -24,16 +24,28 @@
 
 typedef struct _zui_widget ZuiWidget;
 
+// Panel widget - container for widgets
 ZuiWidget * zui_panel(int x, int y, int width, int height);
 
+// Text widget with default values
 ZuiWidget * zui_text(int x, int y, const char *text);
 
+// Text widget
+ZuiWidget * zui_text_ext(int x, int y, const char *text, int fgcol, int bgcol);
+
+// Button widget with default values
 ZuiWidget * zui_button(int x, int y, const char *text, void (*onclick)(ZuiWidget*));
 
+// Button widget
+ZuiWidget * zui_button_ext(int x, int y, const char *text, void (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol);
+
+// Add child to container widget
 void zui_add_child(ZuiWidget * parent, ZuiWidget * child);
 
+// Run the UI
 void zui_run(int xpos, int ypos, ZuiWidget *obj);
 
+// Deallocate a hierarchy of widgets
 void zui_free(ZuiWidget * root);
 
 #endif

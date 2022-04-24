@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <linux/input-event-codes.h>
 
 #include "zui.h"
@@ -51,11 +52,14 @@ typedef struct {
 typedef struct {
   ZuiWidget widget;
   const char *text;
+  int fgcol;
+  int bgcol;
 } ZuiText;
 
 typedef struct {
-  ZuiWidget widget;
-  const char *text;
+  ZuiText text;
+  int fccol;    // focused background colour
+  int encol;    // enabled background colour
   void (*onclick)(ZuiWidget *);
 } ZuiButton;
 
@@ -73,29 +77,46 @@ ZuiWidget * zui_panel(int x, int y, int width, int height) {
   return (ZuiWidget*)obj;
 }
 
-ZuiWidget * zui_text(int x, int y, const char *text) {
-  ZuiText * obj = calloc(1,sizeof(ZuiText));
+static void zui_text_init(ZuiText *obj, int x, int y, const char *text, int fgcol, int bgcol) {
+  memset(obj,0,sizeof(*obj));
   obj->widget.type = ZUI_TEXT;
   obj->widget.visible = 1;
   obj->widget.x = x;
   obj->widget.y = y;
   obj->text = text;
+  obj->fgcol = fgcol;
+  obj->bgcol = bgcol;
+}
 
+ZuiWidget * zui_text_ext(int x, int y, const char *text, int fgcol, int bgcol) {
+  ZuiText * obj = malloc(sizeof(ZuiText));
+  zui_text_init(obj,x,y,text,fgcol,bgcol);
+  return (ZuiWidget*)obj;
+}
+
+ZuiWidget * zui_text(int x, int y, const char *text) {
+  return zui_text_ext(x,y,text,1,0);
+}
+
+static void zui_button_init(ZuiButton *obj, int x, int y, const char *text, void (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol) {
+  ZuiWidget *w = (ZuiWidget*)obj;
+  zui_text_init(&obj->text,x,y,text,fgcol,bgcol);
+  w->type = ZUI_BUTTON;
+  w->focusable = 1;
+  w->clickable = 1;
+  obj->fccol = fccol;
+  obj->encol = encol;
+  obj->onclick = onclick;
+}
+
+ZuiWidget * zui_button_ext(int x, int y, const char *text, void (*onclick)(ZuiWidget*), int fgcol, int bgcol, int fccol, int encol) {
+  ZuiButton * obj = malloc(sizeof(ZuiButton));
+  zui_button_init(obj,x,y,text,onclick,fgcol,bgcol,fccol,encol);
   return (ZuiWidget*)obj;
 }
 
 ZuiWidget * zui_button(int x, int y, const char *text, void (*onclick)(ZuiWidget*)) {
-  ZuiButton * obj = calloc(1,sizeof(ZuiButton));
-  obj->widget.type = ZUI_BUTTON;
-  obj->widget.visible = 1;
-  obj->widget.focusable = 1;
-  obj->widget.clickable = 1;
-  obj->widget.x = x;
-  obj->widget.y = y;
-  obj->text = text;
-  obj->onclick = onclick;
-
-  return (ZuiWidget*)obj;
+  return zui_button_ext(x,y,text,onclick,0,1,2,3);
 }
 
 void zui_add_child(ZuiWidget * parent, ZuiWidget * child) {
@@ -136,15 +157,17 @@ static void display_panel(ZuiPanel *obj) {
 
 //static void display_text(ZuiText *obj) {
 void display_text(ZuiText *obj) {
-  osd_text(obj->text,obj->widget.x,obj->widget.y,1,0);
+  osd_text(obj->text,obj->widget.x,obj->widget.y,obj->fgcol,obj->bgcol);
 }
 
 static void display_button(ZuiButton *obj) {
-  int fg = 0;
-  int bg = 1;
-  if (obj->widget.has_focus) bg = 2;
-  if (obj->widget.enabled) bg = 3;
-  osd_text(obj->text,obj->widget.x,obj->widget.y,fg,bg);
+  ZuiWidget *w = (ZuiWidget*)obj;
+  ZuiText *t = (ZuiText*)obj;
+  int fg = t->fgcol;
+  int bg = t->bgcol;
+  if (w->has_focus) bg = 2;
+  if (w->enabled) bg = 3;
+  osd_text(t->text,w->x,w->y,fg,bg);
 }
 
 
