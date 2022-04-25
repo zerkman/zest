@@ -106,11 +106,11 @@ void update_file_listing() {
   // TODO: Setting the palette here because I have no idea how to set the
   //       palette when form initially displays (and there's a hardcoded palette there)
 
-  static const uint8_t file_selector_palette[]={
-    6,40,38,
-    176-20,224-20,230-20,
-    (176-20)/2,(224-20)/2,(230-20)/2,
-    0,184,128
+  static const uint8_t file_selector_palette[] = {
+    6, 40, 38,
+    176-20, 224-20, 230-20,
+    (176-20)/2, (224-20)/2, (230-20)/2,
+    0, 184, 128
   };
   osd_set_palette_all(file_selector_palette);
 
@@ -118,54 +118,49 @@ void update_file_listing() {
 
   int i;
   int first_colour=file_selector_current_top&1;    // This is done in order when the list scrolls, the odd/even lines will maintain their colour
-  for (i=0; i < FSEL_YCHARS-2; i++)
-  {
-    // strcpy, but also fill the rest of the horizontal characters with spaces
+  for (i=0;i<FSEL_YCHARS-2;i++) {
     int j=0;
-    char *s=directory_filenames[file_selector_current_top + i];
-    int len = strlen(s);
+    char *s=directory_filenames[file_selector_current_top+i];
+    int len=strlen(s);
     char *d=file_selector_list[i];
-    if (len > FSEL_XCHARS-1)
-    {
-        // Filename is too big to fit in one line, so copy as much as we can
-        // from the left hand side, put a "[...]" at the middle, and then
-        // copy as much as we can from the right hand side. That way
-        // we can both see the start of the filename and the extension,
-        // as well as stuff like "Disk X of Y"
-        char *s2 = s + len-((FSEL_XCHARS-1) / 2-2);
-        for (; j < (FSEL_XCHARS-1) / 2-2; j++)
-        {
-            *d++ = *s++;
-        }
-        *d++ = '[';
-        *d++ = '.';
-        *d++ = '.';
-        *d++ = '.';
-        *d++ = ']';
-        j += 5;
+    if (len>FSEL_XCHARS-1) {
+      // Filename is too big to fit in one line, so copy as much as we can
+      // from the left hand side, put a "[...]" at the middle, and then
+      // copy as much as we can from the right hand side. That way
+      // we can both see the start of the filename and the extension,
+      // as well as stuff like "Disk X of Y"
+      char *s2=s+len-((FSEL_XCHARS-1)/2-2);
+      for (;j<(FSEL_XCHARS-1)/2-2;j++) {
+        *d++=*s++;
+      }
 
-        for (; j < (FSEL_XCHARS-1) / 1; j++)
-        {
-            *d++ = *s2++;
-        }
-        *d = 0;
+      *d++='[';
+      *d++='.';
+      *d++='.';
+      *d++='.';
+      *d++=']';
+      j += 5;
+
+      for (;j<(FSEL_XCHARS-1)/1;j++) {
+        *d++=*s2++;
+      }
+      *d=0;
+    } else {
+      // strcpy, but also fill the rest of the horizontal characters with spaces
+      while (*s) {
+        *d++=*s++;
+        j++;
+      }
+      for (;j<FSEL_XCHARS-1;j++) {
+        *d++=' ';
+      }
+      *d=0;
     }
-    else
-    {
-        while (*s) {
-            *d++ = *s++;
-            j++;
-        }
-        for (; j < FSEL_XCHARS-1; j++) {
-            *d++ = ' ';
-        }
-        *d = 0;
-    }
-    int c=((i + first_colour) & 1) + 1;
+    int c=((i+first_colour) & 1)+1;
     if (i==file_selector_cursor_position) {
       c=3;
     }
-    osd_text(file_selector_list[i],0,i + 1,c,0);
+    osd_text(file_selector_list[i],0,i+1,c,0);
   }
 }
 
@@ -183,11 +178,11 @@ static int buttonclick_fsel_up_arrow(ZuiWidget* obj) {
 }
 
 static int buttonclick_fsel_down_arrow(ZuiWidget* obj) {
-  if (file_selector_cursor_position < FSEL_YCHARS-3 && (file_selector_cursor_position + file_selector_current_top-1) < total_listing_files) {
+  if (file_selector_cursor_position<FSEL_YCHARS-3&&(file_selector_cursor_position+file_selector_current_top-1)<total_listing_files) {
     file_selector_cursor_position++;
     update_file_listing();
   } else {
-    if (file_selector_current_top + FSEL_YCHARS-2 < total_listing_files)
+    if (file_selector_current_top+FSEL_YCHARS-2<total_listing_files)
     {
       file_selector_current_top++;
       update_file_listing();
@@ -209,10 +204,10 @@ void read_directory(char *path) {
 
   // Get directories and place them at the beginning on the list
   // (so they won't get mixed up with the actual files)
-  glob(path_wildcard,GLOB_MARK | GLOB_ONLYDIR,NULL,&glob_info);
+  glob(path_wildcard,GLOB_MARK|GLOB_ONLYDIR,NULL,&glob_info);
   int number_of_files=glob_info.gl_pathc;
 
-  if (number_of_files > MAX_FILENAMES) {
+  if (number_of_files>MAX_FILENAMES) {
     // TODO: decide what to do with large directories
     number_of_files=MAX_FILENAMES;
   }
@@ -220,9 +215,9 @@ void read_directory(char *path) {
   current_glob=glob_info.gl_pathv;
   total_listing_files=0;
 
-  for (i=0; i < number_of_files; i++) {
+  for (i=0;i<number_of_files;i++) {
     // TODO: decide on how to deal with larger filenames
-    strncpy(directory_filenames[total_listing_files++],*current_glob + bytes_to_skip,MAX_FILENAME_CHARS-1);
+    strncpy(directory_filenames[total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
     current_glob++;
   }
 
@@ -234,7 +229,7 @@ void read_directory(char *path) {
     //return;
   }
 
-  if (number_of_files > MAX_FILENAMES) {
+  if (number_of_files>MAX_FILENAMES) {
     // TODO: decide what to do with large directories
     //       but for now we clamp the amount of files shown to MAX_FILENAMES
     number_of_files=MAX_FILENAMES;
@@ -243,21 +238,21 @@ void read_directory(char *path) {
   // Get file listing, filter for the extensions we care about and add them to the list.
   // Gave up trying to understand whether glob() supports multiple wildcards and how, so here we are
   current_glob=glob_info.gl_pathv;
-  for (; i < number_of_files; i++) {
-    if (total_listing_files > MAX_FILENAMES) {
+  for (;i<number_of_files;i++) {
+    if (total_listing_files>MAX_FILENAMES) {
       break;
     }
-    if (strlen(*current_glob) > 4) {
+    if (strlen(*current_glob)>4) {
       char extension[4];
       int k;
-      for (k=0; k < 4; k++) {
+      for (k=0;k<4;k++) {
         // TODO: c'mon bro,that's crap
-        extension[k]=tolower(*(*current_glob + strlen(*current_glob)-3 + k));
+        extension[k]=tolower(*(*current_glob+strlen(*current_glob)-3+k));
       }
 
       if (strcmp(extension,"msa")==0 || strcmp(extension,".st")==0 || strcmp(extension,"mfm")==0) {
         // TODO: decide on how to deal with larger filenames
-        strncpy(directory_filenames[total_listing_files++],*current_glob + bytes_to_skip,MAX_FILENAME_CHARS-1);
+        strncpy(directory_filenames[total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
       }
     }
     current_glob++;
@@ -271,7 +266,7 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
     // We're at /
     return 0;
   }
-  char *p=current_directory + i-2;
+  char *p=current_directory+i-2;
   while (*p != '/') {
     p--;
   }
@@ -289,7 +284,7 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
   //       (like disk image A, disk image B, TOS image, etc) there should
   //       probably be no logic here (unless we have a global variable that
   //       mentions the caller).
-  char *selected_item=directory_filenames[file_selector_current_top + file_selector_cursor_position];
+  char *selected_item=directory_filenames[file_selector_current_top+file_selector_cursor_position];
   if (selected_item[strlen(selected_item)-1]=='/') {
     // Enter directory
     // Append the selected item (AKA directory name) to the global path (it already has a trailing slash and all)
@@ -311,7 +306,7 @@ static int buttonclick_fsel_cancel(ZuiWidget* obj) {
 }
 
 static int buttonclick_eject_floppy_a(ZuiWidget* obj) {
-  // TODO: call save image + change disk_image_filename to empty (I guess?)
+  // TODO: call save image+change disk_image_filename to empty (I guess?)
   return 0;
 }
 
@@ -325,11 +320,11 @@ ZuiWidget * menu_file_selector(void) {
   zui_add_child(form,zui_button(10,FSEL_YCHARS-1,"Ok",buttonclick_fsel_ok));
   zui_add_child(form,zui_button(20,FSEL_YCHARS-1,"Cancel",buttonclick_fsel_cancel));
   int i;
-  for (i=0; i < FSEL_YCHARS-2; i++) {
-    zui_add_child(form,zui_text(0,i + 1,file_selector_list[i]));
+  for (i=0;i<FSEL_YCHARS-2;i++) {
+    zui_add_child(form,zui_text(0,i+1,file_selector_list[i]));
     // TODO: if filename is bigger than displayed text, either right trim it
     //       or "eat" characters in the middle
-    strncpy(file_selector_list[i],directory_filenames[file_selector_current_top + i],FSEL_XCHARS-1);
+    strncpy(file_selector_list[i],directory_filenames[file_selector_current_top+i],FSEL_XCHARS-1);
   }
   return form;
 }
@@ -369,20 +364,20 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,4,"Eject A",buttonclick_eject_floppy_a));
   zui_add_child(form,zui_button_ext(1,5,"TOS image",buttonclick_select_tos,1,3,2,1));
   zui_add_child(form,zui_button(1,6,"RAM size",buttonclick_change_ram_size));
-  lolwidget = zui_button(1,7," LOL  ",buttonclick_lol);
+  lolwidget=zui_button(1,7," LOL  ",buttonclick_lol);
   zui_add_child(form,lolwidget);
   zui_add_child(form,zui_button(1,9,"Exit menu",buttonclick_exit_menu));
   return form;
 }
 
 void menu(void) {
-  static const uint8_t osd_palette[] = {
+  static const uint8_t osd_palette[]={
     0x40,0x40,0x40,
     0xc0,0xc0,0xc0,
     0xff,0xff,0x80,
     0x40,0x40,0xff
   };
-  static const uint8_t colour1[8*3] = {
+  static const uint8_t colour1[8*3]={
     253,0,0,
     253,0,0,
     253,151,0,
@@ -397,7 +392,7 @@ void menu(void) {
   osd_init();
   osd_set_palette_all(osd_palette);
   int i;
-  for (i=0; i<8; ++i) {
+  for (i=0;i<8;++i) {
     memcpy(osd_palette0[i],osd_palette,12);
     memcpy(&osd_palette0[i][3],&colour1[i*3],3);
   }
@@ -405,7 +400,7 @@ void menu(void) {
 
   ZuiWidget *form=menu_form();
 
-  int retval = zui_run(XPOS,YPOS,form);
+  int retval=zui_run(XPOS,YPOS,form);
 
   zui_free(form);
 
