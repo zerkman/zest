@@ -114,25 +114,53 @@ void update_file_listing() {
   };
   osd_set_palette_all(file_selector_palette);
 
+  // TODO: maybe we could keep a second array with all the processed filenames?
+
   int i;
   int first_colour=file_selector_current_top&1;    // This is done in order when the list scrolls, the odd/even lines will maintain their colour
   for (i=0; i < FSEL_YCHARS-2; i++)
   {
-    // TODO: if filename is bigger than displayed text, either right trim it
-    //       or "eat" characters in the middle
-
     // strcpy, but also fill the rest of the horizontal characters with spaces
     int j=0;
     char *s=directory_filenames[file_selector_current_top + i];
+    int len = strlen(s);
     char *d=file_selector_list[i];
-    while (*s) {
-      *d++=*s++;
-      j++;
+    if (len > FSEL_XCHARS)
+    {
+        // Filename is too big to fit in one line, so copy as much as we can
+        // from the left hand side, put a "[...]" at the middle, and then
+        // copy as much as we can from the right hand side. That way
+        // we can both see the start of the filename and the extension,
+        // as well as stuff like "Disk X of Y"
+        char *s2 = s + len-(FSEL_XCHARS / 2-2);
+        for (; j < FSEL_XCHARS / 2-2; j++)
+        {
+            *d++ = *s++;
+        }
+        *d++ = '[';
+        *d++ = '.';
+        *d++ = '.';
+        *d++ = '.';
+        *d++ = ']';
+        j += 5;
+
+        for (; j < FSEL_XCHARS / 1; j++)
+        {
+            *d++ = *s2++;
+        }
+        *d = 0;
     }
-    for (; j < FSEL_XCHARS-1; j++) {
-      *d++=' ';
+    else
+    {
+        while (*s) {
+            *d++ = *s++;
+            j++;
+        }
+        for (; j < FSEL_XCHARS-1; j++) {
+            *d++ = ' ';
+        }
+        *d = 0;
     }
-    *d=0;
     int c=((i + first_colour) & 1) + 1;
     if (i==file_selector_cursor_position) {
       c=3;
