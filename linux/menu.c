@@ -102,22 +102,10 @@ char directory_filenames[MAX_FILENAMES][MAX_FILENAME_CHARS];
 int total_listing_files=0;
 int file_selector_cursor_position;
 
-void update_file_listing() {
-  // TODO: Setting the palette here because I have no idea how to set the
-  //       palette when form initially displays (and there's a hardcoded palette there)
 
-  static const uint8_t file_selector_palette[] = {
-    6, 40, 38,
-    176-20, 224-20, 230-20,
-    (176-20)/2, (224-20)/2, (230-20)/2,
-    0, 184, 128
-  };
-  osd_set_palette_all(file_selector_palette);
-
-  // TODO: maybe we could keep a second array with all the processed filenames?
-
+void populate_file_array()
+{
   int i;
-  int first_colour=file_selector_current_top&1;    // This is done in order when the list scrolls, the odd/even lines will maintain their colour
   for (i=0;i<FSEL_YCHARS-2;i++) {
     int j=0;
     char *s=directory_filenames[file_selector_current_top+i];
@@ -156,6 +144,27 @@ void update_file_listing() {
       }
       *d=0;
     }
+  }
+}
+
+void update_file_listing() {
+  // TODO: Setting the palette here because I have no idea how to set the
+  //       palette when form initially displays (and there's a hardcoded palette there)
+
+  static const uint8_t file_selector_palette[] = {
+    6, 40, 38,
+    176-20, 224-20, 230-20,
+    (176-20)/2, (224-20)/2, (230-20)/2,
+    0, 184, 128
+  };
+  osd_set_palette_all(file_selector_palette);
+
+  // TODO: maybe we could keep a second array with all the processed filenames?
+
+  populate_file_array();
+  int i;
+  int first_colour=file_selector_current_top&1;    // This is done in order when the list scrolls, the odd/even lines will maintain their colour
+  for (i=0;i<FSEL_YCHARS-2;i++) {
     int c=((i+first_colour) & 1)+1;
     if (i==file_selector_cursor_position) {
       c=3;
@@ -229,25 +238,32 @@ void read_directory(char *path) {
     //return;
   }
 
+  int number_of_files_to_copy = number_of_files;
   if (number_of_files>MAX_FILENAMES) {
     // TODO: decide what to do with large directories
     //       but for now we clamp the amount of files shown to MAX_FILENAMES
+    //       and display a message about it at the end of the list
     number_of_files=MAX_FILENAMES;
+    number_of_files_to_copy=MAX_FILENAMES-1;
+    strcpy(directory_filenames[MAX_FILENAMES-1], "Directory too large");
   }
 
   // Get file listing, filter for the extensions we care about and add them to the list.
-  // Gave up trying to understand whether glob() supports multiple wildcards and how, so here we are
+  // Turns out that uclibc doesn't support GLOB_BRACES by defalut, so we can't have a fancy
+  // "{*.msa,*.st,*.mfm,*.MSA,*.ST,*.MFM}" pattern here. So we have to do the filtering by hand.
+  // Maybe if we change the compilation options of uclibc we can switch to the above.
   current_glob=glob_info.gl_pathv;
-  for (;i<number_of_files;i++) {
+  for (;i<number_of_files_to_copy;i++) {
     if (total_listing_files>MAX_FILENAMES) {
       break;
     }
     if (strlen(*current_glob)>4) {
       char extension[4];
+      char *p_three_chars = (*current_glob + strlen(*current_glob)-3);
+      char *p_extension = extension;
       int k;
       for (k=0;k<4;k++) {
-        // TODO: c'mon bro,that's crap
-        extension[k]=tolower(*(*current_glob+strlen(*current_glob)-3+k));
+        *p_extension++=tolower(*p_three_chars++);
       }
 
       if (strcmp(extension,"msa")==0 || strcmp(extension,".st")==0 || strcmp(extension,"mfm")==0) {
@@ -293,16 +309,14 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
     file_selector_cursor_position=0;
     update_file_listing();
   } else {
-    // TODO: for now we have to press ESC to exit the form :/
     disk_image_filename=selected_item;
     disk_image_changed=1;
   }
-  return 0;
+  return 1;
 }
 
 static int buttonclick_fsel_cancel(ZuiWidget* obj) {
-  // TODO: for now we have to press ESC to exit the form :/
-  return 0;
+  return 1;
 }
 
 static int buttonclick_eject_floppy_a(ZuiWidget* obj) {
@@ -320,11 +334,9 @@ ZuiWidget * menu_file_selector(void) {
   zui_add_child(form,zui_button(10,FSEL_YCHARS-1,"Ok",buttonclick_fsel_ok));
   zui_add_child(form,zui_button(20,FSEL_YCHARS-1,"Cancel",buttonclick_fsel_cancel));
   int i;
+  populate_file_array();
   for (i=0;i<FSEL_YCHARS-2;i++) {
     zui_add_child(form,zui_text(0,i+1,file_selector_list[i]));
-    // TODO: if filename is bigger than displayed text, either right trim it
-    //       or "eat" characters in the middle
-    strncpy(file_selector_list[i],directory_filenames[file_selector_current_top+i],FSEL_XCHARS-1);
   }
   return form;
 }
