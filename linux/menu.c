@@ -96,7 +96,7 @@ static int buttonclick_cold_reset(ZuiWidget* obj) {
 char file_selector_list[FSEL_YCHARS-2][FSEL_XCHARS];
 int file_selector_current_top=0;
 int file_selector_selected_file=0;
-#define MAX_FILENAME_CHARS 32
+#define MAX_FILENAME_CHARS 127
 #define MAX_FILENAMES 128
 char directory_filenames[MAX_FILENAMES][MAX_FILENAME_CHARS];
 int total_listing_files=0;
@@ -109,7 +109,7 @@ void update_file_listing() {
   static const uint8_t file_selector_palette[]={
     6,40,38,
     176-20,224-20,230-20,
-    176-50,224-50,230-50,
+    (176-20)/2,(224-20)/2,(230-20)/2,
     0,184,128
   };
   osd_set_palette_all(file_selector_palette);
@@ -125,15 +125,15 @@ void update_file_listing() {
     char *s=directory_filenames[file_selector_current_top + i];
     int len = strlen(s);
     char *d=file_selector_list[i];
-    if (len > FSEL_XCHARS)
+    if (len > FSEL_XCHARS-1)
     {
         // Filename is too big to fit in one line, so copy as much as we can
         // from the left hand side, put a "[...]" at the middle, and then
         // copy as much as we can from the right hand side. That way
         // we can both see the start of the filename and the extension,
         // as well as stuff like "Disk X of Y"
-        char *s2 = s + len-(FSEL_XCHARS / 2-2);
-        for (; j < FSEL_XCHARS / 2-2; j++)
+        char *s2 = s + len-((FSEL_XCHARS-1) / 2-2);
+        for (; j < (FSEL_XCHARS-1) / 2-2; j++)
         {
             *d++ = *s++;
         }
@@ -144,7 +144,7 @@ void update_file_listing() {
         *d++ = ']';
         j += 5;
 
-        for (; j < FSEL_XCHARS / 1; j++)
+        for (; j < (FSEL_XCHARS-1) / 1; j++)
         {
             *d++ = *s2++;
         }
