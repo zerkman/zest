@@ -152,11 +152,11 @@ void update_file_listing() {
   // TODO: Setting the palette here because I have no idea how to set the
   //       palette when form initially displays (and there's a hardcoded palette there)
 
-  static const uint8_t file_selector_palette[] = {
-    6, 40, 38,
-    176-20, 224-20, 230-20,
-    (176-20)/2, (224-20)/2, (230-20)/2,
-    0, 184, 128
+  static const uint8_t file_selector_palette[]={
+    6,40,38,
+    176-20,224-20,230-20,
+    (176-20)/2,(224-20)/2,(230-20)/2,
+    0,184,128
   };
   osd_set_palette_all(file_selector_palette);
 
@@ -168,7 +168,7 @@ void update_file_listing() {
     if (i==file_selector_cursor_position) {
       c=3;
     }
-    osd_text(file_selector_list[i],0,i+1,c,0);
+    osd_text(file_selector_list[i],0,i + 1,c,0);
   }
 }
 
@@ -186,11 +186,11 @@ static int buttonclick_fsel_up_arrow(ZuiWidget* obj) {
 }
 
 static int buttonclick_fsel_down_arrow(ZuiWidget* obj) {
-  if (file_selector_cursor_position<FSEL_YCHARS-3&&(file_selector_cursor_position+file_selector_current_top-1)<total_listing_files) {
+  if (file_selector_cursor_position < FSEL_YCHARS-3 && (file_selector_cursor_position + file_selector_current_top-1) < total_listing_files) {
     file_selector_cursor_position++;
     update_file_listing();
   } else {
-    if (file_selector_current_top+FSEL_YCHARS-2<total_listing_files)
+    if (file_selector_current_top + FSEL_YCHARS-2 < total_listing_files)
     {
       file_selector_current_top++;
       update_file_listing();
@@ -210,13 +210,12 @@ void read_directory(char *path) {
 
   // Get directories and place them at the beginning on the list
   // (so they won't get mixed up with the actual files)
-  glob(path_wildcard,GLOB_MARK|GLOB_ONLYDIR,NULL,&glob_info);
+  glob(path_wildcard,GLOB_MARK | GLOB_ONLYDIR,NULL,&glob_info);
   int number_of_files=glob_info.gl_pathc;
   total_listing_files=number_of_files;
   current_glob=glob_info.gl_pathv;
 
-  for (i = 0; i < number_of_files; i++)
-  {
+  for (i=0; i < number_of_files; i++) {
     directory_filenames[i] = *current_glob + bytes_to_skip;
     current_glob++;
   }
@@ -234,13 +233,13 @@ void read_directory(char *path) {
   // "{*.msa,*.st,*.mfm,*.MSA,*.ST,*.MFM}" pattern here. So we have to do the filtering by hand.
   // Maybe if we change the compilation options of uclibc we can switch to the above.
   current_glob=glob_info.gl_pathv;
-  for (;i<number_of_files;i++) {
+  for (; i < number_of_files; i++) {
     if (strlen(*current_glob)>4) {
       char extension[4];
       char *p_three_chars = (*current_glob + strlen(*current_glob)-3);
       char *p_extension = extension;
       int k;
-      for (k=0;k<4;k++) {
+      for (k=0; k < 4; k++) {
         *p_extension++=tolower(*p_three_chars++);
       }
       if (strcmp(extension,"msa")==0 || strcmp(extension,".st")==0 || strcmp(extension,"mfm")==0) {
@@ -261,7 +260,7 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
     // We're at /
     return 0;
   }
-  char *p=current_directory+i-2;
+  char *p=current_directory + i-2;
   while (*p != '/') {
     p--;
   }
@@ -280,7 +279,7 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
   //       (like disk image A, disk image B, TOS image, etc) there should
   //       probably be no logic here (unless we have a global variable that
   //       mentions the caller).
-  char *selected_item=directory_filenames[file_selector_current_top+file_selector_cursor_position];
+  char *selected_item=directory_filenames[file_selector_current_top + file_selector_cursor_position];
   if (selected_item[strlen(selected_item)-1]=='/') {
     // Enter directory
     // Append the selected item (AKA directory name) to the global path (it already has a trailing slash and all)
@@ -302,7 +301,7 @@ static int buttonclick_fsel_cancel(ZuiWidget* obj) {
 }
 
 static int buttonclick_eject_floppy_a(ZuiWidget* obj) {
-  // TODO: call save image+change disk_image_filename to empty (I guess?)
+  // TODO: call save image + change disk_image_filename to empty (I guess?)
   return 0;
 }
 
@@ -317,8 +316,8 @@ ZuiWidget * menu_file_selector(void) {
   zui_add_child(form,zui_button(20,FSEL_YCHARS-1,"Cancel",buttonclick_fsel_cancel));
   int i;
   populate_file_array();
-  for (i=0;i<FSEL_YCHARS-2;i++) {
-    zui_add_child(form,zui_text(0,i+1,file_selector_list[i]));
+  for (i=0; i < FSEL_YCHARS-2; i++) {
+    zui_add_child(form,zui_text(0,i + 1,file_selector_list[i]));
   }
   return form;
 }
@@ -354,20 +353,20 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,4,"Eject A",buttonclick_eject_floppy_a));
   zui_add_child(form,zui_button_ext(1,5,"TOS image",buttonclick_select_tos,1,3,2,1));
   zui_add_child(form,zui_button(1,6,"RAM size",buttonclick_change_ram_size));
-  lolwidget=zui_button(1,7," LOL  ",buttonclick_lol);
+  lolwidget = zui_button(1,7," LOL  ",buttonclick_lol);
   zui_add_child(form,lolwidget);
   zui_add_child(form,zui_button(1,9,"Exit menu",buttonclick_exit_menu));
   return form;
 }
 
 void menu(void) {
-  static const uint8_t osd_palette[]={
+  static const uint8_t osd_palette[] = {
     0x40,0x40,0x40,
     0xc0,0xc0,0xc0,
     0xff,0xff,0x80,
     0x40,0x40,0xff
   };
-  static const uint8_t colour1[8*3]={
+  static const uint8_t colour1[8*3] = {
     253,0,0,
     253,0,0,
     253,151,0,
@@ -382,7 +381,7 @@ void menu(void) {
   osd_init();
   osd_set_palette_all(osd_palette);
   int i;
-  for (i=0;i<8;++i) {
+  for (i=0; i<8; ++i) {
     memcpy(osd_palette0[i],osd_palette,12);
     memcpy(&osd_palette0[i][3],&colour1[i*3],3);
   }
@@ -390,7 +389,7 @@ void menu(void) {
 
   ZuiWidget *form=menu_form();
 
-  int retval=zui_run(XPOS,YPOS,form);
+  int retval = zui_run(XPOS,YPOS,form);
 
   zui_free(form);
 
