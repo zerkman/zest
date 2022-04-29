@@ -52,8 +52,6 @@ extern char current_directory[PATH_MAX]; // From setup.c
 // - Generally, keyboard control for all functions would be neat (dir up, ok, cancel)
 // - Typing letters should search for a filename (maybe partial matches, i.e. not from the start of the filename?)
 // - Some UI code to be enhanced:
-//   - For now, we have to press ESC to exit the form. So to enter the file selector we have to press "Disk A", then press ESC :)
-//   - Same for pressing Ok/Cancel
 //   - File listing isn't initially coloured, and the palette isn't the desired one. That's because widgets don't accept colour as parameter, nor palette can be set up
 
 #define XCHARS 60
@@ -81,7 +79,7 @@ static int buttonclick_lol(ZuiWidget* obj) {
 static int buttonclick_warm_reset(ZuiWidget* obj)
 {
   parmreg[0]=cfg&0xfffffffe;    // Bit 0 clear=reset
-  parmreg[0]=cfg|3;  // |3="end reset"
+  parmreg[0]=cfg|3;             // |3="end reset"
   return 0;
 }
 
@@ -96,12 +94,11 @@ static int buttonclick_cold_reset(ZuiWidget* obj) {
 char file_selector_list[FSEL_YCHARS-2][FSEL_XCHARS];
 int file_selector_current_top=0;
 int file_selector_selected_file=0;
-#define MAX_FILENAME_CHARS 127
-#define MAX_FILENAMES 128
-char directory_filenames[MAX_FILENAMES][MAX_FILENAME_CHARS];
 int total_listing_files=0;
 int file_selector_cursor_position;
-
+glob_t glob_info;
+char *directory_filenames[1024];  // Holds pointers to filtered directory items inside the glob struct
+char blank_line[FSEL_XCHARS-1] = "                                       "; // TODO: this should idealy be resized depending on FSEL_XCHARS
 
 void populate_file_array()
 {
@@ -109,6 +106,9 @@ void populate_file_array()
   for (i=0;i<FSEL_YCHARS-2;i++) {
     int j=0;
     char *s=directory_filenames[file_selector_current_top+i];
+    if (!s) {
+      break;
+    }
     int len=strlen(s);
     char *d=file_selector_list[i];
     if (len>FSEL_XCHARS-1) {
@@ -122,11 +122,7 @@ void populate_file_array()
         *d++=*s++;
       }
 
-      *d++='[';
-      *d++='.';
-      *d++='.';
-      *d++='.';
-      *d++=']';
+      *d++='['; *d++='.'; *d++='.'; *d++='.'; *d++=']';
       j += 5;
 
       for (;j<(FSEL_XCHARS-1)/1;j++) {
@@ -145,6 +141,11 @@ void populate_file_array()
       *d=0;
     }
   }
+  // If we have too few filenames to fill the list, just fill the rest with blanks
+  for (; i < FSEL_YCHARS-2; i++) {
+    char *d=file_selector_list[i];
+    strcpy(d, blank_line);
+  }
 }
 
 void update_file_listing() {
@@ -158,8 +159,6 @@ void update_file_listing() {
     0, 184, 128
   };
   osd_set_palette_all(file_selector_palette);
-
-  // TODO: maybe we could keep a second array with all the processed filenames?
 
   populate_file_array();
   int i;
@@ -206,31 +205,23 @@ void read_directory(char *path) {
   strcat(path_wildcard,"*");
 
   int bytes_to_skip=strlen(path); // AKA the number of bytes to trim from the left hand side of the returned filenames, those contain the path
-
   char **current_glob;
-  glob_t glob_info;
   int i;
 
   // Get directories and place them at the beginning on the list
   // (so they won't get mixed up with the actual files)
   glob(path_wildcard,GLOB_MARK|GLOB_ONLYDIR,NULL,&glob_info);
   int number_of_files=glob_info.gl_pathc;
-
-  if (number_of_files>MAX_FILENAMES) {
-    // TODO: decide what to do with large directories
-    number_of_files=MAX_FILENAMES;
-  }
-
+  total_listing_files=number_of_files;
   current_glob=glob_info.gl_pathv;
-  total_listing_files=0;
 
-  for (i=0;i<number_of_files;i++) {
-    // TODO: decide on how to deal with larger filenames
-    strncpy(directory_filenames[total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
+  for (i = 0; i < number_of_files; i++)
+  {
+    directory_filenames[i] = *current_glob + bytes_to_skip;
     current_glob++;
   }
 
-  glob(path_wildcard,GLOB_MARK,NULL,&glob_info); // GLOB_MARK=Append '/' to directories so we can filter them out too
+  glob(path_wildcard,GLOB_MARK|GLOB_APPEND,NULL,&glob_info); // GLOB_MARK=Append '/' to directories so we can filter them out too
 
   number_of_files += glob_info.gl_pathc;
   if (!number_of_files) {
@@ -238,25 +229,12 @@ void read_directory(char *path) {
     //return;
   }
 
-  int number_of_files_to_copy = number_of_files;
-  if (number_of_files>MAX_FILENAMES) {
-    // TODO: decide what to do with large directories
-    //       but for now we clamp the amount of files shown to MAX_FILENAMES
-    //       and display a message about it at the end of the list
-    number_of_files=MAX_FILENAMES;
-    number_of_files_to_copy=MAX_FILENAMES-1;
-    strcpy(directory_filenames[MAX_FILENAMES-1], "Directory too large");
-  }
-
   // Get file listing, filter for the extensions we care about and add them to the list.
   // Turns out that uclibc doesn't support GLOB_BRACES by defalut, so we can't have a fancy
   // "{*.msa,*.st,*.mfm,*.MSA,*.ST,*.MFM}" pattern here. So we have to do the filtering by hand.
   // Maybe if we change the compilation options of uclibc we can switch to the above.
   current_glob=glob_info.gl_pathv;
-  for (;i<number_of_files_to_copy;i++) {
-    if (total_listing_files>MAX_FILENAMES) {
-      break;
-    }
+  for (;i<number_of_files;i++) {
     if (strlen(*current_glob)>4) {
       char extension[4];
       char *p_three_chars = (*current_glob + strlen(*current_glob)-3);
@@ -265,15 +243,16 @@ void read_directory(char *path) {
       for (k=0;k<4;k++) {
         *p_extension++=tolower(*p_three_chars++);
       }
-
       if (strcmp(extension,"msa")==0 || strcmp(extension,".st")==0 || strcmp(extension,"mfm")==0) {
         // TODO: decide on how to deal with larger filenames
-        strncpy(directory_filenames[total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
+        //strncpy(directory_displayed_filenames[total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
+        directory_filenames[total_listing_files] = *current_glob + bytes_to_skip;
+        total_listing_files++;
       }
     }
     current_glob++;
   }
-  globfree(&glob_info);
+  directory_filenames[total_listing_files] = 0; // Terminate list
 }
 
 static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
@@ -289,6 +268,7 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
   p[1]=0;   // Just null terminate after the /, this will remove the rightmost directory name
 
   // Update the form
+  globfree(&glob_info);
   read_directory(current_directory);
   file_selector_cursor_position=0;
   update_file_listing();
@@ -305,17 +285,19 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
     // Enter directory
     // Append the selected item (AKA directory name) to the global path (it already has a trailing slash and all)
     strcat(current_directory,selected_item);
+    globfree(&glob_info);
     read_directory(current_directory);
     file_selector_cursor_position=0;
     update_file_listing();
-  } else {
-    disk_image_filename=selected_item;
-    disk_image_changed=1;
+    return 0;   // Don't exit the dialog yet
   }
+  disk_image_filename=selected_item;
+  disk_image_changed=1;
   return 1;
 }
 
 static int buttonclick_fsel_cancel(ZuiWidget* obj) {
+  globfree(&glob_info);
   return 1;
 }
 
@@ -327,7 +309,7 @@ static int buttonclick_eject_floppy_a(ZuiWidget* obj) {
 ZuiWidget * menu_file_selector(void) {
   ZuiWidget * form=zui_panel(0,0,FSEL_XCHARS,FSEL_YCHARS);
   zui_add_child(form,zui_text(0,0,"\x5         Pick a file, any file        \x7"));
-  zui_add_child(form,zui_text(FSEL_XCHARS-1,FSEL_YCHARS-1,"\x6"));                                // "window resize" glyph on ST font
+  zui_add_child(form,zui_text(FSEL_XCHARS-1,FSEL_YCHARS-1,"\x6"));                               // "window resize" glyph on ST font
   zui_add_child(form,zui_button(FSEL_XCHARS-1,1,"\x1",buttonclick_fsel_up_arrow));               // up arrow glyph on ST font
   zui_add_child(form,zui_button(FSEL_XCHARS-1,FSEL_YCHARS-2,"\x2",buttonclick_fsel_down_arrow)); // down arrow on ST font
   zui_add_child(form,zui_button(1,FSEL_YCHARS-1,"Dir up",buttonclick_fsel_dir_up));
@@ -366,10 +348,6 @@ static int buttonclick_exit_menu(ZuiWidget* obj) {
 ZuiWidget * menu_form(void) {
   ZuiWidget * form=zui_panel(0,0,XCHARS,YCHARS);
   zui_add_child(form,zui_text(0,0,"~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3  ~=[,,_,,]:3"));
-  //zui_add_child(form,zui_text(4,5,"This is a larger text"));
-  //zui_add_child(form,zui_button(10,16,"  Ok  ",buttonclick_ok));
-  //zui_add_child(form,zui_button(18,16,"Ignore",buttonclick_ignore));
-  //zui_add_child(form,zui_button(26,16,"Cancel",buttonclick_cancel));
   zui_add_child(form,zui_button(1,1,"Warm reset",buttonclick_warm_reset));
   zui_add_child(form,zui_button(1,2,"Cold reset",buttonclick_cold_reset));
   zui_add_child(form,zui_button(1,3,"Disk A",buttonclick_insert_floppy_a));
