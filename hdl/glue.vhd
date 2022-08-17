@@ -131,9 +131,9 @@ architecture behavioral of glue is
 	constant mode       : mode_array_t := (mode_60,mode_50,mode_hi);
 
 	-- resolution
-	signal mono		: std_logic := '0';
+	signal mono		: std_logic;
 	-- 0 -> 60 Hz, 1 -> 50 Hz
-	signal hz50		: std_logic := '1';
+	signal hz50		: std_logic;
 
 	signal hcnt		: unsigned(8 downto 0);
 	signal nexthcnt	: unsigned(8 downto 0);
@@ -142,10 +142,11 @@ architecture behavioral of glue is
 	signal hblank	: std_logic;
 	signal vde		: std_logic;
 	signal hde		: std_logic;
-	signal line_pal	: std_logic := '0';
+	signal line_pal	: std_logic;
 
 	signal umode_id	: unsigned(1 downto 0);
 	signal mode_id	: integer range 0 to 2;
+	signal vmode_id	: integer range 0 to 2;
 
 	signal irq_vbl	: std_logic;
 	signal irq_hbl	: std_logic;
@@ -181,7 +182,7 @@ oDTACKn <= sdtackn;
 oRDY <= sdma;
 DMAn <= sdma;
 
-umode_id <= mono & (line_pal and not mono);
+umode_id <= mono & (hz50 and not mono);
 mode_id <= to_integer(umode_id);
 
 -- 8-bit bus (ACIA) signal management
@@ -504,8 +505,11 @@ end process;
 
 -- video sync
 process(hcnt,mono,line_pal)
+	variable id : unsigned(1 downto 0);
 begin
-	if hcnt+1 = mode(mode_id).cycles_per_line then
+	id := mono & (line_pal and not mono);
+
+	if hcnt+1 = mode(to_integer(id)).cycles_per_line then
 		nexthcnt <= (others => '0');
 	else
 		nexthcnt <= hcnt+1;
@@ -525,6 +529,8 @@ begin
 			vde <= '0';
 			hcnt <= (others => '1');
 			vcnt <= (others => '0');
+			line_pal <= '0';
+			vmode_id <= 0;
 		elsif enPhi1 = '1' then
 			-- update H signals
 			hcnt <= nexthcnt;
@@ -554,8 +560,9 @@ begin
 			-- update V signals
 			nextvcnt := vcnt;
 			if nexthcnt = 0 then
-				if vcnt+1 = mode(mode_id).n_lines then
+				if vcnt+1 = mode(vmode_id).n_lines then
 					nextvcnt := (others => '0');
+					vmode_id <= mode_id;
 				else
 					nextvcnt := vcnt + 1;
 				end if;
@@ -578,6 +585,7 @@ begin
 					svsync <= '1';
 				elsif nextvcnt = mode(mode_id).vvsync_on then
 					svsync <= '0';
+					vde <= '0';
 				end if;
 			end if;
 		end if;
