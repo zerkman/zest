@@ -165,8 +165,8 @@ architecture structure of atarist_mb is
 	signal glue_DTACKn	: std_logic;
 	signal glue_oD		: std_logic_vector(1 downto 0);
 	signal cs6850		: std_logic;
-	signal vsyncn		: std_logic;
-	signal hsyncn		: std_logic;
+	signal st_vsync		: std_logic;
+	signal st_hsync		: std_logic;
 	signal blankn		: std_logic;
 	signal sde			: std_logic;
 
@@ -271,6 +271,9 @@ architecture structure of atarist_mb is
 	signal sndsum			: signed(17 downto 0);
 
 	signal hsync1			: std_logic;
+	signal vsync1			: std_logic;
+	signal hscnt			: integer range 0 to 31;
+	signal vscnt			: integer range 0 to 3;
 
 begin
 	reset <= not resetn;
@@ -280,7 +283,6 @@ begin
 	ikbd_clkfen <= en2fck;
 	fdd_clken <= en8rck;
 	de <= blankn;
-	hsync <= hsync1;
 
 	a <= ram_A;
 	ds <= ram_DS;
@@ -291,21 +293,41 @@ begin
 	ram_oD <= od;
 	id <= ram_iD;
 
-	-- synchronize output vsync with hsync for better hdmi compatibility
+	-- Generate VSYNC/HSYNC output signals suitable for HDMI.
+	-- HSYNC and VSYNC are synchronous (VSYNC is triggered at the same time as HSYNC).
+	-- According to logic analysis, HSYNC may be issued 1 us (8 cycles) after
+	-- st_hsync goes from 1 to 0, then maintained during 3 us (24 cycles).
+	-- Should work in all modes, from PAL/NTSC, even with open borders, to hires
 	gensync : process(clk)
 	begin
 		if rising_edge(clk) then
 			if resetn = '0' then
 				hsync1 <= '0';
+				vsync1 <= '0';
+				hsync <= '0';
 				vsync <= '0';
-			else
-				hsync1 <= not hsyncn;
-				if hsyncn = '0' and hsync1 = '0' then
-					if vsyncn = '0' then
-						vsync <= '1';
-					else
-						vsync <= '0';
+				hscnt <= 0;
+				vscnt <= 0;
+			elsif en8rck = '1' then
+				hsync1 <= st_hsync;
+				if st_hsync = '0' and hsync1 = '1' then
+					hscnt <= 30;
+				elsif hscnt > 0 then
+					hscnt <= hscnt - 1;
+					if hscnt = 24 then
+						hsync <= '1';
+						vsync1 <= st_vsync;
+						if st_vsync = '1' and vsync1 = '0' then
+							vsync <= '1';
+							vscnt <= 3;
+						elsif vscnt > 0 then
+							vscnt <= vscnt - 1;
+						else
+							vsync <= '0';
+						end if;
 					end if;
+				else
+					hsync <= '0';
 				end if;
 			end if;
 		end if;
@@ -442,8 +464,8 @@ begin
 		IACKn => mfp_iackn,
 		SNDCSn => psg_csn,
 
-		VSYNC => vsyncn,
-		HSYNC => hsyncn,
+		VSYNC => st_vsync,
+		HSYNC => st_hsync,
 		BLANKn => blankn,
 		DE => sde
 	);
@@ -480,7 +502,7 @@ begin
 		CMPCSn => shifter_CSn,
 
 		DE => sde,
-		vsync => vsyncn,
+		vsync => st_vsync,
 
 		mem_top	=> mem_top,
 		ram_A => ram_A,
