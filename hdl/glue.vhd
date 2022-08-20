@@ -20,49 +20,53 @@ use ieee.numeric_std.all;
 
 entity glue is
 	port (
-		clk		: in std_logic;
-		enPhi1	: in std_logic;
-		enPhi2	: in std_logic;
-		resetn	: in std_logic;
+		clk         : in std_logic;
+		enPhi1      : in std_logic;
+		enPhi2      : in std_logic;
+		resetn      : in std_logic;
 
-		iA		: in std_logic_vector(23 downto 1);
-		iASn	: in std_logic;
-		iRWn	: in std_logic;
-		iD		: in std_logic_vector(1 downto 0);
-		iUDSn	: in std_logic;
-		iLDSn	: in std_logic;
-		iDTACKn	: in std_logic;
-		oRWn	: out std_logic;
-		oDTACKn	: out std_logic;
-		BEER	: out std_logic;
-		oD		: out std_logic_vector(1 downto 0);
+		iA          : in std_logic_vector(23 downto 1);
+		iASn        : in std_logic;
+		iRWn        : in std_logic;
+		iD          : in std_logic_vector(1 downto 0);
+		iUDSn       : in std_logic;
+		iLDSn       : in std_logic;
+		iDTACKn     : in std_logic;
+		oRWn        : out std_logic;
+		oDTACKn     : out std_logic;
+		BEER        : out std_logic;
+		oD          : out std_logic_vector(1 downto 0);
 
-		FC		: in std_logic_vector(2 downto 0);
-		IPLn	: out std_logic_vector(2 downto 1);
-		VPAn	: out std_logic;
-		VMAn	: in std_logic;
-		cs6850	: out std_logic;
-		FCSn	: out std_logic;
-		iRDY	: in std_logic;
-		oRDY	: out std_logic;
-		RAMn	: out std_logic;
-		DMAn	: out std_logic;
-		DEVn	: out std_logic;
+		FC          : in std_logic_vector(2 downto 0);
+		IPLn        : out std_logic_vector(2 downto 1);
+		VPAn        : out std_logic;
+		VMAn        : in std_logic;
+		cs6850      : out std_logic;
+		FCSn        : out std_logic;
+		iRDY        : in std_logic;
+		oRDY        : out std_logic;
+		RAMn        : out std_logic;
+		DMAn        : out std_logic;
+		DEVn        : out std_logic;
 
-		BRn		: out std_logic;
-		BGn		: in std_logic;
-		BGACKn	: out std_logic;
+		BRn         : out std_logic;
+		BGn         : in std_logic;
+		BGACKn      : out std_logic;
 
-		MFPCSn	: out std_logic;
-		MFPINTn	: in std_logic;
-		IACKn	: out std_logic;
+		MFPCSn      : out std_logic;
+		MFPINTn     : in std_logic;
+		IACKn       : out std_logic;
 
-		SNDCSn	: out std_logic;
+		SNDCSn      : out std_logic;
 
-		VSYNC	: out std_logic;
-		HSYNC	: out std_logic;
-		BLANKn	: out std_logic;
-		DE		: out std_logic
+		VSYNC       : out std_logic;
+		HSYNC       : out std_logic;
+		BLANKn      : out std_logic;
+		DE          : out std_logic;
+
+		vid_vsync   : out std_logic;
+		vid_hsync   : out std_logic;
+		vid_de	    : out std_logic
 	);
 end glue;
 
@@ -83,21 +87,33 @@ architecture behavioral of glue is
 		hde_on			: integer;
 		hde_off			: integer;
 		hblank_on		: integer;
+		vid_hsync_on	: integer;
+		vid_hsync_off	: integer;
+		vid_hde_on		: integer;
+		vid_hde_off		: integer;
+		vid_vde_on		: integer;
+		vid_vde_off		: integer;
 	end record;
 	constant mode_50	: videomode_t := (
 		cycles_per_line		=> 512,
 		n_lines				=> 313,
-		vblank_off			=> 32,		-- measured = 25
-		vde_on				=> 63,
-		vde_off				=> 263,
-		vblank_on			=> 308,		-- measured = 308. we keep 32->308 to only display 276 scanlines
+		vblank_off			=> 25,
+		vde_on				=> 63,		-- 47 on old GLUE revisions
+		vde_off				=> 263,		-- 247 on old GLUE revisions
+		vblank_on			=> 308,
 		vvsync_on			=> 310,
 		hsync_on			=> 472,
 		hvsync_on			=> 64,
 		hblank_off			=> 40,
 		hde_on				=> 68,
 		hde_off				=> 388,
-		hblank_on			=> 460);
+		hblank_on			=> 460,
+		vid_hsync_on		=> 480,
+		vid_hsync_off		=> 504,
+		vid_hde_on			=> 40,
+		vid_hde_off			=> 460,
+		vid_vde_on			=> 34,
+		vid_vde_off			=> 310);
 	constant mode_60	: videomode_t := (
 		cycles_per_line		=> 508,
 		n_lines				=> 263,
@@ -111,7 +127,13 @@ architecture behavioral of glue is
 		hblank_off			=> 36,
 		hde_on				=> 64,
 		hde_off				=> 384,
-		hblank_on			=> 460);
+		hblank_on			=> 460,
+		vid_hsync_on		=> 476,
+		vid_hsync_off		=> 500,
+		vid_hde_on			=> 36,
+		vid_hde_off			=> 460,
+		vid_vde_on			=> 16,
+		vid_vde_off			=> 258);
 	constant mode_hi	: videomode_t := (
 		cycles_per_line		=> 224,
 		n_lines				=> 501,
@@ -125,7 +147,13 @@ architecture behavioral of glue is
 		hblank_off			=> 28,
 		hde_on				=> 16,
 		hde_off				=> 176,
-		hblank_on			=> 196);
+		hblank_on			=> 196,
+		vid_hsync_on		=> 204,
+		vid_hsync_off		=> 4,
+		vid_hde_on			=> 28,
+		vid_hde_off			=> 196,
+		vid_vde_on			=> 36,
+		vid_vde_off			=> 436);
 
 	type mode_array_t is array (0 to 2) of videomode_t;
 	constant mode       : mode_array_t := (mode_60,mode_50,mode_hi);
@@ -143,6 +171,11 @@ architecture behavioral of glue is
 	signal vde		: std_logic;
 	signal hde		: std_logic;
 	signal line_pal	: std_logic;
+
+	signal vsync1    : std_logic;
+	signal vscnt     : integer range 0 to 3;
+	signal vid_vde   : std_logic;
+	signal vid_hde   : std_logic;
 
 	signal umode_id	: unsigned(1 downto 0);
 	signal mode_id	: integer range 0 to 2;
@@ -175,6 +208,7 @@ begin
 
 BLANKn <= vblank nor hblank;
 DE <= vde and hde;
+vid_de <= vid_vde and vid_hde;
 VSYNC <= svsync;
 HSYNC <= shsync;
 VPAn <= vpa_irqn and vpa_acia;
@@ -531,6 +565,12 @@ begin
 			vcnt <= (others => '0');
 			line_pal <= '0';
 			vmode_id <= 0;
+			vid_vsync <= '0';
+			vid_hsync <= '0';
+			vid_vde <= '0';
+			vid_hde <= '0';
+			vsync1 <= '0';
+			vscnt <= 0;
 		elsif enPhi1 = '1' then
 			-- update H signals
 			hcnt <= nexthcnt;
@@ -587,6 +627,35 @@ begin
 					svsync <= '0';
 					vde <= '0';
 				end if;
+			end if;
+
+			if nexthcnt = mode(vmode_id).vid_hsync_on then
+				vid_hsync <= '1';
+				vsync1 <= svsync;
+				if svsync = '1' and vsync1 = '0' then
+					vid_vsync <= '1';
+					vscnt <= 3;
+				elsif vscnt > 0 then
+					vscnt <= vscnt - 1;
+					if vscnt - 1 = 0 then
+						vid_vsync <= '0';
+					end if;
+				end if;
+				if nextvcnt = mode(vmode_id).vid_vde_on then
+					vid_vde <= '1';
+				end if;
+				if nextvcnt = mode(vmode_id).vid_vde_off then
+					vid_vde <= '0';
+				end if;
+			end if;
+			if nexthcnt = mode(vmode_id).vid_hsync_off then
+				vid_hsync <= '0';
+			end if;
+			if nexthcnt = mode(vmode_id).vid_hde_on then
+				vid_hde <= '1';
+			end if;
+			if nexthcnt = mode(vmode_id).vid_hde_off then
+				vid_hde <= '0';
 			end if;
 		end if;
 	end if;
