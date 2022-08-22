@@ -198,6 +198,7 @@ architecture structure of atarist_mb is
 	signal shifter_A	: std_logic_vector(5 downto 1);
 	signal shifter_iD	: std_logic_vector(15 downto 0);
 	signal shifter_oD	: std_logic_vector(15 downto 0);
+	signal shifter_rgb	: std_logic_vector(8 downto 0);
 	signal load			: std_logic;
 
 	signal mfp_oD		: std_logic_vector(7 downto 0);
@@ -490,11 +491,12 @@ begin
 		oD => shifter_oD,
 		DE => sde,
 		LOAD => load,
-		rgb => rgb
+		rgb => shifter_rgb
 	);
 	shifter_iD <= (bus_D or (15 downto 0 => shifter_CSn)) and ram_oD;
 	shifter_RWn <= bus_RWn;
 	shifter_A <= bus_A(5 downto 1);
+	rgb <= shifter_rgb when blankn = '1' else (others => '0');
 
 	mfp:entity mc68901 port map (
 		clk => clk,
