@@ -135,6 +135,7 @@ architecture structure of zest_top is
 	signal rgb 			: std_logic_vector(8 downto 0);
 	signal monomon		: std_logic;
 	signal mem_top		: std_logic_vector(3 downto 0);
+	signal wakestate	: std_logic_vector(1 downto 0);
 	signal ikbd_clkren	: std_logic;
 	signal ikbd_clkfen	: std_logic;
 	signal ikbd_clk		: std_logic;
@@ -219,6 +220,7 @@ begin
 	ram_offvald <= out_reg0(1);
 	monomon <= out_reg0(2);
 	mem_top <= out_reg0(7 downto 4);
+	wakestate <= out_reg0(9 downto 8);
 
 	ram_offset <= out_reg1;
 	in_reg0(12 downto 0) <= (others => '0');
@@ -290,6 +292,7 @@ begin
 		clken_error => clken_err,
 		monomon => monomon,
 		mem_top	=> mem_top,
+		wakestate => wakestate,
 		pclken => pclken,
 		de => de,
 		hsync => hsync,
