@@ -52,6 +52,12 @@ void * thread_ikbd(void * arg);
 #define CFG_2_5M 0x0090
 #define CFG_4M   0x00f0
 
+#define CFG_WS1  0x0000
+#define CFG_WS2  0x0300
+#define CFG_WS3  0x0100
+#define CFG_WS4  0x0200
+
+
 volatile uint32_t *parmreg;
 int parmfd;
 
@@ -94,6 +100,8 @@ int usage(const char *progname) {
     " --mono      Set video to monochrome mode\n"
     " --mem=VAL   Choose memory size\n"
     "             Possible values: 256K, 512K, 1M (default), 2M, 2.5M, 4M\n"
+    " --ws=X      Set wakestate\n"
+    "             Possible values: 1, 2, 3, 4 (default)\n"
     , progname);
   return 1;
 }
@@ -109,16 +117,18 @@ void do_reset()
     fclose(bootfd);
     memcpy(mem_array,mem_array+0xfc0000,8);
     int i;
+    parmreg[0] = cfg;
     for (i=4; i<8; ++i) {
         parmreg[i] = 0xffffffff;
     }
 
-    parmreg[0] = cfg;
+    parmreg[0] = cfg|3; // end reset
 }
 
 int main(int argc, char **argv) {
   int cfg_video = CFG_COLR;
   int cfg_mem = CFG_1M;
+  int cfg_ws = CFG_WS4;
   int has_sil;
   memset(file_selector_state, 0, sizeof(FILE_SELECTOR_STATE)*FILE_SELECTOR_VIEWS);
   getcwd(file_selector_state[0].current_directory, sizeof(file_selector_state[0].current_directory));
@@ -152,7 +162,17 @@ int main(int argc, char **argv) {
         } else if (!strcmp(arg,"4M")) {
           cfg_mem = CFG_4M;
         } else return usage(argv[0]);
-      } else return usage(argv[0]);
+      } else if (!strncmp(arg,"--ws=",5)) {
+        switch(arg[5]) {
+          case '1': cfg_ws = CFG_WS1; break;
+          case '2': cfg_ws = CFG_WS2; break;
+          case '3': cfg_ws = CFG_WS3; break;
+          case '4': cfg_ws = CFG_WS4; break;
+          default:
+            return usage(argv[0]);
+        }
+      }
+       else return usage(argv[0]);
     }
     else if (binfilename == NULL) {
       binfilename = arg;
@@ -166,7 +186,7 @@ int main(int argc, char **argv) {
     usage(argv[0]);
     return 1;
   }
-  cfg = cfg_mem | cfg_video | 3;    /* end reset */
+  cfg = cfg_ws | cfg_mem | cfg_video;
 
   pl_reset();
 

@@ -54,6 +54,8 @@ entity mmu is
 
 		-- max memory configuration
 		mem_top	: in std_logic_vector(3 downto 0);
+		-- wakestate
+		wakest	: in std_logic_vector(1 downto 0);
 
 		-- interface to RAM. Using own signals instead of hardware specific ones
 		ram_A	: out std_logic_vector(23 downto 1);
@@ -126,7 +128,7 @@ begin
 		delay_bus <= '0';
 		if resetn = '0' then
 			sdtackn <= '1';
-			cnt <= "10";
+			cnt <= unsigned(wakest);
 			CMPCSn <= '1';
 			oD <= x"ff";
 			mode_bus_ff <= '0';

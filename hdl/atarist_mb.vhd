@@ -29,6 +29,7 @@ entity atarist_mb is
 		clken_error : out std_logic;
 		monomon : in std_logic;
 		mem_top	: in std_logic_vector(3 downto 0);
+		wakestate : in std_logic_vector(1 downto 0);
 
 		pclken : out std_logic;
 		de : out std_logic;
@@ -464,6 +465,7 @@ begin
 		vsync => st_vsync,
 
 		mem_top	=> mem_top,
+		wakest => wakestate,
 		ram_A => ram_A,
 		ram_W => ram_W,
 		ram_R => ram_R,
