@@ -165,8 +165,8 @@ architecture structure of atarist_mb is
 	signal glue_DTACKn	: std_logic;
 	signal glue_oD		: std_logic_vector(1 downto 0);
 	signal cs6850		: std_logic;
-	signal vsyncn		: std_logic;
-	signal hsyncn		: std_logic;
+	signal st_vsync		: std_logic;
+	signal st_hsync		: std_logic;
 	signal blankn		: std_logic;
 	signal sde			: std_logic;
 
@@ -198,6 +198,7 @@ architecture structure of atarist_mb is
 	signal shifter_A	: std_logic_vector(5 downto 1);
 	signal shifter_iD	: std_logic_vector(15 downto 0);
 	signal shifter_oD	: std_logic_vector(15 downto 0);
+	signal shifter_rgb	: std_logic_vector(8 downto 0);
 	signal load			: std_logic;
 
 	signal mfp_oD		: std_logic_vector(7 downto 0);
@@ -270,8 +271,6 @@ architecture structure of atarist_mb is
 	signal psg_c			: std_logic_vector(15 downto 0);
 	signal sndsum			: signed(17 downto 0);
 
-	signal hsync1			: std_logic;
-
 begin
 	reset <= not resetn;
 	clken_error <= clken_err;
@@ -279,8 +278,6 @@ begin
 	ikbd_clkren <= en2rck;
 	ikbd_clkfen <= en2fck;
 	fdd_clken <= en8rck;
-	de <= blankn;
-	hsync <= hsync1;
 
 	a <= ram_A;
 	ds <= ram_DS;
@@ -290,26 +287,6 @@ begin
 	ram_W_DONE <= w_done;
 	ram_oD <= od;
 	id <= ram_iD;
-
-	-- synchronize output vsync with hsync for better hdmi compatibility
-	gensync : process(clk)
-	begin
-		if rising_edge(clk) then
-			if resetn = '0' then
-				hsync1 <= '0';
-				vsync <= '0';
-			else
-				hsync1 <= not hsyncn;
-				if hsyncn = '0' and hsync1 = '0' then
-					if vsyncn = '0' then
-						vsync <= '1';
-					else
-						vsync <= '0';
-					end if;
-				end if;
-			end if;
-		end if;
-	end process;
 
 	stbus:entity atarist_bus port map(
 		cpu_d => cpu_oD,
@@ -442,10 +419,14 @@ begin
 		IACKn => mfp_iackn,
 		SNDCSn => psg_csn,
 
-		VSYNC => vsyncn,
-		HSYNC => hsyncn,
+		VSYNC => st_vsync,
+		HSYNC => st_hsync,
 		BLANKn => blankn,
-		DE => sde
+		DE => sde,
+
+		vid_vsync => vsync,
+		vid_hsync => hsync,
+		vid_de => de
 	);
 	glue_iA <= bus_A;
 	glue_iASn <= bus_ASn;
@@ -480,7 +461,7 @@ begin
 		CMPCSn => shifter_CSn,
 
 		DE => sde,
-		vsync => vsyncn,
+		vsync => st_vsync,
 
 		mem_top	=> mem_top,
 		ram_A => ram_A,
@@ -510,11 +491,12 @@ begin
 		oD => shifter_oD,
 		DE => sde,
 		LOAD => load,
-		rgb => rgb
+		rgb => shifter_rgb
 	);
 	shifter_iD <= (bus_D or (15 downto 0 => shifter_CSn)) and ram_oD;
 	shifter_RWn <= bus_RWn;
 	shifter_A <= bus_A(5 downto 1);
+	rgb <= shifter_rgb when blankn = '1' else (others => '0');
 
 	mfp:entity mc68901 port map (
 		clk => clk,
