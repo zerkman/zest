@@ -300,7 +300,11 @@ int zui_run(int xpos, int ypos, ZuiWidget *obj) {
   display(obj);
   osd_show(1);
   int shift = 0;
-  focused = NULL;
+  focused = next_focusable(obj,NULL);
+  if (focused) {
+    focused->has_focus=1;
+    display(focused);
+  }
 
   while (quit == 0 && thr_end == 0) {
     int evtype, evcode, evvalue;
