@@ -284,7 +284,7 @@ int select_focused(int sel) {
 int input_event(int timeout, int *type, int *code, int *value);
 
 extern volatile int thr_end;
-
+extern uint8_t osd_palette[3][12];
 
 int zui_run(int xpos, int ypos, ZuiWidget *obj) {
   int quit = 0;
@@ -339,6 +339,15 @@ int zui_run(int xpos, int ypos, ZuiWidget *obj) {
             break;
           case KEY_RIGHTSHIFT:
             shift |= 2;
+            break;
+          case KEY_1:
+            osd_set_palette_all(osd_palette[0]);
+            break;
+          case KEY_2:
+            osd_set_palette_all(osd_palette[1]);
+            break;
+          case KEY_3:
+            osd_set_palette_all(osd_palette[2]);
             break;
           default:
             break;
