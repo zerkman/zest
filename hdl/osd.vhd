@@ -97,6 +97,7 @@ entity on_screen_display is
 		s_axi_rready    : in std_logic;
 
 		-- video signals
+		pclk   : in std_logic;
 		idata  : in std_logic_vector(15 downto 0);
 		ivsync : in std_logic;
 		ihsync : in std_logic;
@@ -439,7 +440,7 @@ begin
 		)
 		port map (
 			clk1 => s_axi_aclk,
-			clk2 => s_axi_aclk,
+			clk2 => pclk,
 			addr1 => ram_addr1,
 			addr2 => ram_addr2,
 			din1 => ram_din1,
@@ -458,77 +459,75 @@ begin
 	-- Reads and writes are not treated simultaneously, so the same RAM channel
 	-- can be used for read and write, leaving the other channel to the
 	-- OSD system.
-	process(s_axi_aclk)
+	process(s_axi_aclk,s_axi_aresetn)
 	begin
-		if rising_edge(s_axi_aclk) then
-			if s_axi_aresetn = '0' then
-				axi_st <= IDLE;
-				s_axi_awready <= '0';
-				s_axi_wready <= '0';
-				s_axi_bvalid <= '0';
-				s_axi_bresp <= "00";
-				ram_addr1 <= (others => '0');
-				ram_din1 <= (others => '0');
-				ram_wsb1 <= (others => '0');
-				ram_we1 <= '0';
-				s_axi_arready <= '0';
-				s_axi_rvalid <= '0';
-				s_axi_rdata <= (others => '0');
-				s_axi_rresp <= "00";
-				ram_re1 <= '0';
-			else
-				case axi_st is
-					when IDLE =>
-						if s_axi_awvalid = '1' and s_axi_wvalid = '1' then
-							s_axi_awready <= '1';
-							s_axi_wready <= '1';
-							s_axi_bvalid <= '1';
-							s_axi_bresp <= "00";
-							ram_addr1 <= s_axi_awaddr(ADDR_MSB downto ADDR_LSB);
-							ram_din1 <= s_axi_wdata;
-							ram_we1 <= '1';
-							ram_wsb1 <= s_axi_wstrb;
-							axi_st <= WR;
-						elsif s_axi_arvalid = '1' then
-							s_axi_arready <= '1';
-							ram_addr1 <= s_axi_araddr(ADDR_MSB downto ADDR_LSB);
-							ram_re1 <= '1';
-							axi_st <= RD;
-						end if;
+		if s_axi_aresetn = '0' then
+			axi_st <= IDLE;
+			s_axi_awready <= '0';
+			s_axi_wready <= '0';
+			s_axi_bvalid <= '0';
+			s_axi_bresp <= "00";
+			ram_addr1 <= (others => '0');
+			ram_din1 <= (others => '0');
+			ram_wsb1 <= (others => '0');
+			ram_we1 <= '0';
+			s_axi_arready <= '0';
+			s_axi_rvalid <= '0';
+			s_axi_rdata <= (others => '0');
+			s_axi_rresp <= "00";
+			ram_re1 <= '0';
+		elsif rising_edge(s_axi_aclk) then
+			case axi_st is
+				when IDLE =>
+					if s_axi_awvalid = '1' and s_axi_wvalid = '1' then
+						s_axi_awready <= '1';
+						s_axi_wready <= '1';
+						s_axi_bvalid <= '1';
+						s_axi_bresp <= "00";
+						ram_addr1 <= s_axi_awaddr(ADDR_MSB downto ADDR_LSB);
+						ram_din1 <= s_axi_wdata;
+						ram_we1 <= '1';
+						ram_wsb1 <= s_axi_wstrb;
+						axi_st <= WR;
+					elsif s_axi_arvalid = '1' then
+						s_axi_arready <= '1';
+						ram_addr1 <= s_axi_araddr(ADDR_MSB downto ADDR_LSB);
+						ram_re1 <= '1';
+						axi_st <= RD;
+					end if;
 
-					when WR =>
-						s_axi_awready <= '0';
-						s_axi_wready <= '0';
-						ram_addr1 <= (others => '0');
-						ram_din1 <= (others => '0');
-						ram_we1 <= '0';
-						ram_wsb1 <= (others => '0');
-						if s_axi_bready = '1' then
-							s_axi_bvalid <= '0';
-							axi_st <= IDLE;
-						end if;
+				when WR =>
+					s_axi_awready <= '0';
+					s_axi_wready <= '0';
+					ram_addr1 <= (others => '0');
+					ram_din1 <= (others => '0');
+					ram_we1 <= '0';
+					ram_wsb1 <= (others => '0');
+					if s_axi_bready = '1' then
+						s_axi_bvalid <= '0';
+						axi_st <= IDLE;
+					end if;
 
-					when RD =>
-						s_axi_arready <= '0';
-						ram_re1 <= '0';
-						ram_addr1 <= (others => '0');
-						axi_st <= RD1;
+				when RD =>
+					s_axi_arready <= '0';
+					ram_re1 <= '0';
+					ram_addr1 <= (others => '0');
+					axi_st <= RD1;
 
-					when RD1 =>
-						s_axi_rvalid <= '1';
-						s_axi_rdata <= ram_dout1;
-						s_axi_rresp <= "00";    -- OKAY response
-						axi_st <= RD2;
+				when RD1 =>
+					s_axi_rvalid <= '1';
+					s_axi_rdata <= ram_dout1;
+					s_axi_rresp <= "00";    -- OKAY response
+					axi_st <= RD2;
 
-					when RD2 =>
-						if s_axi_rready = '1' then
-							s_axi_rvalid <= '0';
-							s_axi_rdata <= (others => '0');
-							axi_st <= IDLE;
-						end if;
+				when RD2 =>
+					if s_axi_rready = '1' then
+						s_axi_rvalid <= '0';
+						s_axi_rdata <= (others => '0');
+						axi_st <= IDLE;
+					end if;
 
-				end case;
-			end if;
+			end case;
 		end if;
 	end process;
 
@@ -539,145 +538,142 @@ begin
 	cpx <= unsigned(xcnt(cpx'length-1 downto 0));
 	cpy <= unsigned(ycnt(cpy'length-1 downto 0));
 
-	process(s_axi_aclk) is
+	process(pclk,s_axi_aresetn) is
 		variable chrd    : std_logic_vector(15 downto 0);   -- character data
 		variable chr     : integer range 0 to 255;          -- current character
 		variable vs_busy : std_logic;
 
 	begin
-		if rising_edge(s_axi_aclk) then
-			if s_axi_aresetn = '0' then
-				odata <= x"0000";
-				s_vsync <= '0';
-				s_hsync <= '0';
-				s_de <= '0';
-				xcnt <= to_signed(-xdstart,xcnt'length);
+		if s_axi_aresetn = '0' then
+			odata <= x"0000";
+			s_vsync <= '0';
+			s_hsync <= '0';
+			s_de <= '0';
+			xcnt <= to_signed(-xdstart,xcnt'length);
+			ycnt <= to_signed(-ydstart,ycnt'length);
+			pxok <= '0';
+			intr <= '0';
+			chrp <= chr_offset*2;
+			transp <= '0';
+			pix <= x"00";
+			cfg <= 0;
+			cbg <= 0;
+			ram_re2 <= '0';
+			ram_addr2 <= (others => '0');
+			varcnt <= 0;
+			show <= '0';
+			xdstart <= 0;
+			ydstart <= 0;
+			xchars <= 0;
+			ychars <= 0;
+			clrp <= clr_offset;
+			clrcnt <= 0;
+		elsif rising_edge(pclk) then
+			s_vsync <= ivsync;
+			s_hsync <= ihsync;
+			s_de <= ide;
+			odata <= idata;
+			vs_busy := '0';
+
+			if ivsync = '1' and s_vsync = '0' then
 				ycnt <= to_signed(-ydstart,ycnt'length);
-				pxok <= '0';
-				intr <= '0';
 				chrp <= chr_offset*2;
-				transp <= '0';
-				pix <= x"00";
-				cfg <= 0;
-				cbg <= 0;
-				ram_re2 <= '0';
-				ram_addr2 <= (others => '0');
-				varcnt <= 0;
-				show <= '0';
-				xdstart <= 0;
-				ydstart <= 0;
-				xchars <= 0;
-				ychars <= 0;
 				clrp <= clr_offset;
-				clrcnt <= 0;
-			else
-				s_vsync <= ivsync;
-				s_hsync <= ihsync;
-				s_de <= ide;
-				odata <= idata;
-				vs_busy := '0';
+				clrcnt <= 1;
 
-				if ivsync = '1' and s_vsync = '0' then
-					ycnt <= to_signed(-ydstart,ycnt'length);
-					chrp <= chr_offset*2;
-					clrp <= clr_offset;
-					clrcnt <= 1;
-
-					-- load variable values from the RAM
-					vs_busy := '1';
+				-- load variable values from the RAM
+				vs_busy := '1';
+				ram_addr2 <= (others => '0');
+				ram_re2 <= '1';
+				varcnt <= 1;
+			elsif varcnt > 0 then
+				vs_busy := '1';
+				ram_addr2 <= std_logic_vector(unsigned(ram_addr2)+1);
+				varcnt <= varcnt + 1;
+				if varcnt = 2 then
+					show <= ram_dout2(0);
+				elsif varcnt = 3 then
+					xchars <= to_integer(unsigned(ram_dout2(6 downto 0)));
+					ychars <= to_integer(unsigned(ram_dout2(22 downto 16)));
 					ram_addr2 <= (others => '0');
+					ram_re2 <= '0';
+				elsif varcnt = 4 then
+					xdstart <= to_integer(unsigned(ram_dout2(11 downto 0)));
+					ydstart <= to_integer(unsigned(ram_dout2(27 downto 16)));
+					varcnt <= 0;
+				end if;
+			end if;
+
+			if ihsync = '1' and s_hsync = '0' then
+				xcnt <= to_signed(-xdstart,xcnt'length);
+				if pxok = '1' then
+					-- end of row with pixels
+					ycnt <= ycnt + 1;
+					intr <= '0';
+					if ycnt+1 = ychars*8*2 then
+						intr <= '1';
+					end if;
+					if ycnt >= 0 and ycnt < ychars*8*2 then
+						if ycnt(3 downto 0) /= "1111" then
+							chrp <= chrp - xchars;
+						end if;
+						if ycnt(0) = '1' then
+							clrcnt <= 1;
+						end if;
+					end if;
+				end if;
+				pxok <= '0';
+			elsif clrcnt > 0 and vs_busy = '0' then
+				clrcnt <= clrcnt + 1;
+				if clrcnt = 1 then
 					ram_re2 <= '1';
-					varcnt <= 1;
-				elsif varcnt > 0 then
-					vs_busy := '1';
-					ram_addr2 <= std_logic_vector(unsigned(ram_addr2)+1);
-					varcnt <= varcnt + 1;
-					if varcnt = 2 then
-						show <= ram_dout2(0);
-					elsif varcnt = 3 then
-						xchars <= to_integer(unsigned(ram_dout2(6 downto 0)));
-						ychars <= to_integer(unsigned(ram_dout2(22 downto 16)));
-						ram_addr2 <= (others => '0');
-						ram_re2 <= '0';
-					elsif varcnt = 4 then
-						xdstart <= to_integer(unsigned(ram_dout2(11 downto 0)));
-						ydstart <= to_integer(unsigned(ram_dout2(27 downto 16)));
-						varcnt <= 0;
-					end if;
+					ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
+					clrp <= clrp + 1;
+				elsif clrcnt = 2 then
+					ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
+					clrp <= clrp + 1;
+				elsif clrcnt = 3 then
+					ram_addr2 <= (others => '0');
+					ram_re2 <= '0';
+					colr(0) <= ram_dout2(15 downto 0);
+					colr(1) <= ram_dout2(31 downto 16);
+				elsif clrcnt = 4 then
+					colr(2) <= ram_dout2(15 downto 0);
+					colr(3) <= ram_dout2(31 downto 16);
+					clrcnt <= 0;
 				end if;
-
-				if ihsync = '1' and s_hsync = '0' then
-					xcnt <= to_signed(-xdstart,xcnt'length);
-					if pxok = '1' then
-						-- end of row with pixels
-						ycnt <= ycnt + 1;
-						intr <= '0';
-						if ycnt+1 = ychars*8*2 then
-							intr <= '1';
-						end if;
-						if ycnt >= 0 and ycnt < ychars*8*2 then
-							if ycnt(3 downto 0) /= "1111" then
-								chrp <= chrp - xchars;
-							end if;
-							if ycnt(0) = '1' then
-								clrcnt <= 1;
-							end if;
-						end if;
-					end if;
-					pxok <= '0';
-				elsif clrcnt > 0 and vs_busy = '0' then
-					clrcnt <= clrcnt + 1;
-					if clrcnt = 1 then
-						ram_re2 <= '1';
-						ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
-						clrp <= clrp + 1;
-					elsif clrcnt = 2 then
-						ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
-						clrp <= clrp + 1;
-					elsif clrcnt = 3 then
-						ram_addr2 <= (others => '0');
-						ram_re2 <= '0';
-						colr(0) <= ram_dout2(15 downto 0);
-						colr(1) <= ram_dout2(31 downto 16);
-					elsif clrcnt = 4 then
-						colr(2) <= ram_dout2(15 downto 0);
-						colr(3) <= ram_dout2(31 downto 16);
-						clrcnt <= 0;
-					end if;
-				elsif ide = '1' and show = '1' then
-					pxok <= '1';
-					xcnt <= xcnt + 1;
-					if xcnt >= -3 and xcnt < xchars*8 and ycnt >= 0 and ycnt < ychars*8*2 then
-						if xcnt < xchars*8-3 then
-							if xcnt(2 downto 0) = "101" then
-								ram_re2 <= '1';
-								ram_addr2 <= std_logic_vector(to_unsigned(chrp/2,ram_addr2'length));
-							elsif xcnt(2 downto 0) = "110" then
-								ram_re2 <= '0';
-							elsif xcnt(2 downto 0) = "111" then
-								chrd := ram_dout2((chrp mod 2)*16+15 downto (chrp mod 2)*16);
-								chr := to_integer(unsigned(chrd(7 downto 0)));
-								cfg <= to_integer(unsigned(chrd(9 downto 8)));
-								cbg <= to_integer(unsigned(chrd(11 downto 10)));
-								if chr = 0 then
-									transp <= '1';
-								else
-									pix <= font(chr*8+to_integer(cpy)/2);
-									transp <= '0';
-								end if;
-								chrp <= chrp + 1;
-							end if;
-						end if;
-						if xcnt >= 0 and transp = '0' then
-							if pix(7-to_integer(cpx)) = '1' then
-								odata <= colr(cfg);
+			elsif ide = '1' and show = '1' then
+				pxok <= '1';
+				xcnt <= xcnt + 1;
+				if xcnt >= -3 and xcnt < xchars*8 and ycnt >= 0 and ycnt < ychars*8*2 then
+					if xcnt < xchars*8-3 then
+						if xcnt(2 downto 0) = "101" then
+							ram_re2 <= '1';
+							ram_addr2 <= std_logic_vector(to_unsigned(chrp/2,ram_addr2'length));
+						elsif xcnt(2 downto 0) = "110" then
+							ram_re2 <= '0';
+						elsif xcnt(2 downto 0) = "111" then
+							chrd := ram_dout2((chrp mod 2)*16+15 downto (chrp mod 2)*16);
+							chr := to_integer(unsigned(chrd(7 downto 0)));
+							cfg <= to_integer(unsigned(chrd(9 downto 8)));
+							cbg <= to_integer(unsigned(chrd(11 downto 10)));
+							if chr = 0 then
+								transp <= '1';
 							else
-								odata <= colr(cbg);
+								pix <= font(chr*8+to_integer(cpy)/2);
+								transp <= '0';
 							end if;
+							chrp <= chrp + 1;
+						end if;
+					end if;
+					if xcnt >= 0 and transp = '0' then
+						if pix(7-to_integer(cpx)) = '1' then
+							odata <= colr(cfg);
+						else
+							odata <= colr(cbg);
 						end if;
 					end if;
 				end if;
-
 			end if;
 		end if;
 	end process;
