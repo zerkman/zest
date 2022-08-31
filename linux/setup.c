@@ -27,6 +27,8 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <pthread.h>
+#include <limits.h> // for PATH_MAX
+#include "menu.h"
 
 #include "sil9022a.h"
 
@@ -114,15 +116,17 @@ void do_reset()
     parmreg[0] = cfg;
 }
 
-#include <limits.h>
-char current_directory[PATH_MAX];
 int main(int argc, char **argv) {
   int cfg_video = CFG_COLR;
   int cfg_mem = CFG_1M;
   int has_sil;
-  getcwd(current_directory, sizeof(current_directory));
-  strcat(current_directory, "/");
-printf("%s\n", current_directory);
+  memset(file_selector_state, 0, sizeof(FILE_SELECTOR_STATE)*FILE_SELECTOR_VIEWS);
+  getcwd(file_selector_state[0].current_directory, sizeof(file_selector_state[0].current_directory));
+  strcat(file_selector_state[0].current_directory, "/");
+  for (int i=1;i<FILE_SELECTOR_VIEWS;i++)
+  {
+    strcpy(file_selector_state[i].current_directory,file_selector_state[0].current_directory);
+  }
 
   const char *floppyfilename = NULL;
   int a = 0;

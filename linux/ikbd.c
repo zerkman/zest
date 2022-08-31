@@ -245,6 +245,7 @@ void * thread_ikbd(void * arg) {
               led_status(joyemufd,joy_emu);
             }
             break;
+          case KEY_PAGEUP:
           case KEY_SCROLLLOCK:
             menu();
             break;
