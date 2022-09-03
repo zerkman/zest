@@ -285,6 +285,9 @@ int input_event(int timeout, int *type, int *code, int *value);
 
 extern volatile int thr_end;
 extern uint8_t osd_palette[3][12];
+extern volatile uint32_t *parmreg;
+extern int _xchars;
+extern int _ychars;
 
 int zui_run(int xpos, int ypos, ZuiWidget *obj) {
   int quit = 0;
@@ -313,6 +316,24 @@ int zui_run(int xpos, int ypos, ZuiWidget *obj) {
       // an error occurred
       break;
     }
+
+    // TODO: - This is copypasta from thread_floppy()
+    //       - This will have "interesting" effects if _xchars is less than 10
+    //       - Make this into a special OSD menu in some corner of the screen so it will be always visible?
+    uint32_t in = parmreg[0];
+    unsigned int r = in>>31;
+    unsigned int w = in>>30&1;
+    unsigned int track = in>>13&0xff;
+    char floppy_osd_info[10];
+    if (r) {
+      sprintf(floppy_osd_info,"R T%02d S%d", track>> 1, track&1);
+      osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
+    }
+    if (w) {
+      sprintf(floppy_osd_info,"W T%02d S%d", track>> 1, track&1);
+      osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
+    }
+
     if (retval > 0 && evtype == EV_KEY) {
       // keyboard event, key is pressed
       if (evvalue == 1) {
