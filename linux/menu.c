@@ -306,12 +306,7 @@ static int buttonclick_fsel_ok_reset(ZuiWidget* obj) {
   int ret = buttonclick_fsel_ok(obj);
   if (ret)
   {
-    if (view != FILE_SELECTOR_TOS_IMAGE)
-    {
-      buttonclick_warm_reset(obj);
-    } else {
-      buttonclick_cold_reset(obj);
-    }
+    buttonclick_cold_reset(obj);
   }
   return ret;
 }
@@ -337,7 +332,6 @@ static int buttonclick_eject_floppy_b(ZuiWidget* obj) {
 }
 
 ZuiWidget * menu_file_selector() {
-  printf("view inside selector=%d\n",view);
   ZuiWidget * form = zui_panel(0, 0, FSEL_XCHARS, FSEL_YCHARS);
   if (view == FILE_SELECTOR_DISK_A) {
     zui_add_child(form, zui_text(0, 0, "\x5    Select a disk image for drive A   \x7"));
@@ -469,7 +463,7 @@ void menu(void) {
 
   zui_free(form);
 
-  if (retval>=2 || retval<=4) {
+  if (retval>=2 && retval<=4) {
     // The 'Insert floppy A/floppy B/TOS' button has been pushed
     ZuiWidget *form=menu_file_selector();
     osd_set_palette_all(osd_palette[1]);
