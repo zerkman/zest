@@ -25,7 +25,9 @@
 //#include <ctype.h>  // Needed for tolower(), but produces a ton of compiler errors, so let us declare it implicitly for now...
 extern int tolower (int __c);
 #include <unistd.h>
+#include <limits.h> // for PATH_MAX
 
+#include "menu.h"
 #include "zui.h"
 #include "osd.h"
 
@@ -34,7 +36,6 @@ extern int cfg;                     // From setup.c
 extern void do_reset();             // From setup.c
 extern int disk_image_changed;      // From floppy.c
 extern void *disk_image_filename;   // From floppy.c
-extern char current_directory[PATH_MAX]; // From setup.c
 
 // Stuff that would be nice for the UI lib:
 // - Changable text widgets (example: file selector text widgets that display the files)
@@ -44,17 +45,16 @@ extern char current_directory[PATH_MAX]; // From setup.c
 // - Coloured text widgets (example: currently selected file)
 // - Text effects (bold, underline)
 // - When selecting an item (using Return) the button's called action to instruct zui_run() to close the panel and exit after executing
-// - Set palette per form/dialogue?
 // - Some callbacks when form exits with Ok or Cancel? (example: change floppy image when Ok pressed in file selector, or load different TOS image)
 
 // General file selector TODOs:
 // - Implement moving with arrows
 // - Generally, keyboard control for all functions would be neat (dir up, ok, cancel)
 // - Typing letters should search for a filename (maybe partial matches, i.e. not from the start of the filename?)
-// - Some UI code to be enhanced:
-//   - For now, we have to press ESC to exit the form. So to enter the file selector we have to press "Disk A", then press ESC :)
-//   - Same for pressing Ok/Cancel
-//   - File listing isn't initially coloured, and the palette isn't the desired one. That's because widgets don't accept colour as parameter, nor palette can be set up
+// - Vertical (scroll) bar between ^ and v buttons
+// - <@tInBot> and a history of last images comes to mind (does not need to be saved neccessarily)
+
+// - At the moment zeST does not have support for two floppies.
 
 #define XCHARS 60
 #define YCHARS 20   // XCHARS*YCHARS must not exceed 1248
@@ -81,7 +81,7 @@ static int buttonclick_lol(ZuiWidget* obj) {
 static int buttonclick_warm_reset(ZuiWidget* obj)
 {
   parmreg[0]=cfg&0xfffffffe;    // Bit 0 clear=reset
-  parmreg[0]=cfg|3;  // |3="end reset"
+  parmreg[0]=cfg|3;             // |3="end reset"
   return 0;
 }
 
@@ -92,90 +92,84 @@ static int buttonclick_cold_reset(ZuiWidget* obj) {
   return 0;
 }
 
+FILE_SELECTOR_STATE file_selector_state[FILE_SELECTOR_VIEWS];
+FILE_SELECTOR_STATE *current_view;
+int view;
+
 // File selector state
 char file_selector_list[FSEL_YCHARS-2][FSEL_XCHARS];
-int file_selector_current_top=0;
-int file_selector_selected_file=0;
-#define MAX_FILENAME_CHARS 32
-#define MAX_FILENAMES 128
-char directory_filenames[MAX_FILENAMES][MAX_FILENAME_CHARS];
-int total_listing_files=0;
-int file_selector_cursor_position;
+glob_t glob_info;
+char *directory_filenames[1024];  // Holds pointers to filtered directory items inside the glob struct
+char blank_line[FSEL_XCHARS-1] = "                                       "; // TODO: this should idealy be resized depending on FSEL_XCHARS
+
+void populate_file_array()
+{
+  int i;
+  for (i=0;i<FSEL_YCHARS-2;i++) {
+    int j=0;
+    char *s=directory_filenames[current_view->file_selector_current_top+i];
+    if (!s) {
+      break;
+    }
+    int len=strlen(s);
+    char *d=file_selector_list[i];
+    if (len>FSEL_XCHARS-1) {
+      // Filename is too big to fit in one line, so copy as much as we can
+      // from the left hand side, put a "[...]" at the middle, and then
+      // copy as much as we can from the right hand side. That way
+      // we can both see the start of the filename and the extension,
+      // as well as stuff like "Disk X of Y"
+      char *s2=s+len-((FSEL_XCHARS-1)/2-2);
+      for (;j<(FSEL_XCHARS-1)/2-2;j++) {
+        *d++=*s++;
+      }
+
+      *d++='['; *d++='.'; *d++='.'; *d++='.'; *d++=']';
+      j += 5;
+
+      for (;j<(FSEL_XCHARS-1)/1;j++) {
+        *d++=*s2++;
+      }
+      *d=0;
+    } else {
+      // strcpy, but also fill the rest of the horizontal characters with spaces
+      while (*s) {
+        *d++=*s++;
+        j++;
+      }
+      for (;j<FSEL_XCHARS-1;j++) {
+        *d++=' ';
+      }
+      *d=0;
+    }
+  }
+  // If we have too few filenames to fill the list, just fill the rest with blanks
+  for (; i < FSEL_YCHARS-2; i++) {
+    char *d=file_selector_list[i];
+    strcpy(d, blank_line);
+  }
+}
 
 void update_file_listing() {
-  // TODO: Setting the palette here because I have no idea how to set the
-  //       palette when form initially displays (and there's a hardcoded palette there)
-
-  static const uint8_t file_selector_palette[]={
-    6,40,38,
-    176-20,224-20,230-20,
-    176-50,224-50,230-50,
-    0,184,128
-  };
-  osd_set_palette_all(file_selector_palette);
-
-  // TODO: maybe we could keep a second array with all the processed filenames?
-
+  populate_file_array();
   int i;
-  int first_colour=file_selector_current_top&1;    // This is done in order when the list scrolls, the odd/even lines will maintain their colour
-  for (i=0; i < FSEL_YCHARS-2; i++)
-  {
-    // strcpy, but also fill the rest of the horizontal characters with spaces
-    int j=0;
-    char *s=directory_filenames[file_selector_current_top + i];
-    int len = strlen(s);
-    char *d=file_selector_list[i];
-    if (len > FSEL_XCHARS)
-    {
-        // Filename is too big to fit in one line, so copy as much as we can
-        // from the left hand side, put a "[...]" at the middle, and then
-        // copy as much as we can from the right hand side. That way
-        // we can both see the start of the filename and the extension,
-        // as well as stuff like "Disk X of Y"
-        char *s2 = s + len-(FSEL_XCHARS / 2-2);
-        for (; j < FSEL_XCHARS / 2-2; j++)
-        {
-            *d++ = *s++;
-        }
-        *d++ = '[';
-        *d++ = '.';
-        *d++ = '.';
-        *d++ = '.';
-        *d++ = ']';
-        j += 5;
-
-        for (; j < FSEL_XCHARS / 1; j++)
-        {
-            *d++ = *s2++;
-        }
-        *d = 0;
-    }
-    else
-    {
-        while (*s) {
-            *d++ = *s++;
-            j++;
-        }
-        for (; j < FSEL_XCHARS-1; j++) {
-            *d++ = ' ';
-        }
-        *d = 0;
-    }
-    int c=((i + first_colour) & 1) + 1;
-    if (i==file_selector_cursor_position) {
+  int first_colour=current_view->file_selector_current_top&1;    // This is done in order when the list scrolls, the odd/even lines will maintain their colour
+  for (i=0;i<FSEL_YCHARS-2;i++) {
+    int c=((i+first_colour)&1)+1;
+    if (i==current_view->file_selector_cursor_position) {
       c=3;
     }
-    osd_text(file_selector_list[i],0,i + 1,c,0);
+    osd_text(file_selector_list[i],0,i+1,c,0);
   }
 }
 
 static int buttonclick_fsel_up_arrow(ZuiWidget* obj) {
-  if (file_selector_cursor_position) {
-    file_selector_cursor_position--;
+  if (current_view->file_selector_cursor_position) {
+    current_view->file_selector_cursor_position--;
     update_file_listing();
   } else {
-    if (file_selector_current_top) {
-      file_selector_current_top--;
+    if (current_view->file_selector_current_top) {
+      current_view->file_selector_current_top--;
       update_file_listing();
     }
   }
@@ -183,13 +177,13 @@ static int buttonclick_fsel_up_arrow(ZuiWidget* obj) {
 }
 
 static int buttonclick_fsel_down_arrow(ZuiWidget* obj) {
-  if (file_selector_cursor_position < FSEL_YCHARS-3 && (file_selector_cursor_position + file_selector_current_top-1) < total_listing_files) {
-    file_selector_cursor_position++;
+  if (current_view->file_selector_cursor_position<FSEL_YCHARS-3&&(current_view->file_selector_cursor_position+current_view->file_selector_current_top+1)<current_view->total_listing_files) {
+    current_view->file_selector_cursor_position++;
     update_file_listing();
   } else {
-    if (file_selector_current_top + FSEL_YCHARS-2 < total_listing_files)
+    if (current_view->file_selector_current_top+FSEL_YCHARS-2<current_view->total_listing_files)
     {
-      file_selector_current_top++;
+      current_view->file_selector_current_top++;
       update_file_listing();
     }
   }
@@ -202,31 +196,22 @@ void read_directory(char *path) {
   strcat(path_wildcard,"*");
 
   int bytes_to_skip=strlen(path); // AKA the number of bytes to trim from the left hand side of the returned filenames, those contain the path
-
   char **current_glob;
-  glob_t glob_info;
   int i;
 
   // Get directories and place them at the beginning on the list
   // (so they won't get mixed up with the actual files)
-  glob(path_wildcard,GLOB_MARK | GLOB_ONLYDIR,NULL,&glob_info);
+  glob(path_wildcard,GLOB_MARK|GLOB_ONLYDIR,NULL,&glob_info);
   int number_of_files=glob_info.gl_pathc;
-
-  if (number_of_files > MAX_FILENAMES) {
-    // TODO: decide what to do with large directories
-    number_of_files=MAX_FILENAMES;
-  }
-
+  current_view->total_listing_files=number_of_files;
   current_glob=glob_info.gl_pathv;
-  total_listing_files=0;
 
   for (i=0; i < number_of_files; i++) {
-    // TODO: decide on how to deal with larger filenames
-    strncpy(directory_filenames[total_listing_files++],*current_glob + bytes_to_skip,MAX_FILENAME_CHARS-1);
+    directory_filenames[i] = *current_glob + bytes_to_skip;
     current_glob++;
   }
 
-  glob(path_wildcard,GLOB_MARK,NULL,&glob_info); // GLOB_MARK=Append '/' to directories so we can filter them out too
+  glob(path_wildcard,GLOB_MARK|GLOB_APPEND,NULL,&glob_info); // GLOB_MARK=Append '/' to directories so we can filter them out too
 
   number_of_files += glob_info.gl_pathc;
   if (!number_of_files) {
@@ -234,117 +219,172 @@ void read_directory(char *path) {
     //return;
   }
 
-  if (number_of_files > MAX_FILENAMES) {
-    // TODO: decide what to do with large directories
-    //       but for now we clamp the amount of files shown to MAX_FILENAMES
-    number_of_files=MAX_FILENAMES;
-  }
-
   // Get file listing, filter for the extensions we care about and add them to the list.
-  // Gave up trying to understand whether glob() supports multiple wildcards and how, so here we are
+  // Turns out that uclibc doesn't support GLOB_BRACES by defalut, so we can't have a fancy
+  // "{*.msa,*.st,*.mfm,*.MSA,*.ST,*.MFM}" pattern here. So we have to do the filtering by hand.
+  // Maybe if we change the compilation options of uclibc we can switch to the above.
   current_glob=glob_info.gl_pathv;
-  for (; i < number_of_files; i++) {
-    if (total_listing_files > MAX_FILENAMES) {
-      break;
-    }
-    if (strlen(*current_glob) > 4) {
+  for (;i<number_of_files;i++) {
+    if (strlen(*current_glob)>4) {
       char extension[4];
+      char *p_three_chars = (*current_glob + strlen(*current_glob)-3);
+      char *p_extension = extension;
       int k;
-      for (k=0; k < 4; k++) {
-        // TODO: c'mon bro,that's crap
-        extension[k]=tolower(*(*current_glob + strlen(*current_glob)-3 + k));
+      for (k=0;k<4;k++) {
+        *p_extension++=tolower(*p_three_chars++);
       }
-
-      if (strcmp(extension,"msa")==0 || strcmp(extension,".st")==0 || strcmp(extension,"mfm")==0) {
-        // TODO: decide on how to deal with larger filenames
-        strncpy(directory_filenames[total_listing_files++],*current_glob + bytes_to_skip,MAX_FILENAME_CHARS-1);
+      // TODO: this is terrible!
+      if (view == FILE_SELECTOR_DISK_A || view == FILE_SELECTOR_DISK_B) {
+        if (strcmp(extension, "msa") == 0 || strcmp(extension, ".st") == 0 || strcmp(extension, "mfm") == 0) {
+          // TODO: decide on how to deal with larger filenames
+          //strncpy(directory_displayed_filenames[current_view->total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
+          directory_filenames[current_view->total_listing_files] = *current_glob + bytes_to_skip;
+          current_view->total_listing_files++;
+        }
+      } else if (view == FILE_SELECTOR_TOS_IMAGE) {
+        if (strcmp(extension, "img") == 0 || strcmp(extension, "rom") == 0) {
+          // TODO: decide on how to deal with larger filenames
+          //strncpy(directory_displayed_filenames[current_view->total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
+          directory_filenames[current_view->total_listing_files] = *current_glob + bytes_to_skip;
+          current_view->total_listing_files++;
+        }
       }
     }
     current_glob++;
   }
-  globfree(&glob_info);
+  directory_filenames[current_view->total_listing_files] = 0; // Terminate list
 }
 
 static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
-  int i=strlen(current_directory);
+  int i=strlen(current_view->current_directory);
   if (i==1) {
     // We're at /
     return 0;
   }
-  char *p=current_directory + i-2;
+  char *p=current_view->current_directory+i-2;
   while (*p != '/') {
     p--;
   }
   p[1]=0;   // Just null terminate after the /, this will remove the rightmost directory name
 
   // Update the form
-  read_directory(current_directory);
-  file_selector_cursor_position=0;
+  globfree(&glob_info);
+  read_directory(current_view->current_directory);
+  current_view->file_selector_cursor_position=0;
   update_file_listing();
   return 0;
 }
 
+extern const char *binfilename;
 static int buttonclick_fsel_ok(ZuiWidget* obj) {
   // TODO: Since the file selector will be called by multiple sites
   //       (like disk image A, disk image B, TOS image, etc) there should
   //       probably be no logic here (unless we have a global variable that
   //       mentions the caller).
-  char *selected_item=directory_filenames[file_selector_current_top + file_selector_cursor_position];
+  char *selected_item=directory_filenames[current_view->file_selector_current_top+current_view->file_selector_cursor_position];
   if (selected_item[strlen(selected_item)-1]=='/') {
     // Enter directory
     // Append the selected item (AKA directory name) to the global path (it already has a trailing slash and all)
-    strcat(current_directory,selected_item);
-    read_directory(current_directory);
-    file_selector_cursor_position=0;
+    strcat(current_view->current_directory,selected_item);
+    globfree(&glob_info);
+    read_directory(current_view->current_directory);
+    current_view->file_selector_cursor_position=0;
     update_file_listing();
-  } else {
-    // TODO: for now we have to press ESC to exit the form :/
-    disk_image_filename=selected_item;
-    disk_image_changed=1;
+    return 0;   // Don't exit the dialog yet
   }
-  return 0;
+  if (view == FILE_SELECTOR_DISK_A || view == FILE_SELECTOR_DISK_B)
+  {
+    disk_image_filename = selected_item;  // TODO: support for drive B?
+    disk_image_changed = 1;               // TODO: support for drive B?
+  } else if (view == FILE_SELECTOR_TOS_IMAGE) {
+    binfilename = selected_item;
+  }
+  return 1;
+}
+
+static int buttonclick_fsel_ok_reset(ZuiWidget* obj) {
+  int ret = buttonclick_fsel_ok(obj);
+  if (ret)
+  {
+    buttonclick_cold_reset(obj);
+  }
+  return ret;
 }
 
 static int buttonclick_fsel_cancel(ZuiWidget* obj) {
-  // TODO: for now we have to press ESC to exit the form :/
-  return 0;
+  globfree(&glob_info);
+  return 1;
+}
+
+static void eject_floppy(int drive)
+{
+  disk_image_filename = 0;
 }
 
 static int buttonclick_eject_floppy_a(ZuiWidget* obj) {
-  // TODO: call save image + change disk_image_filename to empty (I guess?)
+  eject_floppy(0);
   return 0;
 }
 
-ZuiWidget * menu_file_selector(void) {
-  ZuiWidget * form=zui_panel(0,0,FSEL_XCHARS,FSEL_YCHARS);
-  zui_add_child(form,zui_text(0,0,"\x5         Pick a file, any file        \x7"));
-  zui_add_child(form,zui_text(FSEL_XCHARS-1,FSEL_YCHARS-1,"\x6"));                                // "window resize" glyph on ST font
+static int buttonclick_eject_floppy_b(ZuiWidget* obj) {
+  eject_floppy(1);
+  return 0;
+}
+
+ZuiWidget * menu_file_selector() {
+  ZuiWidget * form = zui_panel(0, 0, FSEL_XCHARS, FSEL_YCHARS);
+  if (view == FILE_SELECTOR_DISK_A) {
+    zui_add_child(form, zui_text(0, 0, "\x5    Select a disk image for drive A   \x7"));
+  } else if (view == FILE_SELECTOR_DISK_B) {
+    zui_add_child(form, zui_text(0, 0, "\x5Select a disk image for drive B (dud) \x7"));
+  } else if (view == FILE_SELECTOR_TOS_IMAGE) {
+    zui_add_child(form, zui_text(0, 0, "\x5          Select a TOS image          \x7"));
+  }
+  zui_add_child(form,zui_text(FSEL_XCHARS-1,FSEL_YCHARS-1,"\x6"));                               // "window resize" glyph on ST font
   zui_add_child(form,zui_button(FSEL_XCHARS-1,1,"\x1",buttonclick_fsel_up_arrow));               // up arrow glyph on ST font
   zui_add_child(form,zui_button(FSEL_XCHARS-1,FSEL_YCHARS-2,"\x2",buttonclick_fsel_down_arrow)); // down arrow on ST font
   zui_add_child(form,zui_button(1,FSEL_YCHARS-1,"Dir up",buttonclick_fsel_dir_up));
-  zui_add_child(form,zui_button(10,FSEL_YCHARS-1,"Ok",buttonclick_fsel_ok));
-  zui_add_child(form,zui_button(20,FSEL_YCHARS-1,"Cancel",buttonclick_fsel_cancel));
+  if (view != FILE_SELECTOR_TOS_IMAGE) {
+    zui_add_child(form, zui_button(8, FSEL_YCHARS-1, "Ok", buttonclick_fsel_ok));
+  }
+  zui_add_child(form,zui_button(11,FSEL_YCHARS-1,"Ok (reset)",buttonclick_fsel_ok_reset));
+  zui_add_child(form,zui_button(22,FSEL_YCHARS-1,"Cancel",buttonclick_fsel_cancel));
   int i;
-  for (i=0; i < FSEL_YCHARS-2; i++) {
-    zui_add_child(form,zui_text(0,i + 1,file_selector_list[i]));
-    // TODO: if filename is bigger than displayed text, either right trim it
-    //       or "eat" characters in the middle
-    strncpy(file_selector_list[i],directory_filenames[file_selector_current_top + i],FSEL_XCHARS-1);
+  populate_file_array();
+  for (i=0;i<FSEL_YCHARS-2;i++) {
+    int first_colour=current_view->file_selector_current_top&1;    // This is done in order when the list scrolls, the odd/even lines will maintain their colour
+    int c=((i+first_colour)&1)+1;
+    if (i==current_view->file_selector_cursor_position) {
+      c=3;
+    }
+    zui_add_child(form,zui_text_ext(0,i+1,file_selector_list[i],c,0));
   }
   return form;
 }
 
-static int buttonclick_insert_floppy_a(ZuiWidget* obj) {
-  read_directory(current_directory);
-
+static void setup_item_selector(int selector_view) {
+  current_view=&file_selector_state[selector_view];
+  read_directory(current_view->current_directory);
   // Reset file selector variables
-  file_selector_cursor_position=0;
+  //current_view->file_selector_cursor_position=0;
+}
+
+static int buttonclick_insert_floppy_a(ZuiWidget* obj) {
+  view = FILE_SELECTOR_DISK_A;
+  setup_item_selector(FILE_SELECTOR_DISK_A);
   return 2;
 }
 
+static int buttonclick_insert_floppy_b(ZuiWidget* obj) {
+  view = FILE_SELECTOR_DISK_B;
+  setup_item_selector(FILE_SELECTOR_DISK_B);
+  return 3;
+}
+
 static int buttonclick_select_tos(ZuiWidget* obj) {
-  zui_set_text(lolwidget, " NYAN ");
-  return 0;
+  view = FILE_SELECTOR_TOS_IMAGE;
+  setup_item_selector(FILE_SELECTOR_TOS_IMAGE);
+  return 4;
 }
 
 static int buttonclick_change_ram_size(ZuiWidget* obj) {
@@ -359,30 +399,44 @@ static int buttonclick_exit_menu(ZuiWidget* obj) {
 ZuiWidget * menu_form(void) {
   ZuiWidget * form=zui_panel(0,0,XCHARS,YCHARS);
   zui_add_child(form,zui_text(0,0,"~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3  ~=[,,_,,]:3"));
-  //zui_add_child(form,zui_text(4,5,"This is a larger text"));
-  //zui_add_child(form,zui_button(10,16,"  Ok  ",buttonclick_ok));
-  //zui_add_child(form,zui_button(18,16,"Ignore",buttonclick_ignore));
-  //zui_add_child(form,zui_button(26,16,"Cancel",buttonclick_cancel));
   zui_add_child(form,zui_button(1,1,"Warm reset",buttonclick_warm_reset));
   zui_add_child(form,zui_button(1,2,"Cold reset",buttonclick_cold_reset));
   zui_add_child(form,zui_button(1,3,"Disk A",buttonclick_insert_floppy_a));
-  zui_add_child(form,zui_button(1,4,"Eject A",buttonclick_eject_floppy_a));
-  zui_add_child(form,zui_button_ext(1,5,"TOS image",buttonclick_select_tos,1,3,2,1));
-  zui_add_child(form,zui_button(1,6,"RAM size",buttonclick_change_ram_size));
-  lolwidget = zui_button(1,7," LOL  ",buttonclick_lol);
+  zui_add_child(form,zui_button(1,4,"Disk B",buttonclick_insert_floppy_b));
+  zui_add_child(form,zui_button(1,5,"Select TOS image",buttonclick_select_tos));
+  zui_add_child(form,zui_button(1,6,"Eject A",buttonclick_eject_floppy_a));
+  zui_add_child(form,zui_button(1,7,"Eject B",buttonclick_eject_floppy_b));
+  //zui_add_child(form,zui_button_ext(1,5,"TOS image",buttonclick_select_tos,1,3,2,1));
+  zui_add_child(form,zui_button(1,8,"RAM size",buttonclick_change_ram_size));
+  lolwidget=zui_button(1,9," LOL  ",buttonclick_lol);
   zui_add_child(form,lolwidget);
-  zui_add_child(form,zui_button(1,9,"Exit menu",buttonclick_exit_menu));
+  zui_add_child(form,zui_button(1,10,"Exit menu",buttonclick_exit_menu));
   return form;
 }
 
-void menu(void) {
-  static const uint8_t osd_palette[] = {
+const uint8_t osd_palette[3][12] = {
+  {
     0x40,0x40,0x40,
     0xc0,0xc0,0xc0,
     0xff,0xff,0x80,
     0x40,0x40,0xff
-  };
-  static const uint8_t colour1[8*3] = {
+  },
+  {
+    6, 40, 38,
+    176-20, 224-20, 230-20,
+    (176-20) / 2, (224-20) / 2, (230-20) / 2,
+    0, 184, 128
+  },
+  {
+    255, 255, 255,
+    0, 0, 0,
+    127, 127, 127,
+    255, 0, 0
+  },
+};
+
+void menu(void) {
+  static const uint8_t colour1[8*3]={
     253,0,0,
     253,0,0,
     253,151,0,
@@ -395,23 +449,24 @@ void menu(void) {
   uint8_t osd_palette0[8][12];
 
   osd_init();
-  osd_set_palette_all(osd_palette);
+  osd_set_palette_all(osd_palette[0]);
   int i;
-  for (i=0; i<8; ++i) {
-    memcpy(osd_palette0[i],osd_palette,12);
+  for (i=0;i<8;++i) {
+    memcpy(osd_palette0[i],osd_palette[0],12);
     memcpy(&osd_palette0[i][3],&colour1[i*3],3);
   }
   osd_set_palette(0,8,osd_palette0);
 
   ZuiWidget *form=menu_form();
 
-  int retval = zui_run(XPOS,YPOS,form);
+  int retval=zui_run(XPOS,YPOS,form);
 
   zui_free(form);
 
-  if (retval==2) {
-    // The 'Insert floppy A' button has been pushed
+  if (retval>=2 && retval<=4) {
+    // The 'Insert floppy A/floppy B/TOS' button has been pushed
     ZuiWidget *form=menu_file_selector();
+    osd_set_palette_all(osd_palette[1]);
     zui_run(FSEL_XPOS,FSEL_YPOS,form);
     zui_free(form);
   }
