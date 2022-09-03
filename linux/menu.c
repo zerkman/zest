@@ -195,7 +195,7 @@ void read_directory(char *path) {
   strcpy(path_wildcard,path);
   strcat(path_wildcard,"*");
 
-  int bytes_to_skip=strlen(path); // AKA the number of bytes to trim from the left hand side of the returned filenames, those contain the path
+  int pathname_bytes_to_skip=strlen(path); // AKA the number of bytes to trim from the left hand side of the returned filenames, those contain the path
   char **current_glob;
   int i;
 
@@ -207,7 +207,7 @@ void read_directory(char *path) {
   current_glob=glob_info.gl_pathv;
 
   for (i=0; i < number_of_files; i++) {
-    directory_filenames[i] = *current_glob + bytes_to_skip;
+    directory_filenames[i] = *current_glob + pathname_bytes_to_skip;
     current_glob++;
   }
 
@@ -238,14 +238,14 @@ void read_directory(char *path) {
         if (strcmp(extension, "msa") == 0 || strcmp(extension, ".st") == 0 || strcmp(extension, "mfm") == 0) {
           // TODO: decide on how to deal with larger filenames
           //strncpy(directory_displayed_filenames[current_view->total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
-          directory_filenames[current_view->total_listing_files] = *current_glob + bytes_to_skip;
+          directory_filenames[current_view->total_listing_files] = *current_glob + pathname_bytes_to_skip;
           current_view->total_listing_files++;
         }
       } else if (view == FILE_SELECTOR_TOS_IMAGE) {
         if (strcmp(extension, "img") == 0 || strcmp(extension, "rom") == 0) {
           // TODO: decide on how to deal with larger filenames
           //strncpy(directory_displayed_filenames[current_view->total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
-          directory_filenames[current_view->total_listing_files] = *current_glob + bytes_to_skip;
+          directory_filenames[current_view->total_listing_files] = *current_glob + pathname_bytes_to_skip;
           current_view->total_listing_files++;
         }
       }
@@ -277,10 +277,6 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
 
 extern const char *binfilename;
 static int buttonclick_fsel_ok(ZuiWidget* obj) {
-  // TODO: Since the file selector will be called by multiple sites
-  //       (like disk image A, disk image B, TOS image, etc) there should
-  //       probably be no logic here (unless we have a global variable that
-  //       mentions the caller).
   char *selected_item=directory_filenames[current_view->file_selector_current_top+current_view->file_selector_cursor_position];
   if (selected_item[strlen(selected_item)-1]=='/') {
     // Enter directory
@@ -365,8 +361,6 @@ ZuiWidget * menu_file_selector() {
 static void setup_item_selector(int selector_view) {
   current_view=&file_selector_state[selector_view];
   read_directory(current_view->current_directory);
-  // Reset file selector variables
-  //current_view->file_selector_cursor_position=0;
 }
 
 static int buttonclick_insert_floppy_a(ZuiWidget* obj) {
