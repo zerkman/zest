@@ -52,6 +52,7 @@ architecture behavioral of dma_controller is
 	signal buf_di	: unsigned(3 downto 0);		-- index for controller operations (byte index)
 	signal buf_wl	: std_logic;				-- buffer line to write to
 	signal sec_cnt	: unsigned(16 downto 0);	-- 8 high bits: sector count, 9 low: byte count
+	signal sca		: std_logic_vector(1 downto 0);	-- user selected FDC register
 	signal seccnt0	: std_logic;
 	signal hdc_fdcn	: std_logic;
 	signal reg_sel	: std_logic;
@@ -61,7 +62,10 @@ architecture behavioral of dma_controller is
 	signal dma_on	: std_logic;
 	signal dma_rst	: std_logic;
 	signal dma_d	: std_logic_vector(15 downto 0);
-	signal sod		: std_logic_vector(15 downto 0);
+	signal socd		: std_logic_vector(7 downto 0);
+	signal sfdcsn	: std_logic;
+	signal scrwn	: std_logic;
+	signal rdreg_ff	: std_logic;
 	type bus_st_t is ( idle, start, running, running_w, running_r, done );
 	signal bus_st	: bus_st_t;
 	type dc_st_t is ( idle, warmup, running, run_read, run_read2, run_inc, done );
@@ -72,10 +76,43 @@ begin
 	dma_rst <= '1' when FCSn = '0' and RWn = '0' and A1 = '1' and dma_w /= iD(8) else '0';
 	seccnt0 <= '0' when sec_cnt = 0 else '1';
 
-	-- data bus out
-	process(sod,iRDY,dma_w,dma_d)
+	-- asynchronous register I/O
+	process(sfdcsn,socd,scrwn,FCSn,RWn,socd,A1,reg_sel,sca,hdc_fdcn,iD,rdreg_ff,iCD,FDRQ,seccnt0,dma_err,iRDY,dma_w,dma_d)
 	begin
-		oD <= sod;
+		CA <= "11";
+		HDCSn <= '1';
+		FDCSn <= sfdcsn;
+		oD <= x"ffff";
+		oCD <= socd;
+		CRWn <= scrwn;
+		if FCSn = '0' then
+			if RWn = '0' then
+				if A1 = '0' then
+					if reg_sel = '0' then
+						-- write to FDC/HDC register
+						CRWn <= '0';
+						CA <= sca;
+						HDCSn <= not hdc_fdcn;
+						FDCSn <= hdc_fdcn;
+						oCD <= iD(7 downto 0);
+					end if;
+				end if;
+			else
+				if A1 = '0' then
+					if reg_sel = '0' then
+						-- read register from FDC
+						CRWn <= '1';
+						CA <= sca;
+						FDCSn <= hdc_fdcn;
+						if rdreg_ff = '1' then
+							oD <= x"00" & iCD;
+						end if;
+					end if;
+				else
+					oD <= (15 downto 3 => '0', 2 => FDRQ, 1 => seccnt0, 0 => not dma_err);
+				end if;
+			end if;
+		end if;
 		if dma_w = '0' and iRDY = '0' then
 			oD <= dma_d;
 		end if;
@@ -85,10 +122,6 @@ begin
 	begin
 		if rising_edge(clk) then
 		if resetn = '0' then
-			sod <= x"ffff";
-			oCD <= x"ff";
-			FDCSn <= '1';
-			CRWn <= '1';
 			oRDY <= '0';
 			dma_w <= '0';
 			bus_st <= idle;
@@ -96,23 +129,23 @@ begin
 			buf_bi <= (others => '0');
 			buf_di <= (others => '0');
 			buf_wl <= '0';
+			sca <= "00";
+			socd <= x"ff";
+			scrwn <= '1';
+			sfdcsn <= '1';
+			rdreg_ff <= '0';
 		elsif cken = '1' then
-			sod <= x"ffff";
-			oCD <= x"ff";
-			FDCSn <= '1';
-			HDCSn <= '1';
-			CRWn <= '1';
+			socd <= x"ff";
+			scrwn <= '1';
+			sfdcsn <= '1';
+			rdreg_ff <= '0';
 			if FCSn = '0' then
 				-- register access
 				if RWn = '0' then
 					-- write to internal registers
 					if A1 = '0' then
-						if reg_sel = '0' then
-							HDCSn <= not hdc_fdcn;
-							FDCSn <= hdc_fdcn;
-							CRWn <= '0';
-							oCD <= iD(7 downto 0);
-						else
+						if reg_sel = '1' then
+							-- sector count register
 							sec_cnt <= unsigned(std_logic_vector'(iD(7 downto 0) & (8 downto 0 => '0')));
 							if dma_w = '1' then
 								bus_st <= running;
@@ -124,9 +157,8 @@ begin
 						end if;
 					else
 						if iD(3) = '0' and iD(4) = '0' then
-							-- FDC register select: pre-fetch current value
-							CA <= iD(2 downto 1);
-							FDCSn <= '0';
+							-- FDC register select
+							sca <= iD(2 downto 1);
 						end if;
 						hdc_fdcn <= iD(3);
 						reg_sel <= iD(4);
@@ -146,16 +178,8 @@ begin
 						end if;
 					end if;
 				else
-					-- read registers
-					if hdc_fdcn = '0' then
-						if A1 = '0' then
-							if reg_sel = '0' then
-								FDCSn <= '0';
-								sod <= x"00" & iCD;
-							end if;
-						else
-							sod <= (15 downto 3 => '0', 2 => FDRQ, 1 => seccnt0, 0 => not dma_err);
-						end if;
+					if A1 = '0' and reg_sel = '0' then
+						rdreg_ff <= '1';
 					end if;
 				end if;
 			end if;
@@ -223,20 +247,19 @@ begin
 						if seccnt0 = '0' then
 							dma_err <= '1';
 						else
-							FDCSn <= '0';
-							CA <= "11";			-- data register
+							sfdcsn <= '0';
 							if dma_w = '1' then
 								-- write to fdc
-								CRWn <= '0';
+								scrwn <= '0';
 								if buf_di(0) = '0' then
-									oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(15 downto 8);
+									socd <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(15 downto 8);
 								else
-									oCD <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(7 downto 0);
+									socd <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(7 downto 0);
 								end if;
 								dc_st <= run_inc;
 							else
 								-- read from fdc
-								CRWn <= '1';
+								scrwn <= '1';
 								dc_st <= run_read;
 							end if;
 						end if;
