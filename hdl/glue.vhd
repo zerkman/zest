@@ -64,6 +64,7 @@ entity glue is
 		BLANKn      : out std_logic;
 		DE          : out std_logic;
 
+		mode_mono   : out std_logic;
 		vid_vsync   : out std_logic;
 		vid_hsync   : out std_logic;
 		vid_de	    : out std_logic
@@ -219,6 +220,7 @@ DMAn <= sdma;
 
 umode_id <= mono & (hz50 and not mono);
 mode_id <= to_integer(umode_id);
+mode_mono <= '1' when vmode_id >= 2 else '0';
 
 -- 8-bit bus (ACIA) signal management
 process(iA,iASn,VMAn)
