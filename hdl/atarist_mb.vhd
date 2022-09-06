@@ -170,6 +170,7 @@ architecture structure of atarist_mb is
 	signal st_hsync		: std_logic;
 	signal blankn		: std_logic;
 	signal sde			: std_logic;
+	signal mode_mono    : std_logic;
 
 	signal mmu_RAMn		: std_logic;
 	signal mmu_DMAn		: std_logic;
@@ -199,6 +200,7 @@ architecture structure of atarist_mb is
 	signal shifter_A	: std_logic_vector(5 downto 1);
 	signal shifter_iD	: std_logic_vector(15 downto 0);
 	signal shifter_oD	: std_logic_vector(15 downto 0);
+	signal shifter_mono	: std_logic;
 	signal shifter_rgb	: std_logic_vector(8 downto 0);
 	signal load			: std_logic;
 
@@ -425,6 +427,7 @@ begin
 		BLANKn => blankn,
 		DE => sde,
 
+		mode_mono => mode_mono,
 		vid_vsync => vsync,
 		vid_hsync => hsync,
 		vid_de => de
@@ -493,12 +496,22 @@ begin
 		oD => shifter_oD,
 		DE => sde,
 		LOAD => load,
+		mono => shifter_mono,
 		rgb => shifter_rgb
 	);
 	shifter_iD <= (bus_D or (15 downto 0 => shifter_CSn)) and ram_oD;
 	shifter_RWn <= bus_RWn;
 	shifter_A <= bus_A(5 downto 1);
-	rgb <= shifter_rgb when blankn = '1' else (others => '0');
+
+	process(shifter_rgb,shifter_mono,blankn,mode_mono) is
+		begin
+			rgb <= (others => '0');
+			if mode_mono = '1' then
+				rgb <= (others => shifter_mono);
+			elsif blankn = '1' then
+				rgb <= shifter_rgb;
+			end if;
+		end process;
 
 	mfp:entity mc68901 port map (
 		clk => clk,

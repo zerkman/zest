@@ -34,6 +34,7 @@ entity shifter is
 		DE		: in std_logic;
 		LOAD	: in std_logic;
 
+		mono	: out std_logic;
 		rgb		: out std_logic_vector(8 downto 0)
 	);
 end shifter;
@@ -195,8 +196,10 @@ begin
 	if rising_edge(clk) then
 		if enpxck = '1' then
 			if res(1) = '1' then
-				rgb <= (8 downto 0 => pixel(0) xor monopal);
+				mono <= pixel(0) xor monopal;
+				rgb <= (others => '0');
 			else
+				mono <= '0';
 				rgb <= palette(to_integer(unsigned(pixel)));
 			end if;
 
