@@ -119,14 +119,16 @@ begin
 		elsif clken = '1' then
 			ipn_ff <= IPn;
 			-- index pulse detection and counter decrement
-			if IPn = '0' and ipn_ff = '1' then
-				if ipcnt /= x"0" then
-					ipcnt <= std_logic_vector(unsigned(ipcnt) - 1);
+			if motor_on = '1' then
+				if IPn = '0' and ipn_ff = '1' then
+					if ipcnt /= x"0" then
+						ipcnt <= std_logic_vector(unsigned(ipcnt) - 1);
+					end if;
+					-- sync data shift register load with index pulse
+					ds_cnt <= x"01";
+				else
+					ds_cnt <= ds_cnt + 1;
 				end if;
-				-- sync data shift register load with index pulse
-				ds_cnt <= x"01";
-			else
-				ds_cnt <= ds_cnt + 1;
 			end if;
 			ds_full <= '0';
 			if ds_cnt(4 downto 0) = "01111" then
