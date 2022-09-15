@@ -203,6 +203,7 @@ architecture behavioral of glue is
 	signal dma_st	: dma_st_t;
 	signal dma_cnt	: unsigned(2 downto 0);
 	signal sdma		: std_logic;
+	signal sram		: std_logic;
 	signal mmuct	: unsigned(1 downto 0);
 	signal idtackff	: std_logic;
 
@@ -217,6 +218,7 @@ VPAn <= vpa_irqn and vpa_acia;
 oDTACKn <= sdtackn;
 oRDY <= sdma;
 DMAn <= sdma;
+RAMn <= sram;
 
 umode_id <= mono & (hz50 and not mono);
 mode_id <= to_integer(umode_id);
@@ -264,7 +266,7 @@ begin
 				dma_w <= iD(0);
 			end if;
 		end if;
-		if iDTACKn = '0' and idtackff = '1' then
+		if iDTACKn = '0' and idtackff = '1' and sram = '0' then
 			-- synchronize with MMU counter
 			mmuct <= "11";
 		else
@@ -310,7 +312,7 @@ begin
 end process;
 process(FC,iA,iASn,iUDSn,iLDSn,iRWn,rwn_ff)
 begin
-	RAMn <= '1';
+	sram <= '1';
 	DEVn <= '1';
 	if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRWn = '0' and rwn_ff = '1')) then
 		if iA(23 downto 15) = "111111111" then
@@ -322,16 +324,16 @@ begin
 			end if;
 		elsif unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fe" and iRWn = '1' then
 			-- rom access
-			RAMn <= '0';
+			sram <= '0';
 		elsif unsigned(iA&'0') < 8 and iRWn = '1' and FC(2) = '1' then
 			-- rom access
-			RAMn <= '0';
+			sram <= '0';
 		elsif unsigned(iA&'0') < x"800" and unsigned(iA&'0') >= 8 and FC(2) = '1' then
 			-- protected ram access (supervisor mode only)
-			RAMn <= '0';
+			sram <= '0';
 		elsif unsigned(iA&'0') >= x"800" and iA(23 downto 22) = "00" then
 			-- ram access
-			RAMn <= '0';
+			sram <= '0';
 		end if;
 	end if;
 end process;
