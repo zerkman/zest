@@ -137,19 +137,17 @@ static int guess_size(Flopimg *img) {
     return 0;
   }
   int tracks, sectors;
-  int temp_size;
-  for (tracks = 86; tracks > 0; tracks--) {
+  for (tracks = MAXTRACK;tracks>0;tracks--) {
     for (sectors = 11; sectors >= 9; sectors--) {
-      temp_size = img->image_size / tracks;
       if (!(img->image_size % tracks)) {
-        if (!(temp_size % (sectors*2))) {
+        if ((img->image_size % (tracks*sectors*2*512))==0) {
           img->ntracks = tracks;
           img->nsides = 2;
           img->nsectors = sectors;
           printf("Geometry guessed: %d tracks, %d sides, %d sectors\n", tracks, 2, sectors);
           return 1;
         }
-        else if (!(temp_size % sectors)) {
+        else if ((img->image_size % (tracks*sectors*1*512))==0) {
           img->ntracks = tracks;
           img->nsides = 1;
           img->nsectors = sectors;
@@ -198,7 +196,7 @@ static void load_st(Flopimg *img, int skew) {
       }
     }
 
-    if (img->ntracks > 85 || img->ntracks < 0) {
+    if (img->ntracks > MAXTRACK || img->ntracks < 0) {
       printf("unsupported number of tracks:%u\n", img->ntracks);
       if (!guess_size(img)) {
         return;
