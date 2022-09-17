@@ -37,6 +37,13 @@ extern void do_reset();             // From setup.c
 extern int disk_image_changed;      // From floppy.c
 extern void *disk_image_filename;   // From floppy.c
 
+// From setup.c:
+#define CFG_WS1  0x0000
+#define CFG_WS2  0x0300
+#define CFG_WS3  0x0100
+#define CFG_WS4  0x0200
+#define WS_MASK  0x0300
+
 // Stuff that would be nice for the UI lib:
 // - Changable text widgets (example: file selector text widgets that display the files)
 // - Editable text widgets (example: filename entering)
@@ -70,13 +77,6 @@ extern void *disk_image_filename;   // From floppy.c
 #if (XCHARS*YCHARS)>1248
 #error Too many characters (XCHARS*YCHARS)
 #endif
-
-ZuiWidget *lolwidget;
-
-static int buttonclick_lol(ZuiWidget* obj) {
-  printf("lol\n");
-  return 0;
-}
 
 static int buttonclick_warm_reset(ZuiWidget* obj)
 {
@@ -382,11 +382,34 @@ static int buttonclick_select_tos(ZuiWidget* obj) {
 }
 
 static int buttonclick_change_ram_size(ZuiWidget* obj) {
-  zui_set_text(lolwidget, "~=[,,_,,]:3");
   return 0;
 }
 
 static int buttonclick_exit_menu(ZuiWidget* obj) {
+  return 1;
+}
+
+static int buttonclick_ws1(ZuiWidget* obj) {
+  cfg = (cfg& 0xfffffcff) | CFG_WS1;
+  buttonclick_cold_reset(obj);
+  return 1;
+}
+
+static int buttonclick_ws2(ZuiWidget* obj) {
+  cfg = (cfg& 0xfffffcff) | CFG_WS2;
+  buttonclick_cold_reset(obj);
+  return 1;
+}
+
+static int buttonclick_ws3(ZuiWidget* obj) {
+  cfg = (cfg& 0xfffffccf) | CFG_WS3;
+  buttonclick_cold_reset(obj);
+  return 1;
+}
+
+static int buttonclick_ws4(ZuiWidget* obj) {
+  cfg = (cfg& 0xfffffcff) | CFG_WS4;
+  buttonclick_cold_reset(obj);
   return 1;
 }
 
@@ -400,10 +423,17 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,5,"Select TOS image",buttonclick_select_tos));
   zui_add_child(form,zui_button(1,6,"Eject A",buttonclick_eject_floppy_a));
   zui_add_child(form,zui_button(1,7,"Eject B",buttonclick_eject_floppy_b));
-  //zui_add_child(form,zui_button_ext(1,5,"TOS image",buttonclick_select_tos,1,3,2,1));
   zui_add_child(form,zui_button(1,8,"RAM size",buttonclick_change_ram_size));
-  lolwidget=zui_button(1,9," LOL  ",buttonclick_lol);
-  zui_add_child(form,lolwidget);
+  int ws=cfg&0x300;
+  int bg[4] = { 1, 1, 1, 1 };
+  if (ws == CFG_WS1) bg[0] = 3;
+  if (ws == CFG_WS2) bg[1] = 3;
+  if (ws == CFG_WS3) bg[2] = 3;
+  if (ws == CFG_WS4) bg[3] = 3;
+  zui_add_child(form,zui_button_ext(1,9,"WS1",buttonclick_ws1,0,bg[0],2,3));
+  zui_add_child(form,zui_button_ext(5,9,"WS2",buttonclick_ws2,0,bg[1],2,3));
+  zui_add_child(form,zui_button_ext(9,9,"WS3",buttonclick_ws3,0,bg[2],2,3));
+  zui_add_child(form,zui_button_ext(13,9,"WS4",buttonclick_ws4,0,bg[3],2,3));
   zui_add_child(form,zui_button(1,10,"Exit menu",buttonclick_exit_menu));
   return form;
 }
