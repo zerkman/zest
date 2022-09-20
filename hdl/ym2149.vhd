@@ -318,7 +318,7 @@ begin
 								else
 									envlv := "00000";
 								end if;
-							elsif envel_shape(2 downto 1) = "00" or (envel_shape(1) = '0' and (envel_shape(2) xor envst(5)) = '0') then
+							elsif envel_shape(2 downto 1) = "00" or (envel_shape(1) = '1' and (envel_shape(2) xor envst(5)) = '0') then
 								envlv := 31 - envst(4 downto 0);
 							else
 								envlv := envst(4 downto 0);
