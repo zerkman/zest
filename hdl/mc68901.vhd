@@ -94,6 +94,9 @@ architecture behavioral of mc68901 is
 
 	signal addr		: std_logic_vector(7 downto 0);
 
+	signal csn1		: std_logic;
+	signal iackn1	: std_logic;
+
 	type prescale_t is array(1 to 7) of integer;
 	signal prescale	: prescale_t := (4,10,16,50,64,100,200);
 
@@ -122,6 +125,7 @@ architecture behavioral of mc68901 is
 	signal dtackn_irq	: std_logic;
 	signal dtackn_reg	: std_logic;
 
+	signal sod		: std_logic_vector(7 downto 0);
 	signal ii1		: std_logic_vector(7 downto 0);
 
 	-- priority encoder. Return the index of the highest set bit
@@ -148,7 +152,8 @@ begin
 	tco <= tcto;
 	tdo <= tdto;
 	irqn <= sirqn;
-	dtackn <= dtackn_irq and dtackn_reg;
+	dtackn <= (dtackn_irq and dtackn_reg) or dsn;
+	od <= sod when csn = '0' or iackn = '0' else x"ff";
 
 	process(intv,vr,ipl,isr_ipl,dtackn_irq)
 	begin
@@ -184,7 +189,7 @@ begin
 				scr <= x"00";
 				ucr <= x"00";
 				rsr <= x"00";
-				od <= x"ff";
+				sod <= x"ff";
 				dtackn_irq <= '1';
 				dtackn_reg <= '1';
 
@@ -205,6 +210,8 @@ begin
 				tdto <= '0';
 				tdpc <= x"01";
 				tdmc <= x"01";
+				csn1 <= '1';
+				iackn1 <= '1';
 			else
 				if xtlcken = '1' then
 					-- Timer A operation
@@ -307,39 +314,130 @@ begin
 				end if;
 
 				if clkren = '1' then
-					od <= x"ff";
+					csn1 <= csn;
+					iackn1 <= iackn;
+					sod <= x"ff";
 					dtackn_irq <= '1';
 					dtackn_reg <= '1';
-					if csn = '0' then
+					if csn = '0' and csn1 = '0' then
 						-- register access
 						if rwn = '1' then
 							-- register read access
 							case addr is
-								when x"01" => od <= (gpip and ddr) or (ii and not ddr);
-								when x"03" => od <= aer;
-								when x"05" => od <= ddr;
-								when x"07" => od <= iera;
-								when x"09" => od <= ierb;
-								when x"0b" => od <= ipra;
-								when x"0d" => od <= iprb;
-								when x"0f" => od <= isra;
-								when x"11" => od <= isrb;
-								when x"13" => od <= imra;
-								when x"15" => od <= imrb;
-								when x"17" => od <= vr & "000";
-								when x"19" => od <= "0000" & tacr;
-								when x"1b" => od <= "0000" & tbcr;
-								when x"1d" => od <= '0' & tcdcr(5 downto 3) & '0' & tcdcr(2 downto 0);
-								when x"1f" => od <= std_logic_vector(tamc);
-								when x"21" => od <= std_logic_vector(tbmc);
-								when x"23" => od <= std_logic_vector(tcmc);
-								when x"25" => od <= std_logic_vector(tdmc);
-								when x"27" => od <= scr;
-								when x"29" => od <= ucr;
-								when x"2b" => od <= rsr;
-								when x"2d" => od <= tsr;
-								when x"2f" => od <= udr;
+								when x"01" => sod <= (gpip and ddr) or (ii and not ddr);
+								when x"03" => sod <= aer;
+								when x"05" => sod <= ddr;
+								when x"07" => sod <= iera;
+								when x"09" => sod <= ierb;
+								when x"0b" => sod <= ipra;
+								when x"0d" => sod <= iprb;
+								when x"0f" => sod <= isra;
+								when x"11" => sod <= isrb;
+								when x"13" => sod <= imra;
+								when x"15" => sod <= imrb;
+								when x"17" => sod <= vr & "000";
+								when x"19" => sod <= "0000" & tacr;
+								when x"1b" => sod <= "0000" & tbcr;
+								when x"1d" => sod <= '0' & tcdcr(5 downto 3) & '0' & tcdcr(2 downto 0);
+								when x"1f" => sod <= std_logic_vector(tamc);
+								when x"21" => sod <= std_logic_vector(tbmc);
+								when x"23" => sod <= std_logic_vector(tcmc);
+								when x"25" => sod <= std_logic_vector(tdmc);
+								when x"27" => sod <= scr;
+								when x"29" => sod <= ucr;
+								when x"2b" => sod <= rsr;
+								when x"2d" => sod <= tsr;
+								when x"2f" => sod <= udr;
 								when others =>
+							end case;
+						else
+							-- register write access
+							case addr is
+								when x"01" => gpip <= id;
+								when x"03" => aer <= id;
+								when x"05" => ddr <= id;
+								when x"07" =>
+									iera <= id;
+									ipra <= ipra and id;
+									if ddr(7) = '0' and iera(7) = '0' and id(7) = '1' and ii(7) = aer(7) then ipra(7) <= '1'; end if;
+									if ddr(6) = '0' and iera(6) = '0' and id(6) = '1' and ii(6) = aer(6) then ipra(6) <= '1'; end if;
+								when x"09" =>
+									ierb <= id;
+									iprb <= iprb and id;
+									if ddr(5) = '0' and ierb(7) = '0' and id(7) = '1' and ii(5) = aer(5) then iprb(7) <= '1'; end if;
+									if ddr(4) = '0' and ierb(6) = '0' and id(6) = '1' and ii(4) = aer(4) then iprb(6) <= '1'; end if;
+									if ddr(3) = '0' and ierb(3) = '0' and id(3) = '1' and ii(3) = aer(3) then iprb(3) <= '1'; end if;
+									if ddr(2) = '0' and ierb(2) = '0' and id(2) = '1' and ii(2) = aer(2) then iprb(2) <= '1'; end if;
+									if ddr(1) = '0' and ierb(1) = '0' and id(1) = '1' and ii(1) = aer(1) then iprb(1) <= '1'; end if;
+									if ddr(0) = '0' and ierb(0) = '0' and id(0) = '1' and ii(0) = aer(0) then iprb(0) <= '1'; end if;
+								when x"0b" => ipra <= ipra and id;
+								when x"0d" => iprb <= iprb and id;
+								when x"0f" => isra <= isra and id;
+								when x"11" => isrb <= isrb and id;
+								when x"13" => imra <= id;
+								when x"15" => imrb <= id;
+								when x"17" =>
+									vr <= id(7 downto 3);
+									if id(3) = '0' then
+										isra <= x"00";
+										isrb <= x"00";
+									end if;
+								when x"19" =>
+									tacr <= id(3 downto 0);
+									if id(4) = '1' then
+										-- reset timer output
+										tato <= '0';
+									end if;
+									if id(3 downto 0) = "0000" then
+										tapc <= x"01";
+									elsif tacr = "0000" and id(3 downto 0) /= "1000" then
+										tapc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tapc'length);
+									end if;
+								when x"1b" =>
+									tbcr <= id(3 downto 0);
+									if id(4) = '1' then
+										-- reset timer output
+										tbto <= '0';
+									end if;
+									if id(3 downto 0) = "0000" then
+										tbpc <= x"01";
+									elsif tbcr = "0000" and id(3 downto 0) /= "1000" then
+										tbpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tbpc'length);
+									end if;
+								when x"1d" =>
+									tcdcr <= id(6 downto 4) & id(2 downto 0);
+									if tcdcr(5 downto 3) = "000" and id(6 downto 4) /= "000" then
+										tcpc <= to_unsigned(prescale(to_integer(unsigned(id(6 downto 4)))),tcpc'length);
+									end if;
+									if tcdcr(2 downto 0) = "000" and id(2 downto 0) /= "000" then
+										tdpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tdpc'length);
+									end if;
+								when x"1f" =>
+									tadr <= id;
+									if tacr = "0000" then
+										tamc <= unsigned(id);
+									end if;
+								when x"21" =>
+									tbdr <= id;
+									if tbcr = "0000" then
+										tbmc <= unsigned(id);
+									end if;
+								when x"23" =>
+									tcdr <= id;
+									if tcdcr(5 downto 3) = "000" then
+										tcmc <= unsigned(id);
+									end if;
+								when x"25" =>
+									tddr <= id;
+									if tcdcr(2 downto 0) = "000" then
+										tdmc <= unsigned(id);
+									end if;
+								when x"27" => scr <= id;
+								when x"29" => ucr <= id;
+								when x"2b" => rsr <= id;
+								when x"2d" => tsr <= id;
+								when x"2f" => udr <= id;
+								when others => null;
 							end case;
 						end if;
 						dtackn_reg <= '0';
@@ -355,10 +453,10 @@ begin
 					if ddr(1) = '0' and ii(1) /= ii1(1) and ii(1) = aer(1) and ierb(1) = '1' then iprb(1) <= '1'; end if;
 					if ddr(0) = '0' and ii(0) /= ii1(0) and ii(0) = aer(0) and ierb(0) = '1' then iprb(0) <= '1'; end if;
 
-					if sirqn = '0' and iackn = '0' and dsn = '0' then
+					if sirqn = '0' and iackn = '0' and iackn1 = '0' and dsn = '0' then
 						-- begin interrupt acknowledge cycle
 						dtackn_irq <= '0';
-						od <= vr(7 downto 4) & ipl;
+						sod <= vr(7 downto 4) & ipl;
 						if ipl(3) = '1' then
 							ipra(to_integer(unsigned(ipl(2 downto 0)))) <= '0';
 						else
@@ -372,97 +470,6 @@ begin
 								isrb(to_integer(unsigned(ipl(2 downto 0)))) <= '1';
 							end if;
 						end if;
-					end if;
-				elsif clkfen = '1' then
-					if csn = '0' and dsn = '0' and rwn = '0' then
-						-- register write access
-						case addr is
-							when x"01" => gpip <= id;
-							when x"03" => aer <= id;
-							when x"05" => ddr <= id;
-							when x"07" =>
-								iera <= id;
-								ipra <= ipra and id;
-								if ddr(7) = '0' and iera(7) = '0' and id(7) = '1' and ii(7) = aer(7) then ipra(7) <= '1'; end if;
-								if ddr(6) = '0' and iera(6) = '0' and id(6) = '1' and ii(6) = aer(6) then ipra(6) <= '1'; end if;
-							when x"09" =>
-								ierb <= id;
-								iprb <= iprb and id;
-								if ddr(5) = '0' and ierb(7) = '0' and id(7) = '1' and ii(5) = aer(5) then iprb(7) <= '1'; end if;
-								if ddr(4) = '0' and ierb(6) = '0' and id(6) = '1' and ii(4) = aer(4) then iprb(6) <= '1'; end if;
-								if ddr(3) = '0' and ierb(3) = '0' and id(3) = '1' and ii(3) = aer(3) then iprb(3) <= '1'; end if;
-								if ddr(2) = '0' and ierb(2) = '0' and id(2) = '1' and ii(2) = aer(2) then iprb(2) <= '1'; end if;
-								if ddr(1) = '0' and ierb(1) = '0' and id(1) = '1' and ii(1) = aer(1) then iprb(1) <= '1'; end if;
-								if ddr(0) = '0' and ierb(0) = '0' and id(0) = '1' and ii(0) = aer(0) then iprb(0) <= '1'; end if;
-							when x"0b" => ipra <= ipra and id;
-							when x"0d" => iprb <= iprb and id;
-							when x"0f" => isra <= isra and id;
-							when x"11" => isrb <= isrb and id;
-							when x"13" => imra <= id;
-							when x"15" => imrb <= id;
-							when x"17" =>
-								vr <= id(7 downto 3);
-								if id(3) = '0' then
-									isra <= x"00";
-									isrb <= x"00";
-								end if;
-							when x"19" =>
-								tacr <= id(3 downto 0);
-								if id(4) = '1' then
-									-- reset timer output
-									tato <= '0';
-								end if;
-								if id(3 downto 0) = "0000" then
-									tapc <= x"01";
-								elsif tacr = "0000" and id(3 downto 0) /= "1000" then
-									tapc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tapc'length);
-								end if;
-							when x"1b" =>
-								tbcr <= id(3 downto 0);
-								if id(4) = '1' then
-									-- reset timer output
-									tbto <= '0';
-								end if;
-								if id(3 downto 0) = "0000" then
-									tbpc <= x"01";
-								elsif tbcr = "0000" and id(3 downto 0) /= "1000" then
-									tbpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tbpc'length);
-								end if;
-							when x"1d" =>
-								tcdcr <= id(6 downto 4) & id(2 downto 0);
-								if tcdcr(5 downto 3) = "000" and id(6 downto 4) /= "000" then
-									tcpc <= to_unsigned(prescale(to_integer(unsigned(id(6 downto 4)))),tcpc'length);
-								end if;
-								if tcdcr(2 downto 0) = "000" and id(2 downto 0) /= "000" then
-									tdpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tdpc'length);
-								end if;
-							when x"1f" =>
-								tadr <= id;
-								if tacr = "0000" then
-									tamc <= unsigned(id);
-								end if;
-							when x"21" =>
-								tbdr <= id;
-								if tbcr = "0000" then
-									tbmc <= unsigned(id);
-								end if;
-							when x"23" =>
-								tcdr <= id;
-								if tcdcr(5 downto 3) = "000" then
-									tcmc <= unsigned(id);
-								end if;
-							when x"25" =>
-								tddr <= id;
-								if tcdcr(2 downto 0) = "000" then
-									tdmc <= unsigned(id);
-								end if;
-							when x"27" => scr <= id;
-							when x"29" => ucr <= id;
-							when x"2b" => rsr <= id;
-							when x"2d" => tsr <= id;
-							when x"2f" => udr <= id;
-							when others =>
-						end case;
 					end if;
 				end if;
 			end if;

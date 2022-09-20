@@ -187,8 +187,6 @@ architecture behavioral of glue is
 	signal irq_hbl	: std_logic;
 	signal svsync	: std_logic;
 	signal shsync	: std_logic;
-	signal iack_cnt	: integer range 0 to 8;
-	signal siackn   : std_logic;
 	signal ack_vbl	: std_logic;
 	signal ack_hbl	: std_logic;
 	signal ack_mfp	: std_logic;
@@ -515,32 +513,7 @@ begin
 end process;
 
 -- Vectored interrupt acknowledge (for MFP)
-IACKn <= siackn;
-process(clk)
-begin
-	if rising_edge(clk) then
-		if resetn = '0' then
-			iack_cnt <= 0;
-			siackn <= '1';
-		elsif enPhi1 = '1' then
-			if siackn = '1' and (ack_mfp = '1' or iack_cnt /= 0) then
-				if iack_cnt = 7 then
-					siackn <= '0';
-					iack_cnt <= 0;
-				else
-					iack_cnt <= iack_cnt + 1;
-				end if;
-			elsif siackn = '0' then
-				if iack_cnt = 8 then
-					siackn <= '1';
-					iack_cnt <= 0;
-				else
-					iack_cnt <= iack_cnt + 1;
-				end if;
-			end if;
-		end if;
-	end if;
-end process;
+IACKn <= not ack_mfp;
 
 -- video sync
 process(hcnt,mono,line_pal)
