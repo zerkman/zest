@@ -62,8 +62,6 @@ architecture behavioral of clock_enabler is
 	signal phase		: std_logic;
 	signal en1			: std_logic;
 	signal en2			: std_logic;
-	signal en4			: std_logic;
-	signal en32			: std_logic;
 	signal en24			: std_logic;
 	signal err			: std_logic;
 	signal new_phase	: std_logic;
@@ -73,12 +71,10 @@ begin
 
 	en8rck <= en1;
 	en8fck <= en2;
-	en32ck <= en32;
-	en4 <= en1 and not cnt05(0);
-	en4rck <= en4;
+	en4rck <= en1 and not cnt05(0);
 	en4fck <= en1 and cnt05(0);
-	en2rck <= en4 and not cnt05(1);
-	en2fck <= en4 and cnt05(1);
+	en2rck <= en2 and not cnt05(0) and not cnt05(1);
+	en2fck <= en2 and not cnt05(0) and cnt05(1);
 	en2_4576 <= en24;
 	ck05 <= cnt05(3);
 	error <= err;
@@ -113,7 +109,7 @@ begin
 				phase <= '0';
 				en1 <= '0';
 				en2 <= '0';
-				en32 <= '0';
+				en32ck <= '0';
 				en24 <= '0';
 				err <= '0';
 				en16fck <= '0';
@@ -121,7 +117,7 @@ begin
 			else
 				en1 <= '0';
 				en2 <= '0';
-				en32 <= '0';
+				en32ck <= '0';
 				en24 <= '0';
 				en16fck <= '0';
 				en16rck <= '0';
@@ -131,7 +127,7 @@ begin
 					else
 						en2 <= '1';
 					end if;
-					en32 <= '1';
+					en32ck <= '1';
 					en16fck <= '1';
 					phase <= not phase;
 					cnt <= cnt + incr - CLK_FREQ_NUM*CPU_FREQ_DIV;
@@ -139,7 +135,7 @@ begin
 				else
 					cnt <= cnt + incr;
 					if delay = '1' then
-						en32 <= '1';
+						en32ck <= '1';
 						en16rck <= '1';
 					end if;
 					delay <= '0';
