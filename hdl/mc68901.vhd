@@ -95,7 +95,7 @@ architecture behavioral of mc68901 is
 	signal addr		: std_logic_vector(7 downto 0);
 
 	signal csn1		: std_logic;
-	signal iackn1	: std_logic;
+	signal siackn	: std_logic_vector(2 downto 0);
 
 	type prescale_t is array(1 to 7) of integer;
 	signal prescale	: prescale_t := (4,10,16,50,64,100,200);
@@ -211,7 +211,7 @@ begin
 				tdpc <= x"01";
 				tdmc <= x"01";
 				csn1 <= '1';
-				iackn1 <= '1';
+				siackn <= (others => '1');
 			else
 				if xtlcken = '1' then
 					-- Timer A operation
@@ -315,7 +315,7 @@ begin
 
 				if clkren = '1' then
 					csn1 <= csn;
-					iackn1 <= iackn;
+					siackn <= iackn & siackn(siackn'high downto 1);
 					sod <= x"ff";
 					dtackn_irq <= '1';
 					dtackn_reg <= '1';
@@ -453,7 +453,7 @@ begin
 					if ddr(1) = '0' and ii(1) /= ii1(1) and ii(1) = aer(1) and ierb(1) = '1' then iprb(1) <= '1'; end if;
 					if ddr(0) = '0' and ii(0) /= ii1(0) and ii(0) = aer(0) and ierb(0) = '1' then iprb(0) <= '1'; end if;
 
-					if sirqn = '0' and iackn = '0' and iackn1 = '0' and dsn = '0' then
+					if sirqn = '0' and iackn = '0' and siackn(0) = '0' and dsn = '0' then
 						-- begin interrupt acknowledge cycle
 						dtackn_irq <= '0';
 						sod <= vr(7 downto 4) & ipl;
