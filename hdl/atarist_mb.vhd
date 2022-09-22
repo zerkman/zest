@@ -388,8 +388,8 @@ begin
 
 	glu:entity glue port map(
 		clk => clk,
-		enPhi1 => en8rck,
-		enPhi2 => en8fck,
+		en8rck => en8rck,
+		en8fck => en8fck,
 		resetn => resetn,
 
 		iA => glue_iA,
