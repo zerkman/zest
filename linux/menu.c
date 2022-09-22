@@ -100,7 +100,7 @@ int view;
 char file_selector_list[FSEL_YCHARS-2][FSEL_XCHARS];
 glob_t glob_info;
 char *directory_filenames[1024];  // Holds pointers to filtered directory items inside the glob struct
-char blank_line[FSEL_XCHARS-1] = "                                       "; // TODO: this should idealy be resized depending on FSEL_XCHARS
+char blank_line[FSEL_XCHARS-1]="                                       "; // TODO: this should idealy be resized depending on FSEL_XCHARS
 
 void populate_file_array()
 {
@@ -181,8 +181,7 @@ static int buttonclick_fsel_down_arrow(ZuiWidget* obj) {
     current_view->file_selector_cursor_position++;
     update_file_listing();
   } else {
-    if (current_view->file_selector_current_top+FSEL_YCHARS-2<current_view->total_listing_files)
-    {
+    if (current_view->file_selector_current_top+FSEL_YCHARS-2<current_view->total_listing_files) {
       current_view->file_selector_current_top++;
       update_file_listing();
     }
@@ -227,32 +226,28 @@ void read_directory(char *path) {
   for (;i<number_of_files;i++) {
     if (strlen(*current_glob)>4) {
       char extension[4];
-      char *p_three_chars = (*current_glob + strlen(*current_glob)-3);
-      char *p_extension = extension;
+      char *p_three_chars=(*current_glob + strlen(*current_glob)-3);
+      char *p_extension=extension;
       int k;
       for (k=0;k<4;k++) {
         *p_extension++=tolower(*p_three_chars++);
       }
       // TODO: this is terrible!
-      if (view == FILE_SELECTOR_DISK_A || view == FILE_SELECTOR_DISK_B) {
-        if (strcmp(extension, "msa") == 0 || strcmp(extension, ".st") == 0 || strcmp(extension, "mfm") == 0) {
-          // TODO: decide on how to deal with larger filenames
-          //strncpy(directory_displayed_filenames[current_view->total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
-          directory_filenames[current_view->total_listing_files] = *current_glob + pathname_bytes_to_skip;
+      if (view==FILE_SELECTOR_DISK_A||view==FILE_SELECTOR_DISK_B) {
+        if (strcmp(extension, "msa")==0||strcmp(extension, ".st")==0||strcmp(extension, "mfm")==0) {
+          directory_filenames[current_view->total_listing_files]=*current_glob + pathname_bytes_to_skip;
           current_view->total_listing_files++;
         }
-      } else if (view == FILE_SELECTOR_TOS_IMAGE) {
-        if (strcmp(extension, "img") == 0 || strcmp(extension, "rom") == 0) {
-          // TODO: decide on how to deal with larger filenames
-          //strncpy(directory_displayed_filenames[current_view->total_listing_files++],*current_glob+bytes_to_skip,MAX_FILENAME_CHARS-1);
-          directory_filenames[current_view->total_listing_files] = *current_glob + pathname_bytes_to_skip;
+      } else if (view==FILE_SELECTOR_TOS_IMAGE) {
+        if (strcmp(extension, "img")==0||strcmp(extension, "rom")==0) {
+          directory_filenames[current_view->total_listing_files]=*current_glob + pathname_bytes_to_skip;
           current_view->total_listing_files++;
         }
       }
     }
     current_glob++;
   }
-  directory_filenames[current_view->total_listing_files] = 0; // Terminate list
+  directory_filenames[current_view->total_listing_files]=0; // Terminate list
 }
 
 static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
@@ -262,7 +257,7 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
     return 0;
   }
   char *p=current_view->current_directory+i-2;
-  while (*p != '/') {
+  while (*p!='/') {
     p--;
   }
   p[1]=0;   // Just null terminate after the /, this will remove the rightmost directory name
@@ -288,20 +283,18 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
     update_file_listing();
     return 0;   // Don't exit the dialog yet
   }
-  if (view == FILE_SELECTOR_DISK_A || view == FILE_SELECTOR_DISK_B)
-  {
-    disk_image_filename = selected_item-strlen(current_view->current_directory);  // TODO: support for drive B?
-    disk_image_changed = 1;               // TODO: support for drive B?
-  } else if (view == FILE_SELECTOR_TOS_IMAGE) {
-    binfilename = selected_item;
+  if (view==FILE_SELECTOR_DISK_A||view==FILE_SELECTOR_DISK_B) {
+    disk_image_filename=selected_item-strlen(current_view->current_directory);  // TODO: support for drive B?
+    disk_image_changed=1;               // TODO: support for drive B?
+  } else if (view==FILE_SELECTOR_TOS_IMAGE) {
+    binfilename=selected_item;
   }
   return 1;
 }
 
 static int buttonclick_fsel_ok_reset(ZuiWidget* obj) {
-  int ret = buttonclick_fsel_ok(obj);
-  if (ret)
-  {
+  int ret=buttonclick_fsel_ok(obj);
+  if (ret) {
     buttonclick_cold_reset(obj);
   }
   return ret;
@@ -314,7 +307,7 @@ static int buttonclick_fsel_cancel(ZuiWidget* obj) {
 
 static void eject_floppy(int drive)
 {
-  disk_image_filename = 0;
+  disk_image_filename=0;
 }
 
 static int buttonclick_eject_floppy_a(ZuiWidget* obj) {
@@ -328,19 +321,19 @@ static int buttonclick_eject_floppy_b(ZuiWidget* obj) {
 }
 
 ZuiWidget * menu_file_selector() {
-  ZuiWidget * form = zui_panel(0, 0, FSEL_XCHARS, FSEL_YCHARS);
-  if (view == FILE_SELECTOR_DISK_A) {
+  ZuiWidget * form=zui_panel(0, 0, FSEL_XCHARS, FSEL_YCHARS);
+  if (view==FILE_SELECTOR_DISK_A) {
     zui_add_child(form, zui_text(0, 0, "\x5    Select a disk image for drive A   \x7"));
-  } else if (view == FILE_SELECTOR_DISK_B) {
+  } else if (view==FILE_SELECTOR_DISK_B) {
     zui_add_child(form, zui_text(0, 0, "\x5Select a disk image for drive B (dud) \x7"));
-  } else if (view == FILE_SELECTOR_TOS_IMAGE) {
+  } else if (view==FILE_SELECTOR_TOS_IMAGE) {
     zui_add_child(form, zui_text(0, 0, "\x5          Select a TOS image          \x7"));
   }
   zui_add_child(form,zui_text(FSEL_XCHARS-1,FSEL_YCHARS-1,"\x6"));                               // "window resize" glyph on ST font
   zui_add_child(form,zui_button(FSEL_XCHARS-1,1,"\x1",buttonclick_fsel_up_arrow));               // up arrow glyph on ST font
   zui_add_child(form,zui_button(FSEL_XCHARS-1,FSEL_YCHARS-2,"\x2",buttonclick_fsel_down_arrow)); // down arrow on ST font
   zui_add_child(form,zui_button(1,FSEL_YCHARS-1,"Dir up",buttonclick_fsel_dir_up));
-  if (view != FILE_SELECTOR_TOS_IMAGE) {
+  if (view!=FILE_SELECTOR_TOS_IMAGE) {
     zui_add_child(form, zui_button(8, FSEL_YCHARS-1, "Ok", buttonclick_fsel_ok));
   }
   zui_add_child(form,zui_button(11,FSEL_YCHARS-1,"Ok (reset)",buttonclick_fsel_ok_reset));
@@ -364,19 +357,19 @@ static void setup_item_selector(int selector_view) {
 }
 
 static int buttonclick_insert_floppy_a(ZuiWidget* obj) {
-  view = FILE_SELECTOR_DISK_A;
+  view=FILE_SELECTOR_DISK_A;
   setup_item_selector(FILE_SELECTOR_DISK_A);
   return 2;
 }
 
 static int buttonclick_insert_floppy_b(ZuiWidget* obj) {
-  view = FILE_SELECTOR_DISK_B;
+  view=FILE_SELECTOR_DISK_B;
   setup_item_selector(FILE_SELECTOR_DISK_B);
   return 3;
 }
 
 static int buttonclick_select_tos(ZuiWidget* obj) {
-  view = FILE_SELECTOR_TOS_IMAGE;
+  view=FILE_SELECTOR_TOS_IMAGE;
   setup_item_selector(FILE_SELECTOR_TOS_IMAGE);
   return 4;
 }
@@ -390,25 +383,25 @@ static int buttonclick_exit_menu(ZuiWidget* obj) {
 }
 
 static int buttonclick_ws1(ZuiWidget* obj) {
-  cfg = (cfg& 0xfffffcff) | CFG_WS1;
+  cfg=(cfg& 0xfffffcff) | CFG_WS1;
   buttonclick_cold_reset(obj);
   return 1;
 }
 
 static int buttonclick_ws2(ZuiWidget* obj) {
-  cfg = (cfg& 0xfffffcff) | CFG_WS2;
+  cfg=(cfg& 0xfffffcff) | CFG_WS2;
   buttonclick_cold_reset(obj);
   return 1;
 }
 
 static int buttonclick_ws3(ZuiWidget* obj) {
-  cfg = (cfg& 0xfffffccf) | CFG_WS3;
+  cfg=(cfg& 0xfffffccf) | CFG_WS3;
   buttonclick_cold_reset(obj);
   return 1;
 }
 
 static int buttonclick_ws4(ZuiWidget* obj) {
-  cfg = (cfg& 0xfffffcff) | CFG_WS4;
+  cfg=(cfg& 0xfffffcff) | CFG_WS4;
   buttonclick_cold_reset(obj);
   return 1;
 }
@@ -425,11 +418,11 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,7,"Eject B",buttonclick_eject_floppy_b));
   zui_add_child(form,zui_button(1,8,"RAM size",buttonclick_change_ram_size));
   int ws=cfg&0x300;
-  int bg[4] = { 1, 1, 1, 1 };
-  if (ws == CFG_WS1) bg[0] = 3;
-  if (ws == CFG_WS2) bg[1] = 3;
-  if (ws == CFG_WS3) bg[2] = 3;
-  if (ws == CFG_WS4) bg[3] = 3;
+  int bg[4]={ 1, 1, 1, 1 };
+  if (ws==CFG_WS1) bg[0]=3;
+  if (ws==CFG_WS2) bg[1]=3;
+  if (ws==CFG_WS3) bg[2]=3;
+  if (ws==CFG_WS4) bg[3]=3;
   zui_add_child(form,zui_button_ext(1,9,"WS1",buttonclick_ws1,0,bg[0],2,3));
   zui_add_child(form,zui_button_ext(5,9,"WS2",buttonclick_ws2,0,bg[1],2,3));
   zui_add_child(form,zui_button_ext(9,9,"WS3",buttonclick_ws3,0,bg[2],2,3));
@@ -438,7 +431,7 @@ ZuiWidget * menu_form(void) {
   return form;
 }
 
-const uint8_t osd_palette[3][12] = {
+const uint8_t osd_palette[3][12]={
   {
     0x40,0x40,0x40,
     0xc0,0xc0,0xc0,
@@ -487,7 +480,7 @@ void menu(void) {
 
   zui_free(form);
 
-  if (retval>=2 && retval<=4) {
+  if (retval>=2&&retval<=4) {
     // The 'Insert floppy A/floppy B/TOS' button has been pushed
     ZuiWidget *form=menu_file_selector();
     osd_set_palette_all(osd_palette[1]);

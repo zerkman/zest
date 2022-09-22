@@ -131,10 +131,9 @@ int main(int argc, char **argv) {
   int cfg_ws = CFG_WS4;
   int has_sil;
   memset(file_selector_state, 0, sizeof(FILE_SELECTOR_STATE)*FILE_SELECTOR_VIEWS);
-  getcwd(file_selector_state[0].current_directory, sizeof(file_selector_state[0].current_directory));
+  getcwd(file_selector_state[0].current_directory, PATH_MAX);
   strcat(file_selector_state[0].current_directory, "/");
-  for (int i=1;i<FILE_SELECTOR_VIEWS;i++)
-  {
+  for (int i=1;i<FILE_SELECTOR_VIEWS;i++) {
     strcpy(file_selector_state[i].current_directory,file_selector_state[0].current_directory);
   }
 
