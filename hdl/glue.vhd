@@ -21,8 +21,8 @@ use ieee.numeric_std.all;
 entity glue is
 	port (
 		clk         : in std_logic;
-		enPhi1      : in std_logic;
-		enPhi2      : in std_logic;
+		en8rck      : in std_logic;
+		en8fck      : in std_logic;
 		resetn      : in std_logic;
 
 		iA          : in std_logic_vector(23 downto 1);
@@ -249,7 +249,7 @@ begin
 		dma_w <= '0';
 		mmuct <= "00";
 		idtackff <= '1';
-	elsif enPhi2 = '1' then
+	elsif en8fck = '1' then
 		idtackff <= iDTACKn;
 		if FC /= "111" and iASn = '0' and iUDSn = '0' and FC(2) = '1' and iRWn = '0' then
 			if iA(23 downto 8) = x"ff82" then
@@ -270,7 +270,7 @@ begin
 		else
 			mmuct <= mmuct + 1;
 		end if;
-	elsif enPhi1 = '1' then
+	elsif en8rck = '1' then
 		oD <= (others => '1');
 		sdtackn <= '1';
 		ymdtackn <= '1';
@@ -303,7 +303,7 @@ begin
 	if rising_edge(clk) then
 		if resetn = '0' then
 			rwn_ff <= '1';
-		elsif enPhi1 = '1' then
+		elsif en8rck = '1' then
 			rwn_ff <= iRWn;
 		end if;
 	end if;
@@ -343,7 +343,7 @@ begin
 	if rising_edge(clk) then
 		if resetn = '0' then
 			beercnt <= "100000";
-		elsif enPhi1 = '1' then
+		elsif en8rck = '1' then
 			if iASn = '0' and (iUDSn = '0' or iLDSn = '0') and iDTACKn = '1' and sdtackn = '1' then
 				if beercnt(5) = '1' then
 					beercnt <= beercnt + 1;
@@ -396,7 +396,7 @@ begin
 			dma_cnt <= "000";
 			sdma <= '1';
 			oRWn <= '1';
-		elsif enPhi1 = '1' then
+		elsif en8rck = '1' then
 			case dma_st is
 			when idle =>
 				if iRDY = '1' then
@@ -442,7 +442,7 @@ begin
 					dma_st <= idle;
 				end if;
 			end case;
-		elsif enPhi2 = '1' then
+		elsif en8fck = '1' then
 			if sdma = '0' and mmuct = 3 then
 				sdma <= '1';
 			end if;
@@ -472,7 +472,7 @@ begin
 		if resetn = '0' then
 			irq_hbl <= '0';
 			irq_vbl <= '0';
-		elsif enPhi1 = '1' then
+		elsif en8rck = '1' then
 			if vcnt = 0 and nexthcnt = mode(mode_id).hvsync_on then
 				irq_vbl <= '1';
 			end if;
@@ -550,7 +550,7 @@ begin
 			vsync1 <= '0';
 			vscnt <= 0;
 			hscnt <= 0;
-		elsif enPhi1 = '1' then
+		elsif en8rck = '1' then
 			-- update H signals
 			hcnt <= nexthcnt;
 			if nexthcnt = 0 then
