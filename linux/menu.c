@@ -353,6 +353,38 @@ ZuiWidget * menu_file_selector() {
 
 static void setup_item_selector(int selector_view) {
   current_view=&file_selector_state[selector_view];
+  if (current_view->selected_file) {
+    char *p=&current_view->selected_file[strlen(current_view->selected_file)];
+    while (p[-1]!='/'&&p!=current_view->selected_file) p--;
+    int path_size=p-current_view->selected_file;
+    char path[PATH_MAX];
+    memcpy(path, current_view->selected_file, path_size);
+    path[path_size]=0;
+    // TODO: Initially read_directory() was modified to have a return value. That value in turn depended on the return value of
+    //       glob() call. For some reason, when storing the glob return value (instead of ignoring it as it is currently)
+    //       some paths return GLOB_NOMATCH (even though the pathname exists and you can 'ls' it) and corrupt-o-rama starts
+    //       happening. There's probably a workaround for this, but for now we're going to blindly assume that things went
+    //       okay inside read_directory()
+    read_directory(path);
+    if (1) { //if (read_directory(path)) {
+      // Search the results for the filename and point the file selector cursor at it
+      int l=0;
+      char *i=directory_filenames[0];
+      while (i) {
+        if (strcmp(i, p)==0) {
+          // TODO: check if this works when the directory listing is smaller than the file selector visible lines
+          current_view->file_selector_current_top=l;
+          current_view->file_selector_cursor_position=0;
+          break;
+        }
+        l++;
+        i=directory_filenames[l];
+      }
+      return;
+    } else {
+      globfree(&glob_info);
+    }
+  }
   read_directory(current_view->current_directory);
 }
 

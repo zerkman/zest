@@ -175,8 +175,19 @@ int main(int argc, char **argv) {
     }
     else if (binfilename == NULL) {
       binfilename = arg;
+      // TODO: factor this code?
+      if (*arg != '/') {
+        getcwd(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file, PATH_MAX);
+        strcat(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file, "/");
+      }
+      strcat(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file,arg);
     } else if (floppyfilename == NULL) {
       floppyfilename = arg;
+      if (*arg != '/') {
+        getcwd(file_selector_state[FILE_SELECTOR_DISK_A].selected_file, PATH_MAX);
+        strcat(file_selector_state[FILE_SELECTOR_DISK_A].selected_file, "/");
+      }
+      strcat(file_selector_state[FILE_SELECTOR_DISK_A].selected_file,arg); // TODO: support for drive B?
     } else {
       return usage(argv[0]);
     }
