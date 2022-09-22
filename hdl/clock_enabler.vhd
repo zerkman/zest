@@ -71,8 +71,8 @@ begin
 
 	en8rck <= en1;
 	en8fck <= en2;
-	en4rck <= en1 and not cnt05(0);
-	en4fck <= en1 and cnt05(0);
+	en4rck <= en1 and cnt05(0);
+	en4fck <= en1 and not cnt05(0);
 	en2rck <= en2 and not cnt05(0) and not cnt05(1);
 	en2fck <= en2 and not cnt05(0) and cnt05(1);
 	en2_4576 <= en24;
