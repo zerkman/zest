@@ -23,6 +23,7 @@ entity glue is
 		clk         : in std_logic;
 		en8rck      : in std_logic;
 		en8fck      : in std_logic;
+		en2rck      : in std_logic;
 		resetn      : in std_logic;
 
 		iA          : in std_logic_vector(23 downto 1);
@@ -96,63 +97,63 @@ architecture behavioral of glue is
 		vid_vde_off		: integer;
 	end record;
 	constant mode_50	: videomode_t := (
-		cycles_per_line		=> 512,
+		cycles_per_line		=> 128,
 		n_lines				=> 313,
 		vblank_off			=> 25,
 		vde_on				=> 63,		-- 47 on old GLUE revisions
 		vde_off				=> 263,		-- 247 on old GLUE revisions
 		vblank_on			=> 308,
 		vvsync_on			=> 310,
-		hsync_on			=> 472,
-		hvsync_on			=> 64,
-		hblank_off			=> 40,
-		hde_on				=> 68,
-		hde_off				=> 388,
-		hblank_on			=> 460,
-		vid_hsync_on		=> 480,
-		vid_hsync_off		=> 504,
-		vid_hde_on			=> 40,
-		vid_hde_off			=> 460,
+		hsync_on			=> 118,
+		hvsync_on			=> 16,
+		hblank_off			=> 10,
+		hde_on				=> 17,
+		hde_off				=> 97,
+		hblank_on			=> 115,
+		vid_hsync_on		=> 120,
+		vid_hsync_off		=> 126,
+		vid_hde_on			=> 10,
+		vid_hde_off			=> 115,
 		vid_vde_on			=> 34,
 		vid_vde_off			=> 310);
 	constant mode_60	: videomode_t := (
-		cycles_per_line		=> 508,
+		cycles_per_line		=> 127,
 		n_lines				=> 263,
 		vblank_off			=> 16,
 		vde_on				=> 34,
 		vde_off				=> 234,
 		vblank_on			=> 258,
 		vvsync_on			=> 260,
-		hsync_on			=> 468,
-		hvsync_on			=> 64,
-		hblank_off			=> 36,
-		hde_on				=> 64,
-		hde_off				=> 384,
-		hblank_on			=> 460,
-		vid_hsync_on		=> 476,
-		vid_hsync_off		=> 500,
-		vid_hde_on			=> 36,
-		vid_hde_off			=> 460,
+		hsync_on			=> 117,
+		hvsync_on			=> 16,
+		hblank_off			=> 9,
+		hde_on				=> 16,
+		hde_off				=> 96,
+		hblank_on			=> 115,
+		vid_hsync_on		=> 119,
+		vid_hsync_off		=> 125,
+		vid_hde_on			=> 9,
+		vid_hde_off			=> 115,
 		vid_vde_on			=> 16,
 		vid_vde_off			=> 258);
 	constant mode_hi	: videomode_t := (
-		cycles_per_line		=> 224,
+		cycles_per_line		=> 56,
 		n_lines				=> 501,
 		vblank_off			=> 30,
 		vde_on				=> 36,
 		vde_off				=> 436,
 		vblank_on			=> 442,
 		vvsync_on			=> 500,
-		hsync_on			=> 200,
+		hsync_on			=> 50,
 		hvsync_on			=> 0,
-		hblank_off			=> 28,
-		hde_on				=> 16,
-		hde_off				=> 176,
-		hblank_on			=> 196,
-		vid_hsync_on		=> 204,
-		vid_hsync_off		=> 4,
-		vid_hde_on			=> 28,
-		vid_hde_off			=> 196,
+		hblank_off			=> 7,
+		hde_on				=> 4,
+		hde_off				=> 44,
+		hblank_on			=> 49,
+		vid_hsync_on		=> 51,
+		vid_hsync_off		=> 1,
+		vid_hde_on			=> 7,
+		vid_hde_off			=> 49,
 		vid_vde_on			=> 36,
 		vid_vde_off			=> 436);
 
@@ -164,8 +165,8 @@ architecture behavioral of glue is
 	-- 0 -> 60 Hz, 1 -> 50 Hz
 	signal hz50		: std_logic;
 
-	signal hcnt		: unsigned(8 downto 0);
-	signal nexthcnt	: unsigned(8 downto 0);
+	signal hcnt		: unsigned(6 downto 0);
+	signal nexthcnt	: unsigned(6 downto 0);
 	signal vcnt		: unsigned(8 downto 0);
 	signal vblank	: std_logic;
 	signal hblank	: std_logic;
@@ -550,7 +551,7 @@ begin
 			vsync1 <= '0';
 			vscnt <= 0;
 			hscnt <= 0;
-		elsif en8rck = '1' then
+		elsif en2rck = '1' then
 			-- update H signals
 			hcnt <= nexthcnt;
 			if nexthcnt = 0 then
@@ -580,7 +581,7 @@ begin
 				hblank <= '0';
 			end if;
 
-			if nexthcnt = 64 then
+			if nexthcnt = 16 then
 				line_pal <= hz50;
 			end if;
 
