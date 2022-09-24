@@ -380,6 +380,7 @@ static void setup_item_selector(int selector_view) {
         l++;
         i=directory_filenames[l];
       }
+      strcpy(current_view->current_directory,path);
       return;
     } else {
       globfree(&glob_info);
