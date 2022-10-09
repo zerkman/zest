@@ -173,7 +173,7 @@ architecture behavioral of glue is
 	signal vde		: std_logic;
 	signal hde		: std_logic;
 	signal line_pal	: std_logic;
-	signal hscnt	: integer range 0 to 4;
+	signal hsdly	: std_logic;
 
 	signal vsync1    : std_logic;
 	signal vscnt     : integer range 0 to 3;
@@ -550,23 +550,21 @@ begin
 			vid_hde <= '0';
 			vsync1 <= '0';
 			vscnt <= 0;
-			hscnt <= 0;
+			hsdly <= '0';
 		elsif en2rck = '1' then
 			-- update H signals
 			hcnt <= nexthcnt;
 			if nexthcnt = 0 then
 				shsync <= '1';
 			end if;
-			if hscnt > 0 then
-				hscnt <= hscnt - 1;
-				if hscnt - 1 = 0 then
-					hde <= '0';
-					hblank <= '1';
-				end if;
+			if hsdly = '1' then
+				hsdly <= '0';
+				hde <= '0';
+				hblank <= '1';
 			end if;
 			if nexthcnt = mode(mode_id).hsync_on then
 				shsync <= '0';
-				hscnt <= 4;
+				hsdly <= '1';
 			end if;
 			if nexthcnt = mode(mode_id).hde_on then
 				hde <= '1';
