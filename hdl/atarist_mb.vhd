@@ -357,6 +357,7 @@ begin
 		port map (
 			clk => clk,
 			reset => reset,
+			wakestate => wakestate,
 			enNC1 => enNC1,         -- enable 8 MHz rising edges
 			enNC2 => enNC2,         -- enable 8 MHz falling edges
 			en16rck => en16rck,     -- 16 MHz rising edge
@@ -469,7 +470,6 @@ begin
 		vsync => st_vsync,
 
 		mem_top	=> mem_top,
-		wakest => wakestate,
 		ram_A => ram_A,
 		ram_W => ram_W,
 		ram_R => ram_R,

@@ -32,6 +32,7 @@ entity clock_enabler is
 	port (
 		clk			: in std_logic;
 		reset		: in std_logic;
+		wakestate	: in std_logic_vector(1 downto 0);
 		enNC1		: in std_logic;		-- enable 8 MHz rising edges
 		enNC2		: in std_logic;		-- enable 8 MHz falling edges
 		en8rck		: out std_logic;	-- 8 MHz rising edge
@@ -58,6 +59,7 @@ architecture behavioral of clock_enabler is
 	signal cnt			: unsigned(CPT_BITS-1 downto 0);
 	signal cnt24		: unsigned(15 downto 0);
 	signal cnt05		: unsigned(3 downto 0);
+	signal cnt2			: unsigned(1 downto 0);
 	signal delay		: std_logic;
 	signal phase		: std_logic;
 	signal en1			: std_logic;
@@ -73,10 +75,11 @@ begin
 	en8fck <= en2;
 	en4rck <= en1 and cnt05(0);
 	en4fck <= en1 and not cnt05(0);
-	en2rck <= en2 and not cnt05(0) and not cnt05(1);
-	en2fck <= en2 and not cnt05(0) and cnt05(1);
+	en2rck <= en1 and cnt2(1) and not cnt2(0);
+	en2fck <= en1 and not cnt2(1) and not cnt2(0);
 	en2_4576 <= en24;
 	ck05 <= cnt05(3);
+	cnt2 <= cnt05(1 downto 0) + unsigned(wakestate);
 	error <= err;
 
 	process(phase,enNC1,enNC2,delay,cnt)
