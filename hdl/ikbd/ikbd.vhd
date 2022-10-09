@@ -38,7 +38,7 @@ architecture behavioral of atari_ikbd is
 		port (
 			CLKx2	: in std_logic;
 			clkren	: in std_logic;
-		    clkfen	: in std_logic;
+			clkfen	: in std_logic;
 			RST		: in std_logic;
 			NMI		: in std_logic;
 			IRQ		: in std_logic;
