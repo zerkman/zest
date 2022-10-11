@@ -24,6 +24,7 @@ entity glue is
 		en8rck      : in std_logic;
 		en8fck      : in std_logic;
 		en2rck      : in std_logic;
+		en2fck      : in std_logic;
 		resetn      : in std_logic;
 
 		iA          : in std_logic_vector(23 downto 1);
@@ -579,10 +580,6 @@ begin
 				hblank <= '0';
 			end if;
 
-			if nexthcnt = 16 then
-				line_pal <= hz50;
-			end if;
-
 			-- update V signals
 			nextvcnt := vcnt;
 			if nexthcnt = 0 then
@@ -642,6 +639,10 @@ begin
 			end if;
 			if nexthcnt = mode(vmode_id).vid_hde_off then
 				vid_hde <= '0';
+			end if;
+		elsif en2fck = '1' then
+			if hcnt = mode_60.hde_on then
+				line_pal <= hz50;
 			end if;
 		end if;
 	end if;
