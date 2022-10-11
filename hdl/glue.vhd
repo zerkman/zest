@@ -254,16 +254,9 @@ begin
 	elsif en8fck = '1' then
 		idtackff <= iDTACKn;
 		if FC /= "111" and iASn = '0' and iUDSn = '0' and FC(2) = '1' and iRWn = '0' then
-			if iA(23 downto 8) = x"ff82" then
-				if iA(7 downto 1)&'0' = x"60" then
-					-- resolution (write only - Read is managed by Shifter.)
-					mono <= iD(1);
-				end if;
-				if iA(7 downto 1)&'0' = x"0a" then
-					hz50 <= iD(1);
-				end if;
-			elsif iA(23 downto 1)&'0' = x"ff8606" then
-				dma_w <= iD(0);
+			if iA(23 downto 1)&'0' = x"ff8260" then
+				-- resolution (write only - Read is managed by Shifter.)
+				mono <= iD(1);
 			end if;
 		end if;
 		if iDTACKn = '0' and idtackff = '1' and sram = '0' then
@@ -290,6 +283,13 @@ begin
 					-- assert DTACKn for PSG register access (1 extra cycle delay)
 					ymdtackn <= '0';
 				end if;
+			end if;
+		end if;
+		if FC /= "111" and iASn = '0' and iUDSn = '0' and FC(2) = '1' and iRWn = '0' then
+			if iA(23 downto 1)&'0' = x"ff820a" then
+					hz50 <= iD(1);
+			elsif iA(23 downto 1)&'0' = x"ff8606" then
+				dma_w <= iD(0);
 			end if;
 		end if;
 		if ymdtackn = '0' then

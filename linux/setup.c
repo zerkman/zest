@@ -53,8 +53,8 @@ void * thread_ikbd(void * arg);
 #define CFG_4M   0x00f0
 
 #define CFG_WS1  0x0000
-#define CFG_WS2  0x0300
-#define CFG_WS3  0x0100
+#define CFG_WS2  0x0100
+#define CFG_WS3  0x0300
 #define CFG_WS4  0x0200
 
 
