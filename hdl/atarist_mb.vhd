@@ -392,6 +392,7 @@ begin
 		en8rck => en8rck,
 		en8fck => en8fck,
 		en2rck => en2rck,
+		en2fck => en2fck,
 		resetn => resetn,
 
 		iA => glue_iA,
