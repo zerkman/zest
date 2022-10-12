@@ -84,7 +84,7 @@ architecture behavioral of glue is
 		vde_off			: integer;
 		vblank_on		: integer;
 		vvsync_on		: integer;
-		hsync_on		: integer;
+		hsync_off		: integer;
 		hvsync_on		: integer;
 		hblank_off		: integer;
 		hde_on			: integer;
@@ -105,7 +105,7 @@ architecture behavioral of glue is
 		vde_off				=> 263,		-- 247 on old GLUE revisions
 		vblank_on			=> 308,
 		vvsync_on			=> 310,
-		hsync_on			=> 118,
+		hsync_off			=> 118,
 		hvsync_on			=> 16,
 		hblank_off			=> 10,
 		hde_on				=> 17,
@@ -125,7 +125,7 @@ architecture behavioral of glue is
 		vde_off				=> 234,
 		vblank_on			=> 258,
 		vvsync_on			=> 260,
-		hsync_on			=> 117,
+		hsync_off			=> 117,
 		hvsync_on			=> 16,
 		hblank_off			=> 9,
 		hde_on				=> 16,
@@ -145,7 +145,7 @@ architecture behavioral of glue is
 		vde_off				=> 436,
 		vblank_on			=> 442,
 		vvsync_on			=> 500,
-		hsync_on			=> 50,
+		hsync_off			=> 50,
 		hvsync_on			=> 0,
 		hblank_off			=> 7,
 		hde_on				=> 4,
@@ -181,8 +181,8 @@ architecture behavioral of glue is
 	signal vid_vde   : std_logic;
 	signal vid_hde   : std_logic;
 
-	signal umode_id	: unsigned(1 downto 0);
 	signal mode_id	: integer range 0 to 2;
+	signal smode_id	: integer range 0 to 2;
 	signal vmode_id	: integer range 0 to 2;
 
 	signal irq_vbl	: std_logic;
@@ -220,8 +220,8 @@ oRDY <= sdma;
 DMAn <= sdma;
 RAMn <= sram;
 
-umode_id <= mono & (hz50 and not mono);
-mode_id <= to_integer(umode_id);
+mode_id <= to_integer(unsigned(std_logic_vector'(mono & (hz50 and not mono))));
+smode_id <= to_integer(unsigned(std_logic_vector'(mono & (line_pal and not mono))));
 mode_mono <= '1' when vmode_id >= 2 else '0';
 
 -- 8-bit bus (ACIA) signal management
@@ -518,12 +518,9 @@ end process;
 IACKn <= not ack_mfp;
 
 -- video sync
-process(hcnt,mono,line_pal)
-	variable id : unsigned(1 downto 0);
+process(hcnt,mono,smode_id)
 begin
-	id := mono & (line_pal and not mono);
-
-	if hcnt+1 = mode(to_integer(id)).cycles_per_line then
+	if hcnt+1 = mode(smode_id).cycles_per_line then
 		nexthcnt <= (others => '0');
 	else
 		nexthcnt <= hcnt+1;
@@ -563,7 +560,7 @@ begin
 				hde <= '0';
 				hblank <= '1';
 			end if;
-			if nexthcnt = mode(mode_id).hsync_on then
+			if nexthcnt = mode(smode_id).hsync_off then
 				shsync <= '0';
 				hsdly <= '1';
 			end if;
