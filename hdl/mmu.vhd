@@ -142,7 +142,7 @@ begin
 			end if;
 			if cnt = 0 then
 				sdtackn <= '1';
-				sde <= DE;
+				-- sde <= DE;
 			end if;
 			if cnt = 0 and mode_load = '1' then
 				loadn <= '0';
@@ -152,6 +152,9 @@ begin
 				mode_load <= '0';
 				delay_loadn <= '1';
 				video_ptr <= std_logic_vector(unsigned(video_ptr)+1);
+			end if;
+			if cnt = 2 then
+				sde <= DE;
 			end if;
 		elsif en8fck = '1' then
 			mode_bus_ff <= mode_bus or mode_bus_ff;
