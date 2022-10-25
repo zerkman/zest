@@ -557,7 +557,7 @@ begin
 			vsync1 <= '0';
 			vscnt <= 0;
 			hsdly <= '0';
-		elsif en2rck = '1' then
+		elsif en2fck = '1' then
 			-- update H signals
 			hcnt <= nexthcnt;
 			if nexthcnt = 0 then
@@ -645,7 +645,7 @@ begin
 			if nexthcnt = mode(vmode_id).vid_hde_off then
 				vid_hde <= '0';
 			end if;
-		elsif en2fck = '1' then
+		elsif en2rck = '1' then
 			if hcnt = mode_60.hde_on then
 				line_pal <= hz50;
 			end if;
