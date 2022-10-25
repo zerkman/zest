@@ -142,19 +142,6 @@ begin
 			end if;
 			if cnt = 0 then
 				sdtackn <= '1';
-				-- sde <= DE;
-			end if;
-			if cnt = 0 and mode_load = '1' then
-				loadn <= '0';
-			end if;
-			if cnt = 1 and loadn = '0' then
-				loadn <= '1';
-				mode_load <= '0';
-				delay_loadn <= '1';
-				video_ptr <= std_logic_vector(unsigned(video_ptr)+1);
-			end if;
-			if cnt = 2 then
-				sde <= DE;
 			end if;
 		elsif en8fck = '1' then
 			mode_bus_ff <= mode_bus or mode_bus_ff;
@@ -228,9 +215,13 @@ begin
 				end if;
 			end if;
 
-			if cnt = 3 and sde = '1' then
+			if cnt = 2 and sde = '1' then
 				mode_load <= '1';
 			end if;
+			if cnt = 0 then
+				mode_load <= '0';
+			end if;
+
 
 			if mode_bus_ff = '1' and cnt = 2 then
 				delay_bus <= '1';
@@ -238,6 +229,19 @@ begin
 					dma_ptr <= std_logic_vector(unsigned(dma_ptr)+1);
 				end if;
 			end if;
+
+			if cnt = 3 and mode_load = '1' then
+				loadn <= '0';
+			end if;
+			if loadn = '0' then
+				loadn <= '1';
+				delay_loadn <= '1';
+				video_ptr <= std_logic_vector(unsigned(video_ptr)+1);
+			end if;
+			if cnt = 1 then
+				sde <= DE;
+			end if;
+
 		end if;
 	end if;
 
