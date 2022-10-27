@@ -163,8 +163,10 @@ architecture behavioral of glue is
 
 	-- resolution
 	signal mono		: std_logic;
+	signal mono_0	: std_logic;
 	-- 0 -> 60 Hz, 1 -> 50 Hz
 	signal hz50		: std_logic;
+	signal hz50_0	: std_logic;
 
 	signal hcnt		: unsigned(6 downto 0);
 	signal nexthcnt	: unsigned(6 downto 0);
@@ -249,18 +251,13 @@ begin
 		ymdtackn <= '1';
 		sdtackn <= '1';
 		mono <= '0';
-		hz50 <= '0';
+		mono_0 <= '0';
+		hz50_0 <= '0';
 		dma_w <= '0';
 		mmuct <= "00";
 		idtackff <= '1';
 	elsif en8fck = '1' then
 		idtackff <= iDTACKn;
-		if FC /= "111" and iASn = '0' and iUDSn = '0' and FC(2) = '1' and iRWn = '0' then
-			if iA(23 downto 1)&'0' = x"ff8260" then
-				-- resolution (write only - Read is managed by Shifter.)
-				mono <= iD(1);
-			end if;
-		end if;
 		if iDTACKn = '0' and idtackff = '1' and sram = '0' then
 			-- synchronize with MMU counter
 			mmuct <= "11";
@@ -271,6 +268,7 @@ begin
 		oD <= (others => '1');
 		sdtackn <= '1';
 		ymdtackn <= '1';
+		mono <= mono_0;
 		if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRwn = '0' and rwn_ff = '1')) then
 			if iA(23 downto 15) = "111111111" and FC(2) = '1' then
 				-- hardware registers
@@ -289,7 +287,10 @@ begin
 		end if;
 		if FC /= "111" and iASn = '0' and iUDSn = '0' and FC(2) = '1' and iRWn = '0' then
 			if iA(23 downto 1)&'0' = x"ff820a" then
-					hz50 <= iD(1);
+				hz50_0 <= iD(1);
+			elsif iA(23 downto 1)&'0' = x"ff8260" then
+					-- resolution (write only - Read is managed by Shifter.)
+				mono_0 <= iD(1);
 			elsif iA(23 downto 1)&'0' = x"ff8606" then
 				dma_w <= iD(0);
 			end if;
@@ -557,6 +558,7 @@ begin
 			vsync1 <= '0';
 			vscnt <= 0;
 			hsdly <= '0';
+			hz50 <= '0';
 		elsif en2fck = '1' then
 			-- update H signals
 			hcnt <= nexthcnt;
@@ -646,8 +648,9 @@ begin
 				vid_hde <= '0';
 			end if;
 		elsif en2rck = '1' then
+			hz50 <= hz50_0;
 			if hcnt = mode_60.hde_on then
-				line_pal <= hz50;
+				line_pal <= hz50_0;
 			end if;
 		end if;
 	end if;
