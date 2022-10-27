@@ -317,7 +317,7 @@ process(FC,iA,iASn,iUDSn,iLDSn,iRWn,rwn_ff)
 begin
 	sram <= '1';
 	DEVn <= '1';
-	if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRWn = '0' and rwn_ff = '1')) then
+	if FC /= "111" and iASn = '0' then
 		if iA(23 downto 15) = "111111111" then
 			-- hardware registers
 			if FC(2) = '1' then
@@ -325,18 +325,20 @@ begin
 					DEVn <= '0';
 				end if;
 			end if;
-		elsif unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fe" and iRWn = '1' then
-			-- rom access
-			sram <= '0';
-		elsif unsigned(iA&'0') < 8 and iRWn = '1' and FC(2) = '1' then
-			-- rom access
-			sram <= '0';
-		elsif unsigned(iA&'0') < x"800" and unsigned(iA&'0') >= 8 and FC(2) = '1' then
-			-- protected ram access (supervisor mode only)
-			sram <= '0';
-		elsif unsigned(iA&'0') >= x"800" and iA(23 downto 22) = "00" then
-			-- ram access
-			sram <= '0';
+		elsif iUDSn = '0' or iLDSn = '0' then
+			if unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fe" and iRWn = '1' then
+				-- rom access
+				sram <= '0';
+			elsif unsigned(iA&'0') < 8 and iRWn = '1' and FC(2) = '1' then
+				-- rom access
+				sram <= '0';
+			elsif unsigned(iA&'0') < x"800" and unsigned(iA&'0') >= 8 and FC(2) = '1' then
+				-- protected ram access (supervisor mode only)
+				sram <= '0';
+			elsif unsigned(iA&'0') >= x"800" and iA(23 downto 22) = "00" then
+				-- ram access
+				sram <= '0';
+			end if;
 		end if;
 	end if;
 end process;
