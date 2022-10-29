@@ -189,8 +189,6 @@ architecture behavioral of glue is
 
 	signal irq_vbl	: std_logic;
 	signal irq_hbl	: std_logic;
-	signal irq_vbl0	: std_logic;
-	signal irq_hbl0	: std_logic;
 	signal svsync	: std_logic;
 	signal shsync	: std_logic;
 	signal ack_vbl	: std_logic;
@@ -479,24 +477,18 @@ begin
 		if resetn = '0' then
 			irq_hbl <= '0';
 			irq_vbl <= '0';
-			irq_hbl0 <= '0';
-			irq_vbl0 <= '0';
 		elsif en2fck = '1' then
-			irq_vbl <= irq_vbl0;
-			irq_hbl <= irq_hbl0;
 			if vcnt = 0 and nexthcnt = mode(mode_id).hvsync_on then
-				irq_vbl0 <= '1';
+				irq_vbl <= '1';
 			end if;
 			if nexthcnt = 0 then
-				irq_hbl0 <= '1';
+				irq_hbl <= '1';
 			end if;
 			if ack_vbl = '1' then
 				irq_vbl <= '0';
-				irq_vbl0 <= '0';
 			end if;
 			if ack_hbl = '1' then
 				irq_hbl <= '0';
-				irq_hbl0 <= '0';
 			end if;
 		end if;
 	end if;
