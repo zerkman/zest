@@ -73,7 +73,7 @@ architecture behavioral of mmu is
 	signal delay_loadn		: std_logic;
 	signal delay_bus		: std_logic;
 	signal mode_bus			: std_logic;
-	signal mode_bus_ff		: std_logic;
+	-- signal mode_bus_ff		: std_logic;
 	signal mode_load		: std_logic;
 	signal sdtackn			: std_logic;
 	signal sde				: std_logic;
@@ -82,13 +82,13 @@ architecture behavioral of mmu is
 begin
 
 	al <= iA(7 downto 1) & '1';
-	mode_bus <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
+	mode_bus <= '1' when (cnt = 1 or cnt = 2) and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
 	RDATn <= RAMn or delay_loadn;
 
 	-- RAM access control
-	process(mode_load,delay_bus,delay_loadn,video_ptr,mode_bus,mode_bus_ff,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
+	process(mode_load,delay_bus,delay_loadn,video_ptr,mode_bus,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
 	begin
 		LATCH <= '1';
 		ram_A <= (others => '0');
@@ -101,7 +101,7 @@ begin
 			ram_DS <= "11";
 			ram_R <= '1';
 			ram_W <= '0';
-		elsif (mode_bus = '1' or mode_bus_ff = '1') and delay_loadn = '0' then
+		elsif mode_bus = '1' and delay_loadn = '0' then
 			-- valid ST RAM/ROM address
 			if RAMn = '0' then
 				ram_A <= iA;
@@ -129,7 +129,6 @@ begin
 			cnt <= "10";
 			CMPCSn <= '1';
 			oD <= x"ff";
-			mode_bus_ff <= '0';
 			mode_load <= '0';
 			screen_adr <= (others => '0');
 			video_ptr <= (others => '0');
@@ -144,13 +143,9 @@ begin
 				sdtackn <= '1';
 			end if;
 		elsif en8fck = '1' then
-			mode_bus_ff <= mode_bus or mode_bus_ff;
 			cnt <= cnt + 1;
 			CMPCSn <= '1';
 			oD <= x"ff";
-			if cnt = 2 then
-				mode_bus_ff <= '0';
-			end if;
 
 			if VSYNC = '0' then
 				video_ptr <= screen_adr & "0000000";
@@ -223,7 +218,7 @@ begin
 			end if;
 
 
-			if mode_bus_ff = '1' and cnt = 2 then
+			if mode_bus = '1' and cnt = 2 then
 				delay_bus <= '1';
 				if DMAn = '0' then
 					dma_ptr <= std_logic_vector(unsigned(dma_ptr)+1);
