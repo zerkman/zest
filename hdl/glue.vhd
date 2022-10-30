@@ -323,7 +323,7 @@ begin
 					DEVn <= '0';
 				end if;
 			end if;
-		elsif iUDSn = '0' or iLDSn = '0' then
+		else
 			if unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fe" and iRWn = '1' then
 				-- rom access
 				sram <= '0';
