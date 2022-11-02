@@ -184,6 +184,7 @@ architecture behavioral of glue is
 	signal vid_hde   : std_logic;
 
 	signal mode_id	: integer range 0 to 2;
+	signal dmode_id	: integer range 0 to 2;
 	signal smode_id	: integer range 0 to 2;
 	signal vmode_id	: integer range 0 to 2;
 
@@ -223,6 +224,7 @@ DMAn <= sdma;
 RAMn <= sram;
 
 mode_id <= to_integer(unsigned(std_logic_vector'(mono & (hz50 and not mono))));
+dmode_id <= to_integer(unsigned(std_logic_vector'(mono & (hz50_0 and not mono))));
 smode_id <= to_integer(unsigned(std_logic_vector'(mono & (line_pal and not mono))));
 mode_mono <= '1' when vmode_id >= 2 else '0';
 
@@ -591,16 +593,16 @@ begin
 					nextvcnt := vcnt + 1;
 				end if;
 				vcnt <= nextvcnt;
-				if nextvcnt = mode(mode_id).vblank_on then
+				if nextvcnt = mode(dmode_id).vblank_on then
 					vblank <= '1';
 				end if;
-				if nextvcnt = mode(mode_id).vblank_off then
+				if nextvcnt = mode(dmode_id).vblank_off then
 					vblank <= '0';
 				end if;
-				if nextvcnt = mode(mode_id).vde_on then
+				if nextvcnt = mode(dmode_id).vde_on then
 					vde <= '1';
 				end if;
-				if nextvcnt = mode(mode_id).vde_off then
+				if nextvcnt = mode(dmode_id).vde_off then
 					vde <= '0';
 				end if;
 			end if;
