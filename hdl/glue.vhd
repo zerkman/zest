@@ -627,10 +627,10 @@ begin
 						vid_vsync <= '0';
 					end if;
 				end if;
-				if nextvcnt = mode(vmode_id).vid_vde_on then
+				if nextvcnt = mode(vmode_id).vid_vde_on-1 then
 					vid_vde <= '1';
 				end if;
-				if nextvcnt = mode(vmode_id).vid_vde_off then
+				if nextvcnt = mode(vmode_id).vid_vde_off-1 then
 					vid_vde <= '0';
 				end if;
 			end if;
