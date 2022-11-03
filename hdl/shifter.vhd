@@ -161,7 +161,7 @@ begin
 			end if;
 
 			vloadsr := loadsr;
-			if reload1 = '1' then
+			if reload = '1' then
 				vloadsr := "0000";
 			elsif load1 = '0' and LOAD = '1' then
 				vloadsr := loadsr(2 downto 0) & '1';
