@@ -48,6 +48,8 @@ architecture behavioral of shifter is
 	signal address	: integer;
 	-- resolution
 	signal res		: std_logic_vector(1 downto 0) := "00";
+	signal res_ff	: std_logic_vector(1 downto 0) := "00";
+	signal res_w	: std_logic;
 	-- pixel registers
 	type pxregs_t is array (0 to 3) of std_logic_vector(15 downto 0);
 	signal rr		: pxregs_t;
@@ -66,6 +68,8 @@ architecture behavioral of shifter is
 
 begin
 	address <= to_integer(unsigned(A));
+	res_w <= '1' when CSn = '0' and A(5) = '1' else '0';
+	res <= res_ff when res_w = '0' else iD(9 downto 8);
 
 -- pixel clock enable
 process(res,en8ck,en16ck,en32ck)
@@ -100,8 +104,9 @@ begin
 						if address = 0 then
 							monopal <= iD(0);
 						end if;
-					else
-						res <= iD(9 downto 8);
+					end if;
+					if res_w = '1' then
+						res_ff <= res;
 					end if;
 				end if;
 			end if;
