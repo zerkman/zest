@@ -27,7 +27,7 @@ entity mmu is
 
 		-- regular RAM access
 		RAMn	: in std_logic;
-		-- DMA RAM access (use DMA pointer instead of address bus)
+		-- DMA RAM access (use DMA pointer instead of address bus)
 		DMAn	: in std_logic;
 		-- DMA or Shifter register access
 		DEVn	: in std_logic;
@@ -73,8 +73,8 @@ architecture behavioral of mmu is
 	signal delay_loadn		: std_logic;
 	signal delay_bus		: std_logic;
 	signal mode_bus			: std_logic;
-	-- signal mode_bus_ff		: std_logic;
 	signal mode_load		: std_logic;
+	signal cmpcsn_en		: std_logic;
 	signal sdtackn			: std_logic;
 	signal sde				: std_logic;
 	signal loadn			: std_logic;
@@ -86,8 +86,9 @@ begin
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
 	RDATn <= RAMn or delay_loadn;
+	CMPCSn <= '0' when cmpcsn_en = '1' and iA(23 downto 6) & "000000" = x"ff8240" and iUDSn = '0' and iASn = '0' else '1';
 
-	-- RAM access control
+	-- RAM access control
 	process(mode_load,delay_bus,delay_loadn,video_ptr,mode_bus,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
 	begin
 		LATCH <= '1';
@@ -127,7 +128,6 @@ begin
 		if resetn = '0' then
 			sdtackn <= '1';
 			cnt <= "10";
-			CMPCSn <= '1';
 			oD <= x"ff";
 			mode_load <= '0';
 			screen_adr <= (others => '0');
@@ -135,6 +135,7 @@ begin
 			memcfg <= (others => '0');
 			dma_ptr <= (others => '0');
 			loadn <= '1';
+			cmpcsn_en <= '0';
 		elsif en8rck = '1' then
 			if (RAMn = '0' or DEVn = '0') and cnt = 2 then
 				sdtackn <= '0';
@@ -142,9 +143,11 @@ begin
 			if cnt = 0 then
 				sdtackn <= '1';
 			end if;
+			if cnt = 2 then
+				cmpcsn_en <= '1';
+			end if;
 		elsif en8fck = '1' then
 			cnt <= cnt + 1;
-			CMPCSn <= '1';
 			oD <= x"ff";
 
 			if VSYNC = '0' then
@@ -155,10 +158,7 @@ begin
 			if (cnt = 1 or cnt = 2) and iASn = '0' then
 				-- hardware registers
 				if iA(23 downto 7) & "0000000" = x"ff8200" then
-					if al >= x"40" then
-						-- shifter registers
-						CMPCSn <= '0';
-					elsif iLDSn = '0' then
+					if iLDSn = '0' then
 						-- video pointer registers
 						if iRWn = '1' then
 							-- read
@@ -235,6 +235,9 @@ begin
 			end if;
 			if cnt = 1 then
 				sde <= DE;
+			end if;
+			if cnt = 3 then
+				cmpcsn_en <= '0';
 			end if;
 
 		end if;
