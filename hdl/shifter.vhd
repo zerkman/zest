@@ -140,7 +140,7 @@ begin
 	if resetn = '0' then
 		lnbegin <= '0';
 		pxctenff <= '0';
-		load1 <= '0';
+		load1 <= '1';
 		reload <= '0';
 		reload1 <= '0';
 	elsif rising_edge(clk) then
