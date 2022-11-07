@@ -295,7 +295,7 @@ begin
 				dma_w <= iD(0);
 			end if;
 		end if;
-		if ymdtackn = '0' then
+		if ymdtackn = '0' and iASn = '0' then
 			sdtackn <= '0';
 		end if;
 	end if;
