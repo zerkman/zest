@@ -383,9 +383,9 @@ begin
 end process;
 
 -- YM registers access
-process(iA,iASn)
+process(iA,iASn,iUDSn)
 begin
-	if iASn = '0' and iA(23 downto 8) = x"ff88" then
+	if iASn = '0' and iUDSn = '0' and iA(23 downto 8) = x"ff88" then
 		SNDCSn <= '0';
 	else
 		SNDCSn <= '1';
