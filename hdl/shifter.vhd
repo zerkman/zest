@@ -83,31 +83,34 @@ begin
 	end if;
 end process;
 
--- read/write in palette or resolution registers
+-- read from palette or resolution registers
+process(CSn,RWn,address,palette,res)
+begin
+	od <= x"ffff";
+	if CSn = '0' and RWn = '1' then
+		if address < 16 then
+			oD <= "00000"&palette(address)(8 downto 6)&'0'&palette(address)(5 downto 3)&'0'&palette(address)(2 downto 0);
+		else
+			oD <= "000000" & res_ff & "00000000";
+		end if;
+	end if;
+end process;
+
+-- write to palette or resolution registers
 process(clk)
 begin
 	if rising_edge(clk) then
 		if en8ck = '1' then
-			oD <= x"ffff";
-			if CSn = '0' then
-				if RWn = '1' then
-					-- read
-					if address < 16 then
-						oD <= "00000"&palette(address)(8 downto 6)&'0'&palette(address)(5 downto 3)&'0'&palette(address)(2 downto 0);
-					else
-						oD <= "000000" & res & "00000000";
+			if CSn = '0' and RWn = '0' then
+				-- write
+				if address < 16 then
+					palette(address) <= iD(10 downto 8) & iD(6 downto 4) & iD(2 downto 0);
+					if address = 0 then
+						monopal <= iD(0);
 					end if;
-				else
-					-- write
-					if address < 16 then
-						palette(address) <= iD(10 downto 8) & iD(6 downto 4) & iD(2 downto 0);
-						if address = 0 then
-							monopal <= iD(0);
-						end if;
-					end if;
-					if res_w = '1' then
-						res_ff <= res;
-					end if;
+				end if;
+				if res_w = '1' then
+					res_ff <= res;
 				end if;
 			end if;
 		end if;
