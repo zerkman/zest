@@ -73,6 +73,8 @@ architecture behavioral of mmu is
 	signal delay_loadn		: std_logic;
 	signal delay_bus		: std_logic;
 	signal mode_bus			: std_logic;
+	signal mode_bus_1		: std_logic;
+	signal mode_bus_2		: std_logic;
 	signal mode_load		: std_logic;
 	signal cmpcsn_en		: std_logic;
 	signal sdtackn			: std_logic;
@@ -82,7 +84,8 @@ architecture behavioral of mmu is
 begin
 
 	al <= iA(7 downto 1) & '1';
-	mode_bus <= '1' when (cnt = 1 or cnt = 2) and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
+	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
+	mode_bus <= mode_bus_1 or mode_bus_2;
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
 	RDATn <= RAMn or delay_loadn;
@@ -136,6 +139,7 @@ begin
 			dma_ptr <= (others => '0');
 			loadn <= '1';
 			cmpcsn_en <= '0';
+			mode_bus_2 <= '0';
 		elsif en8rck = '1' then
 			if (RAMn = '0' or DEVn = '0') and cnt = 2 then
 				sdtackn <= '0';
@@ -149,6 +153,7 @@ begin
 		elsif en8fck = '1' then
 			cnt <= cnt + 1;
 			oD <= x"ff";
+			mode_bus_2 <= mode_bus_1;
 
 			if VSYNC = '0' then
 				video_ptr <= screen_adr & "0000000";
@@ -218,7 +223,7 @@ begin
 			end if;
 
 
-			if mode_bus = '1' and cnt = 2 then
+			if mode_bus_2 = '1' then
 				delay_bus <= '1';
 				if DMAn = '0' then
 					dma_ptr <= std_logic_vector(unsigned(dma_ptr)+1);
