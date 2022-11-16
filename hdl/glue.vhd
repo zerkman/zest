@@ -66,7 +66,6 @@ entity glue is
 		BLANKn      : out std_logic;
 		DE          : out std_logic;
 
-		mode_mono   : out std_logic;
 		vid_vsync   : out std_logic;
 		vid_hsync   : out std_logic;
 		vid_de	    : out std_logic
@@ -226,7 +225,6 @@ RAMn <= sram;
 mode_id <= to_integer(unsigned(std_logic_vector'(mono & (hz50 and not mono))));
 dmode_id <= to_integer(unsigned(std_logic_vector'(mono & (hz50_0 and not mono))));
 smode_id <= to_integer(unsigned(std_logic_vector'(mono & (line_pal and not mono))));
-mode_mono <= '1' when vmode_id >= 2 else '0';
 
 -- 8-bit bus (ACIA) signal management
 process(iA,iASn,VMAn)
