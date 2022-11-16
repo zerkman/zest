@@ -27,7 +27,7 @@ entity clock_enabler is
 		CPU_FREQ_NUM	: integer := 8000;
 		CPU_FREQ_DIV	: integer := 1000;	-- 8.017 MHz
 		-- counter bits
-		CPT_BITS	: integer := 24
+		CPT_BITS	: integer := 28
 	);
 	port (
 		clk			: in std_logic;

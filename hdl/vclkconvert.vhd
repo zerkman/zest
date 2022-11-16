@@ -62,7 +62,7 @@ architecture behavioral of vclkconvert is
 	end component;
 
 	constant DATA_WIDTH : integer := 35;
-	constant fifo_depth : integer := 8;
+	constant fifo_depth : integer := 11;
 
 	signal initcnt : unsigned(fifo_depth-1 downto 0);
 	signal idata : std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -125,7 +125,7 @@ begin
 	begin
 		if rising_edge(pclk) then
 			if presetn = '0' then
-				initcnt <= (fifo_depth-1 => '1', others => '0');
+				initcnt <= (fifo_depth-1 downto fifo_depth-3 => '1', others => '0');
 				readen <= '0';
 			else
 				readen <= '0';
