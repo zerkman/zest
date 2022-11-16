@@ -170,7 +170,6 @@ architecture structure of atarist_mb is
 	signal st_hsync		: std_logic;
 	signal blankn		: std_logic;
 	signal sde			: std_logic;
-	signal mode_mono    : std_logic;
 
 	signal mmu_RAMn		: std_logic;
 	signal mmu_DMAn		: std_logic;
@@ -430,7 +429,6 @@ begin
 		BLANKn => blankn,
 		DE => sde,
 
-		mode_mono => mode_mono,
 		vid_vsync => vsync,
 		vid_hsync => hsync,
 		vid_de => de
@@ -505,10 +503,10 @@ begin
 	shifter_RWn <= bus_RWn;
 	shifter_A <= bus_A(5 downto 1);
 
-	process(shifter_rgb,shifter_mono,blankn,mode_mono) is
+	process(shifter_rgb,shifter_mono,blankn,monomon) is
 		begin
 			rgb <= (others => '0');
-			if mode_mono = '1' then
+			if monomon = '1' then
 				rgb <= (others => shifter_mono);
 			elsif blankn = '1' then
 				rgb <= shifter_rgb;
