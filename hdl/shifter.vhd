@@ -68,7 +68,7 @@ architecture behavioral of shifter is
 
 begin
 	address <= to_integer(unsigned(A));
-	res_w <= '1' when CSn = '0' and A(5) = '1' else '0';
+	res_w <= '1' when CSn = '0' and RWn = '0' and A(5) = '1' else '0';
 	res <= res_ff when res_w = '0' else iD(9 downto 8);
 
 -- pixel clock enable
