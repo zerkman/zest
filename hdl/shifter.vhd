@@ -78,8 +78,10 @@ begin
 		enpxck <= en8ck;
 	elsif res = "01" then
 		enpxck <= en16ck;
-	else
+	elsif res = "10" then
 		enpxck <= en32ck;
+	else
+		enpxck <= '0';
 	end if;
 end process;
 
