@@ -274,7 +274,20 @@ If everything went correctly, now you’ve got the required `BOOT.bin` file.
 
 ## Make boot.scr
 
-TODO
+You need a `boot.scr` boot script file for u-boot. It contains a list of commands to boot Linux, and setup the kernel accordingly.
+
+Create a `boot.cmd` file with the contents:
+
+    setenv bootargs console=ttyPS0,115200 rw earlyprintk uio_pdrv_genirq.of_id=generic-uio rootwait
+    fatload mmc 0 0x8000 uImage
+    fatload mmc 0 0x800000 devicetree.dtb
+    fatload mmc 0 0x900000 rootfs.ub
+    bootm 0x8000 0x900000 0x800000
+
+Then create `boot.scr` from it, placing it in your `setup` directory:
+
+    mkimage -A arm -O linux -C none -T script -a 0 -e 0 -n "boot script" -d boot.cmd $HOME/src/zest/setup/boot.scr
+
 
 ## Build the Linux kernel
 
