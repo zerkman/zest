@@ -40,10 +40,13 @@ void * thread_floppy(void * arg) {
   uint32_t n,oldn=0;
   unsigned int oldaddr=2000;
 
-  Flopimg *img = flopimg_open(arg,0,3);
-  if (img==NULL) {
-    printf("Error opening floppy image file\n");
-    return NULL;
+  Flopimg *img = NULL;
+  if (arg) {
+    img = flopimg_open(arg,0,3);
+    if (img==NULL) {
+      printf("Error opening floppy image file\n");
+      return NULL;
+    }
   }
   unsigned int pos=0,pos1=0,posw=0;
 
@@ -88,7 +91,7 @@ void * thread_floppy(void * arg) {
     }
     oldaddr = addr;
 
-    if (r) {
+    if (img && r) {
       uint8_t *trkp = flopimg_trackpos(img,track>>1,track&1);
 
       posw = pos1;
@@ -111,11 +114,11 @@ void * thread_floppy(void * arg) {
     }
 
     // detect image change
-    if (disk_image_changed)
-    {
+    if (disk_image_changed) {
+      if (img)
         flopimg_close(img);
-        img = flopimg_open(disk_image_filename,0,3);
-        disk_image_changed = 0;
+      img = flopimg_open(disk_image_filename,0,3);
+      disk_image_changed = 0;
     }
   }
 
