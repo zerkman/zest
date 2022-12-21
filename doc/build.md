@@ -144,18 +144,20 @@ The generation of the board support package (BSP) and first stage bootloader (FS
 
 This process will create the whole Linux filesystem for your Zynq board, as well as the build toolchain that can be used for builing the Linux kernel, u-boot and the userland applications.
 
-This procedure has been successfully tested using buildroot version 2022.02.
+This procedure has been successfully tested using buildroot version 2022.02.8.
 It should most probably work on more recent versions.
+
+### Buildroot setup
 
 Fetch the buildroot sources:
 
     $ cd $HOME/src
-    $ wget https://buildroot.org/downloads/buildroot-2022.02.tar.xz
-    $ tar xf buildroot-2022.02.tar.xz
+    $ wget https://buildroot.org/downloads/buildroot-2022.02.8.tar.xz
+    $ tar xf buildroot-2022.02.8.tar.xz
 
 Now a bit of configuration must be done. Issue the commands:
 
-    $ cd buildroot-2022.02
+    $ cd buildroot-2022.02.8
     $ make menuconfig
 
 In the configuration menu, choose **Target options**. In this menu:
@@ -167,15 +169,51 @@ Then you can choose some additional tools to be installed on the Linux system.
 For this, go back to the main menu, then choose **Target packages**.
 I strongly suggest you add at least `lrzsz` (in **Networking Applications**) so you can transfer files through Zmodem between your computer and the Zynq's Linux system.
 
+### Filesystem creation
+
+In **Filesystem images**, enable **cpio the root filesystem**, choose **gzip** as the compression method, and enable **Create U-Boot image of the root filesystem**.
+
 When everything is set up, exit the menu, and save your settings when asked.
 Type the command `make` to build everything. This will take quite a while.
 
-The Linux filesystem tarball will be created as the `buildroot-2022.02/output/images/rootfs.tar` file.
+A first, base version of the root filesystem will be created. We need to patch it a bit, so that the booting process automatically mounts the boot partition, then copies the zeST executable file from it and runs it. So, still in the main Buildroot directory, create a `post_build.sh` file with the contents:
+
+    #!/bin/sh
+
+    TARGET=output/target
+    SRCDIR=`dirname $0`
+
+    if test ! -d $TARGET/boot ; then
+      mkdir $TARGET/boot
+      echo "/dev/mmcblk0p1 /boot vfat flush,dirsync,noatime,noexec,nodev 0 0" >> $TARGET/etc/fstab
+    fi
+
+    if test ! -f $TARGET/root/zestboot ; then
+    cat <<EOF > $TARGET/root/zestboot
+    #!/bin/sh
+    install -m 755 /boot/zeST /usr/sbin
+    exec /usr/sbin/zeST /boot/rom.img
+    EOF
+      chmod 755 $TARGET/root/zestboot
+      ln -s ../../root/zestboot $TARGET/etc/init.d/S99zest
+    fi
+
+Run it, and build the root filesystem again (this time should be very quick):
+    $ sh post_build.sh
+    $ make
+
+The Linux filesystem image will be created as the `buildroot-2022.02.8/output/images/rootfs.cpio.uboot` file. Copy it to your `setup` dir:
+
+    $ cp output/images/rootfs.cpio.uboot $HOME/src/zest/setup/rootfs.ub
+
+### Toolchain setup
+
+During the Buildroot build process, a full-featured cross GCC toolchain is also created, which allows to build Linux binaries for the board's ARM processor. This includes u-boot (the bootloader), the Linux kernel and the zeST manager.
 
 For the following steps (u-boot and Linux kernel), you can set up the environement to use the buildroot cross compilation toolchain:
 
     $ export ARCH=arm
-    $ export CROSS_COMPILE=$HOME/src/buildroot-2022.02/output/host/bin/arm-linux-
+    $ export CROSS_COMPILE=$HOME/src/buildroot-2022.02.8/output/host/bin/arm-linux-
 
 ## Build the u-boot bootloader
 
