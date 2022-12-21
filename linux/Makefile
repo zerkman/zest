@@ -16,9 +16,9 @@
 
 # You can set the path to your local buildroot toolchain by uncommenting the
 # following line and setting the correct path.
-#export PATH:=$(HOME)/src/buildroot-2021.11/output/host/bin:$(PATH)
+#export PATH:=$(HOME)/src/buildroot-2022.02.8/output/host/bin:$(PATH)
 
-TOOLCHAIN=arm-buildroot-linux-uclibcgnueabihf-
+TOOLCHAIN=arm-linux-
 CC=$(TOOLCHAIN)gcc
 CXX=$(TOOLCHAIN)g++
 LD=$(TOOLCHAIN)ld
