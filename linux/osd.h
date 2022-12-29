@@ -17,8 +17,6 @@
  */
 
 
-int osd_init(void);
-
 #ifndef __OSD_H__
 #define __OSD_H__
 
