@@ -240,21 +240,22 @@ void * thread_ikbd(void * arg) {
             case BTN_LEFT: key = 122; break;
             case BTN_RIGHT: key = 127; break;
             case KEY_NUMLOCK:
-            if (evvalue == 1) {
-              joy_emu = !joy_emu;
-              led_status(joyemufd,joy_emu);
-            }
-            break;
-          case KEY_PAGEUP:
-          case KEY_SCROLLLOCK:
-            menu();
-            break;
-          // default:
-          //   printf("Key code:%d val:%d\n",evcode,evvalue);
-        }
-        if (key!=-1) {
-          parmreg[4+key/32] = (parmreg[4+key/32] & ~(1<<key%32)) | (!evvalue)<<(key%32);
-        }
+              if (evvalue == 1) {
+                joy_emu = !joy_emu;
+                led_status(joyemufd,joy_emu);
+              }
+              break;
+            case KEY_PAGEUP:
+            case KEY_SCROLLLOCK:
+              menu();
+              break;
+            // default:
+            //   printf("Key code:%d val:%d\n",evcode,evvalue);
+          }
+          if (key!=-1) {
+            parmreg[4+key/32] = (parmreg[4+key/32] & ~(1<<key%32)) | (!evvalue)<<(key%32);
+          }
+          break;
       }
     }
 
