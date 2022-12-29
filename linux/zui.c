@@ -23,6 +23,7 @@
 
 #include "zui.h"
 #include "osd.h"
+#include "input.h"
 
 // widget types
 #define ZUI_PANEL   1
@@ -279,9 +280,6 @@ int select_focused(int sel) {
   }
   return 0;
 }
-
-// From ikbd.c
-int input_event(int timeout, int *type, int *code, int *value);
 
 extern volatile int thr_end;
 extern uint8_t osd_palette[3][12];

@@ -16,19 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <poll.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 
 #include <linux/input-event-codes.h>
+
+#include "input.h"
 
 #define JOY_EMU_LED_FILE "/sys/class/leds/led1/brightness"
 
@@ -46,66 +40,6 @@ void led_status(int fd,int st) {
     write(fd,&val,1);
   }
 }
-
-struct input_event {
-  struct timeval time;
-  unsigned short type;
-  unsigned short code;
-  unsigned int value;
-};
-
-static struct pollfd pfd[256];
-static int nfds = 0;
-static int fd_i = 0;
-static struct input_event ie[256];
-static int ie_count = 0;
-static int ie_i = 0;
-
-void input_init(void) {
-  struct dirent *e;
-  DIR *dd = opendir("/dev/input");
-  nfds = 0;
-
-  while ((e=readdir(dd))!=NULL) {
-    if (strncmp(e->d_name,"event",5)==0) {
-      char buf[267];
-      sprintf(buf,"/dev/input/%s",e->d_name);
-      pfd[nfds].fd = open(buf,O_RDONLY);
-      pfd[nfds].events = POLLIN;
-      ++nfds;
-    }
-  }
-  closedir(dd);
-}
-
-int input_event(int timeout, int *type, int *code, int *value) {
-  if (ie_i < ie_count) {
-    *type = ie[ie_i].type;
-    *code = ie[ie_i].code;
-    *value = (int)ie[ie_i].value;
-    ++ie_i;
-    return 1;
-  }
-  for (; fd_i<nfds; ++fd_i) {
-    if ((pfd[fd_i].revents&POLLIN) != 0) {
-      ssize_t sz = read(pfd[fd_i].fd,ie,sizeof(ie));
-      ie_count = sz/sizeof(struct input_event);
-      ie_i = 0;
-      ++fd_i;
-      return input_event(timeout,type,code,value);
-    }
-  }
-  int retval = poll(pfd,nfds,timeout);
-  if (retval == -1) {
-    return -1;
-  } else if (retval>0) {
-    fd_i = 0;
-    return input_event(timeout,type,code,value);
-  }
-  // timeout occurred
-  return 0;
-}
-
 
 void * thread_ikbd(void * arg) {
   unsigned int mx=0,my=0;
