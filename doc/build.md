@@ -169,48 +169,47 @@ Then you can choose some additional tools to be installed on the Linux system.
 For this, go back to the main menu, then choose **Target packages**.
 I strongly suggest you add at least `lrzsz` (in **Networking Applications**) so you can transfer files through Zmodem between your computer and the Zynq's Linux system.
 
-### Filesystem creation
-
 In **Filesystem images**, enable **cpio the root filesystem**, choose **gzip** as the compression method, and enable **Create U-Boot image of the root filesystem**.
 
 When everything is set up, exit the menu, and save your settings when asked.
 Type the command `make` to build everything. This will take quite a while.
 
-A first, base version of the root filesystem will be created. We need to patch it a bit, so that the booting process automatically mounts the boot partition, then copies the zeST executable file from it and runs it. So, still in the main Buildroot directory, create a `post_build.sh` file with the contents:
+### Build the zeST binary executable file
 
-    #!/bin/sh
+During the Buildroot build process, a full-featured cross GCC toolchain is also created, which allows to build Linux binaries for the board's ARM processor. We will use it to build the zeST binary executable file.
 
-    TARGET=output/target
-    SRCDIR=`dirname $0`
+In `$HOME/src/zest/linux`, edit the `Makefile` file. You should find a commented out line of the form:
 
-    if test ! -d $TARGET/boot ; then
-      mkdir $TARGET/boot
-      echo "/dev/mmcblk0p1 /boot vfat flush,dirsync,noatime,noexec,nodev 0 0" >> $TARGET/etc/fstab
-    fi
+    #export PATH:=$(HOME)/src/buildroot-2022.02.8/output/host/bin:$(PATH)
 
-    if test ! -f $TARGET/root/zestboot ; then
-    cat <<EOF > $TARGET/root/zestboot
-    #!/bin/sh
-    install -m 755 /boot/zeST /usr/sbin
-    exec /usr/sbin/zeST /boot/rom.img
-    EOF
-      chmod 755 $TARGET/root/zestboot
-      ln -s ../../root/zestboot $TARGET/etc/init.d/S99zest
-    fi
+If you installed Buildroot at the default location `$HOME/src/buildroot-2022.02.8`, you may just uncomment this line my removing the leading `#` comment symbol. Otherwise, modify the line to point to the location of your Buildroot toolchain.
 
-Run it, and build the root filesystem again (this time should be very quick):
-    $ sh post_build.sh
+Save the modified file, close your file editor and type the commands:
+
+    $ cd $HOME/src/zest/linux
+    $ make
+
+This will generate a `zeST` binary executable file.
+
+### Filesystem customisation
+
+After the Buildroot build, a base version of the root filesystem has been created. We need to patch it a bit, so that the booting process automatically mounts the SD card partition (to get access to the ROM and floppy image files), then runs the zeST executable file.
+
+The customisation is done by a `buildroot_post_build.sh` script file from the `zest/setup` directory. Run it from the Buildroot main directory, and build the root filesystem again (this time should be very quick):
+
+    $ cd $HOME/src/buildroot-2022.02.8
+    $ sh $HOME/src/zest/setup/buildroot_post_build.sh
     $ make
 
 The Linux filesystem image will be created as the `buildroot-2022.02.8/output/images/rootfs.cpio.uboot` file. Copy it to your `setup` dir:
 
     $ cp output/images/rootfs.cpio.uboot $HOME/src/zest/setup/rootfs.ub
 
-### Toolchain setup
+## Toolchain setup
 
 During the Buildroot build process, a full-featured cross GCC toolchain is also created, which allows to build Linux binaries for the board's ARM processor. This includes u-boot (the bootloader), the Linux kernel and the zeST manager.
 
-For the following steps (u-boot and Linux kernel), you can set up the environement to use the buildroot cross compilation toolchain:
+For the following steps (u-boot and Linux kernel), you may set up the environement to use the buildroot cross compilation toolchain:
 
     $ export ARCH=arm
     $ export CROSS_COMPILE=$HOME/src/buildroot-2022.02.8/output/host/bin/arm-linux-
@@ -225,7 +224,6 @@ Get the source code and issue the following configurations:
     $ git checkout xilinx-v2020.2
     $ make xilinx_zynq_virt_defconfig
     $ sed -i 's/^\(CONFIG_DEFAULT_DEVICE_TREE\)=.*/\1=""/g' .config
-    $ sed -i 's/^\(CONFIG_BAUDRATE\)=.*/\1=921600/g' .config
 
 Copy the required files:
 
