@@ -1,6 +1,6 @@
 # zeST - An implementation of an Atari ST in VHDL
 
-Copyright (c) 2019-2022 by François Galea (fgalea à free.fr)
+Copyright (c) 2019-2023 by François Galea (fgalea à free.fr)
 
 This is a complete implementation of an Atari ST in VHDL, which targets cheap Xilinx Zynq-7000-based prototyping boards.
 
