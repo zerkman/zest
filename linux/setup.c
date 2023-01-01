@@ -239,11 +239,12 @@ int main(int argc, char **argv) {
   }
 
   memset(mem_array+0xfa0000,0xff,0x20000);
-  int c;
   pthread_t kbd_thr;
   pthread_create(&kbd_thr,NULL,thread_ikbd,NULL);
   pthread_t floppy_thr;
   pthread_create(&floppy_thr,NULL,thread_floppy,(void*)floppyfilename);
+  /*
+  int c;
   do {
     do_reset();
     c = getchar();
@@ -252,6 +253,11 @@ int main(int argc, char **argv) {
     usleep(10000);
   } while (c!='q');
   thr_end = 1;
+  */
+  do_reset();
+  for (;;) {
+    usleep(10000);
+  }
   pthread_join(kbd_thr,NULL);
   pthread_join(floppy_thr,NULL);
   if (has_sil) {
