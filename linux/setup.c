@@ -28,6 +28,8 @@
 #include <sys/mman.h>
 #include <pthread.h>
 #include <limits.h> // for PATH_MAX
+#include <signal.h>
+
 #include "menu.h"
 
 #include "sil9022a.h"
@@ -151,6 +153,10 @@ void load_rom(const char *filename) {
   memcpy(mem_array,mem_array+0xfc0000,8);
 }
 
+static void signal_handler(int sig) {
+  thr_end = 1;
+}
+
 int main(int argc, char **argv) {
   int cfg_video = CFG_COLR;
   int cfg_mem = CFG_1M;
@@ -270,6 +276,12 @@ int main(int argc, char **argv) {
   pthread_create(&kbd_thr,NULL,thread_ikbd,NULL);
   pthread_t floppy_thr;
   pthread_create(&floppy_thr,NULL,thread_floppy,(void*)floppyfilename);
+
+  struct sigaction sa = {0};
+  sa.sa_handler = signal_handler;
+  sigaction(SIGTERM,&sa,NULL);
+  sigaction(SIGINT,&sa,NULL);
+
   /*
   int c;
   do {
@@ -283,9 +295,10 @@ int main(int argc, char **argv) {
   */
   load_rom(binfilename);
   cold_reset();
-  for (;;) {
+  while (thr_end==0) {
     usleep(10000);
   }
+  parmreg[0] = 0;
   pthread_join(kbd_thr,NULL);
   pthread_join(floppy_thr,NULL);
   if (has_sil) {
