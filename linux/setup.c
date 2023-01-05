@@ -56,6 +56,7 @@ void * thread_ikbd(void * arg);
 #define CFG_WS2  0x0300
 #define CFG_WS3  0x0100
 #define CFG_WS4  0x0000
+#define CFG_WSMK 0x0300
 
 
 volatile uint32_t *parmreg;
@@ -106,23 +107,48 @@ int usage(const char *progname) {
   return 1;
 }
 
-const char *binfilename = NULL;
-uint8_t *mem_array;
-int cfg;
-void do_reset()
-{
-    memset(mem_array,0,0x20000);
-    FILE *bootfd = fopen(binfilename,"rb");
-    fread(mem_array+0xfc0000,1,0x30000,bootfd);
-    fclose(bootfd);
-    memcpy(mem_array,mem_array+0xfc0000,8);
-    int i;
-    parmreg[0] = cfg;
-    for (i=4; i<8; ++i) {
-        parmreg[i] = 0xffffffff;
-    }
+static uint8_t *mem_array;
+static int cfg;
 
-    parmreg[0] = cfg|3; // end reset
+void cold_reset() {
+  parmreg[0] = cfg|2; // Bit 0 clear=reset
+  memset(mem_array+8,0,0x1fff8);
+  int i;
+  for (i=4; i<8; ++i) {
+      parmreg[i] = 0xffffffff;
+  }
+  parmreg[0] = cfg|3; // end reset
+}
+
+void warm_reset() {
+  parmreg[0] = cfg|2; // Bit 0 clear=reset
+  parmreg[0] = cfg|3; // |3="end reset"
+}
+
+void set_wakestate(int ws) {
+  switch (ws) {
+    case 1: cfg = (cfg&~CFG_WSMK) | CFG_WS1; break;
+    case 2: cfg = (cfg&~CFG_WSMK) | CFG_WS2; break;
+    case 3: cfg = (cfg&~CFG_WSMK) | CFG_WS3; break;
+    case 4: cfg = (cfg&~CFG_WSMK) | CFG_WS4; break;
+  }
+}
+
+int get_wakestate(void) {
+  switch (cfg&CFG_WSMK) {
+    case CFG_WS1: return 1;
+    case CFG_WS2: return 2;
+    case CFG_WS3: return 3;
+    case CFG_WS4: return 4;
+  }
+  return 0;
+}
+
+void load_rom(const char *filename) {
+  FILE *bootfd = fopen(filename,"rb");
+  fread(mem_array+0xfc0000,1,0x30000,bootfd);
+  fclose(bootfd);
+  memcpy(mem_array,mem_array+0xfc0000,8);
 }
 
 int main(int argc, char **argv) {
@@ -137,6 +163,7 @@ int main(int argc, char **argv) {
     strcpy(file_selector_state[i].current_directory,file_selector_state[0].current_directory);
   }
 
+  const char *binfilename = NULL;
   const char *floppyfilename = NULL;
   int a = 0;
   while (++a<argc) {
@@ -254,7 +281,8 @@ int main(int argc, char **argv) {
   } while (c!='q');
   thr_end = 1;
   */
-  do_reset();
+  load_rom(binfilename);
+  cold_reset();
   for (;;) {
     usleep(10000);
   }
