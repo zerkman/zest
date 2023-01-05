@@ -31,18 +31,13 @@ extern int tolower (int __c);
 #include "zui.h"
 #include "osd.h"
 
-extern volatile uint32_t *parmreg;  // From setup.c
-extern int cfg;                     // From setup.c
-extern void do_reset();             // From setup.c
+extern void cold_reset();           // From setup.c
+extern void warm_reset();           // From setup.c
+extern void set_wakestate(int ws);  // From setup.c
+extern int get_wakestate(void);     // From setup.c
+extern void load_rom(const char *filename);
 extern int disk_image_changed;      // From floppy.c
 extern void *disk_image_filename;   // From floppy.c
-
-// From setup.c:
-#define CFG_WS1  0x0000
-#define CFG_WS2  0x0300
-#define CFG_WS3  0x0100
-#define CFG_WS4  0x0200
-#define WS_MASK  0x0300
 
 // Stuff that would be nice for the UI lib:
 // - Changable text widgets (example: file selector text widgets that display the files)
@@ -80,15 +75,12 @@ extern void *disk_image_filename;   // From floppy.c
 
 static int buttonclick_warm_reset(ZuiWidget* obj)
 {
-  parmreg[0]=cfg&0xfffffffe;    // Bit 0 clear=reset
-  parmreg[0]=cfg|3;             // |3="end reset"
+  warm_reset();
   return 0;
 }
 
 static int buttonclick_cold_reset(ZuiWidget* obj) {
-  parmreg[0]=0;
-  usleep(10000);
-  do_reset();
+  cold_reset();
   return 0;
 }
 
@@ -270,7 +262,6 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
   return 0;
 }
 
-extern const char *binfilename;
 static int buttonclick_fsel_ok(ZuiWidget* obj) {
   char *selected_item=directory_filenames[current_view->file_selector_current_top+current_view->file_selector_cursor_position];
   if (selected_item[strlen(selected_item)-1]=='/') {
@@ -287,7 +278,8 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
     disk_image_filename=selected_item-strlen(current_view->current_directory);  // TODO: support for drive B?
     disk_image_changed=1;               // TODO: support for drive B?
   } else if (view==FILE_SELECTOR_TOS_IMAGE) {
-    binfilename=selected_item;
+    load_rom(selected_item);
+    cold_reset();
   }
   return 1;
 }
@@ -416,26 +408,22 @@ static int buttonclick_exit_menu(ZuiWidget* obj) {
 }
 
 static int buttonclick_ws1(ZuiWidget* obj) {
-  cfg=(cfg& 0xfffffcff) | CFG_WS1;
-  buttonclick_cold_reset(obj);
+  set_wakestate(1);
   return 1;
 }
 
 static int buttonclick_ws2(ZuiWidget* obj) {
-  cfg=(cfg& 0xfffffcff) | CFG_WS2;
-  buttonclick_cold_reset(obj);
+  set_wakestate(2);
   return 1;
 }
 
 static int buttonclick_ws3(ZuiWidget* obj) {
-  cfg=(cfg& 0xfffffccf) | CFG_WS3;
-  buttonclick_cold_reset(obj);
+  set_wakestate(3);
   return 1;
 }
 
 static int buttonclick_ws4(ZuiWidget* obj) {
-  cfg=(cfg& 0xfffffcff) | CFG_WS4;
-  buttonclick_cold_reset(obj);
+  set_wakestate(4);
   return 1;
 }
 
@@ -450,12 +438,9 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,6,"Eject A",buttonclick_eject_floppy_a));
   zui_add_child(form,zui_button(1,7,"Eject B",buttonclick_eject_floppy_b));
   zui_add_child(form,zui_button(1,8,"RAM size",buttonclick_change_ram_size));
-  int ws=cfg&0x300;
+  int ws = get_wakestate();
   int bg[4]={ 1, 1, 1, 1 };
-  if (ws==CFG_WS1) bg[0]=3;
-  if (ws==CFG_WS2) bg[1]=3;
-  if (ws==CFG_WS3) bg[2]=3;
-  if (ws==CFG_WS4) bg[3]=3;
+  bg[ws-1] = 3;
   zui_add_child(form,zui_button_ext(1,9,"WS1",buttonclick_ws1,0,bg[0],2,3));
   zui_add_child(form,zui_button_ext(5,9,"WS2",buttonclick_ws2,0,bg[1],2,3));
   zui_add_child(form,zui_button_ext(9,9,"WS3",buttonclick_ws3,0,bg[2],2,3));
