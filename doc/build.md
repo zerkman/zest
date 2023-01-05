@@ -169,7 +169,7 @@ Then you can choose some additional tools to be installed on the Linux system.
 For this, go back to the main menu, then choose **Target packages**.
 I strongly suggest you add at least `lrzsz` (in **Networking Applications**) so you can transfer files through Zmodem between your computer and the Zynq's Linux system.
 
-In **Filesystem images**, enable **cpio the root filesystem**, choose **gzip** as the compression method, and enable **Create U-Boot image of the root filesystem**.
+In **Filesystem images**, enable **cpio the root filesystem**, choose **xz** as the compression method, and enable **Create U-Boot image of the root filesystem**.
 
 When everything is set up, exit the menu, and save your settings when asked.
 Type the command `make` to build everything. This will take quite a while.
@@ -224,6 +224,8 @@ Get the source code and issue the following configurations:
     $ git checkout xilinx-v2020.2
     $ make xilinx_zynq_virt_defconfig
     $ sed -i 's/^\(CONFIG_DEFAULT_DEVICE_TREE\)=.*/\1=""/g' .config
+    $ sed -i 's/^\(CONFIG_BAUDRATE\)=.*/\1=921600/g' .config
+    $ sed -i 's/^\(CONFIG_BOOTDELAY\)=.*/\1=0/g' .config
 
 Copy the required files:
 
