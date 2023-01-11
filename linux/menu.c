@@ -73,6 +73,8 @@ extern void *disk_image_filename;   // From floppy.c
 #error Too many characters (XCHARS*YCHARS)
 #endif
 
+static const int file_selector_filename_lines=FSEL_YCHARS-2;
+
 static int buttonclick_warm_reset(ZuiWidget* obj)
 {
   warm_reset();
@@ -97,7 +99,7 @@ char blank_line[FSEL_XCHARS-1]="                                       "; // TOD
 void populate_file_array()
 {
   int i;
-  for (i=0;i<FSEL_YCHARS-2;i++) {
+  for (i=0;i<file_selector_filename_lines;i++) {
     int j=0;
     char *s=directory_filenames[current_view->file_selector_current_top+i];
     if (!s) {
@@ -136,7 +138,7 @@ void populate_file_array()
     }
   }
   // If we have too few filenames to fill the list, just fill the rest with blanks
-  for (; i < FSEL_YCHARS-2; i++) {
+  for (;i<file_selector_filename_lines;i++) {
     char *d=file_selector_list[i];
     strcpy(d, blank_line);
   }
@@ -146,7 +148,7 @@ void update_file_listing() {
   populate_file_array();
   int i;
   int first_colour=current_view->file_selector_current_top&1;    // This is done in order when the list scrolls, the odd/even lines will maintain their colour
-  for (i=0;i<FSEL_YCHARS-2;i++) {
+  for (i=0;i<file_selector_filename_lines;i++) {
     int c=((i+first_colour)&1)+1;
     if (i==current_view->file_selector_cursor_position) {
       c=3;
@@ -173,7 +175,7 @@ static int buttonclick_fsel_down_arrow(ZuiWidget* obj) {
     current_view->file_selector_cursor_position++;
     update_file_listing();
   } else {
-    if (current_view->file_selector_current_top+FSEL_YCHARS-2<current_view->total_listing_files) {
+    if (current_view->file_selector_current_top+file_selector_filename_lines<current_view->total_listing_files) {
       current_view->file_selector_current_top++;
       update_file_listing();
     }
@@ -275,6 +277,7 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
     return 0;   // Don't exit the dialog yet
   }
   if (view==FILE_SELECTOR_DISK_A||view==FILE_SELECTOR_DISK_B) {
+    strcpy(current_view->selected_file, selected_item-strlen(current_view->current_directory));
     disk_image_filename=selected_item-strlen(current_view->current_directory);  // TODO: support for drive B?
     disk_image_changed=1;               // TODO: support for drive B?
   } else if (view==FILE_SELECTOR_TOS_IMAGE) {
@@ -332,7 +335,7 @@ ZuiWidget * menu_file_selector() {
   zui_add_child(form,zui_button(22,FSEL_YCHARS-1,"Cancel",buttonclick_fsel_cancel));
   int i;
   populate_file_array();
-  for (i=0;i<FSEL_YCHARS-2;i++) {
+  for (i=0;i<file_selector_filename_lines;i++) {
     int first_colour=current_view->file_selector_current_top&1;    // This is done in order when the list scrolls, the odd/even lines will maintain their colour
     int c=((i+first_colour)&1)+1;
     if (i==current_view->file_selector_cursor_position) {
@@ -346,7 +349,6 @@ ZuiWidget * menu_file_selector() {
 static void setup_item_selector(int selector_view) {
   current_view=&file_selector_state[selector_view];
   if (current_view->selected_file) {
-    char *p=current_view->current_directory;
     // TODO: Initially read_directory() was modified to have a return value. That value in turn depended on the return value of
     //       glob() call. For some reason, when storing the glob return value (instead of ignoring it as it is currently)
     //       some paths return GLOB_NOMATCH (even though the pathname exists and you can 'ls' it) and corrupt-o-rama starts
@@ -357,11 +359,21 @@ static void setup_item_selector(int selector_view) {
       // Search the results for the filename and point the file selector cursor at it
       int l=0;
       char *i=directory_filenames[0];
+      char *p=current_view->selected_file+strlen(current_view->current_directory);
       while (i) {
         if (strcmp(i, p)==0) {
-          // TODO: check if this works when the directory listing is smaller than the file selector visible lines
-          current_view->file_selector_current_top=l;
-          current_view->file_selector_cursor_position=0;
+          current_view->file_selector_current_top=l-file_selector_filename_lines/2;
+          current_view->file_selector_cursor_position=file_selector_filename_lines/2;
+          if (current_view->file_selector_current_top<0) {
+            current_view->file_selector_current_top=0;
+            current_view->file_selector_cursor_position=l;
+          } else if (current_view->file_selector_current_top>current_view->total_listing_files-file_selector_filename_lines) {
+            current_view->file_selector_current_top=current_view->total_listing_files-file_selector_filename_lines;
+            current_view->file_selector_cursor_position=l-(current_view->total_listing_files-file_selector_filename_lines);
+          } else if (current_view->total_listing_files<file_selector_filename_lines) {
+            current_view->file_selector_current_top=0;
+            current_view->file_selector_cursor_position=l;
+          }
           break;
         }
         l++;
