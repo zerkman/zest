@@ -23,8 +23,8 @@
 #define FILE_SELECTOR_VIEWS 3
 
 typedef struct _file_selector_state {
-  int file_selector_current_top;
   int total_listing_files;
+  int file_selector_current_top;
   int file_selector_cursor_position;
   char selected_file[PATH_MAX];
   char current_directory[PATH_MAX];

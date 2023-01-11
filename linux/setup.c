@@ -157,6 +157,23 @@ static void signal_handler(int sig) {
   thr_end = 1;
 }
 
+void setup_file_selector(const char *filename, int state_id)
+{
+  FILE_SELECTOR_STATE *state = &file_selector_state[state_id];
+  if (*filename==0) {
+    return; // Already initialised at the start of main
+  }
+  if (*filename!='/') {
+    getcwd(state->selected_file,PATH_MAX);
+    strcat(state->selected_file,"/");
+  }
+  strcat(state->selected_file,filename);
+  strcpy(state->current_directory,state->selected_file);
+  char *p = &state->current_directory[strlen(state->current_directory)];
+  while (p[-1]!='/'&&p!=state->current_directory) p--;
+  *p=0;
+}
+
 int main(int argc, char **argv) {
   int cfg_video = CFG_COLR;
   int cfg_mem = CFG_1M;
@@ -170,7 +187,8 @@ int main(int argc, char **argv) {
   }
 
   const char *binfilename = NULL;
-  const char *floppyfilename = NULL;
+  const char *floppy1filename = NULL;
+  const char *floppy2filename = NULL;
   int a = 0;
   while (++a<argc) {
     const char *arg = argv[a];
@@ -206,21 +224,15 @@ int main(int argc, char **argv) {
       }
        else return usage(argv[0]);
     }
-    else if (binfilename == NULL) {
+    else if (binfilename==NULL) {
       binfilename = arg;
-      // TODO: factor this code?
-      if (*arg != '/') {
-        getcwd(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file, PATH_MAX);
-        strcat(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file, "/");
-      }
-      strcat(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file,arg);
-    } else if (floppyfilename == NULL) {
-      floppyfilename = arg;
-      if (*arg != '/') {
-        getcwd(file_selector_state[FILE_SELECTOR_DISK_A].selected_file, PATH_MAX);
-        strcat(file_selector_state[FILE_SELECTOR_DISK_A].selected_file, "/");
-      }
-      strcat(file_selector_state[FILE_SELECTOR_DISK_A].selected_file,arg); // TODO: support for drive B?
+      setup_file_selector(arg,FILE_SELECTOR_TOS_IMAGE);
+    } else if (floppy1filename==NULL) {
+      floppy1filename = arg;
+      setup_file_selector(arg,FILE_SELECTOR_DISK_A);
+    } else if (floppy2filename==NULL) {
+      floppy1filename = arg;
+      setup_file_selector(arg,FILE_SELECTOR_DISK_B);
     } else {
       return usage(argv[0]);
     }
@@ -275,7 +287,7 @@ int main(int argc, char **argv) {
   pthread_t kbd_thr;
   pthread_create(&kbd_thr,NULL,thread_ikbd,NULL);
   pthread_t floppy_thr;
-  pthread_create(&floppy_thr,NULL,thread_floppy,(void*)floppyfilename);
+  pthread_create(&floppy_thr,NULL,thread_floppy,(void*)floppy1filename);
 
   struct sigaction sa = {0};
   sa.sa_handler = signal_handler;
