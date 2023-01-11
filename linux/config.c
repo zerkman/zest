@@ -77,6 +77,8 @@ static int handler(void* user, const char* section, const char* name, const char
     pconfig->flopimg_dir = strdup(value);
   } else if (MATCH("floppy","floppy_a")) {
     pconfig->floppy_a = strdup(value);
+  } else if (MATCH("floppy","floppy_b")) {
+    pconfig->floppy_b = strdup(value);
   }
   else {
     return 0;  /* unknown section/name, error */

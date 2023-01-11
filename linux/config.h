@@ -39,7 +39,8 @@ typedef struct {
 
   // floppy
   const char *flopimg_dir;          // Default directory to open new image files
-  const char *floppy_a;             // Floppy image file, full path
+  const char *floppy_a;             // A: floppy image file, full path
+  const char *floppy_b;             // B: floppy image file, full path
 } ZestConfig;
 
 extern ZestConfig config;

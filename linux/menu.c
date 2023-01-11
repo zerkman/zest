@@ -36,8 +36,8 @@ extern int tolower (int __c);
 #define FILE_SELECTOR_VIEWS 3
 
 typedef struct _file_selector_state {
-  int file_selector_current_top;
   int total_listing_files;
+  int file_selector_current_top;
   int file_selector_cursor_position;
   char selected_file[PATH_MAX];
   char current_directory[PATH_MAX];
@@ -359,18 +359,13 @@ ZuiWidget * menu_file_selector() {
 static void setup_item_selector(int selector_view) {
   current_view=&file_selector_state[selector_view];
   if (current_view->selected_file) {
-    char *p=&current_view->selected_file[strlen(current_view->selected_file)];
-    while (p[-1]!='/'&&p!=current_view->selected_file) p--;
-    int path_size=p-current_view->selected_file;
-    char path[PATH_MAX];
-    memcpy(path, current_view->selected_file, path_size);
-    path[path_size]=0;
+    char *p=current_view->current_directory;
     // TODO: Initially read_directory() was modified to have a return value. That value in turn depended on the return value of
     //       glob() call. For some reason, when storing the glob return value (instead of ignoring it as it is currently)
     //       some paths return GLOB_NOMATCH (even though the pathname exists and you can 'ls' it) and corrupt-o-rama starts
     //       happening. There's probably a workaround for this, but for now we're going to blindly assume that things went
     //       okay inside read_directory()
-    read_directory(path);
+    read_directory(current_view->current_directory);
     if (1) { //if (read_directory(path)) {
       // Search the results for the filename and point the file selector cursor at it
       int l=0;
@@ -385,7 +380,6 @@ static void setup_item_selector(int selector_view) {
         l++;
         i=directory_filenames[l];
       }
-      strcpy(current_view->current_directory,path);
       return;
     } else {
       globfree(&glob_info);
@@ -483,22 +477,28 @@ const uint8_t osd_palette[3][24]={
   },
 };
 
+static void setup_file_selector(const char *filename, int state_id)
+{
+  FILE_SELECTOR_STATE *state = &file_selector_state[state_id];
+  if (*filename==0) {
+    return; // Already initialised at the start of main
+  }
+  if (*filename!='/') {
+    getcwd(state->selected_file,PATH_MAX);
+    strcat(state->selected_file,"/");
+  }
+  strcat(state->selected_file,filename);
+  strcpy(state->current_directory,state->selected_file);
+  char *p = &state->current_directory[strlen(state->current_directory)];
+  while (p[-1]!='/'&&p!=state->current_directory) p--;
+  *p=0;
+}
+
 // Menu initialization
 void menu_init(void) {
-  memset(file_selector_state, 0, sizeof(FILE_SELECTOR_STATE)*FILE_SELECTOR_VIEWS);
-  if (config.flopimg_dir==NULL) {
-    getcwd(file_selector_state[0].current_directory, PATH_MAX);
-  } else {
-    strcpy(file_selector_state[0].current_directory,config.flopimg_dir);
-  }
-  strcat(file_selector_state[0].current_directory, "/");
-  for (int i=1;i<FILE_SELECTOR_VIEWS;i++) {
-    strcpy(file_selector_state[i].current_directory,file_selector_state[0].current_directory);
-  }
-  strcpy(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file,config.rom_file);
-  if (config.floppy_a) {
-    strcpy(file_selector_state[FILE_SELECTOR_DISK_A].selected_file,config.floppy_a);
-  }
+  setup_file_selector(config.rom_file,FILE_SELECTOR_TOS_IMAGE);
+  setup_file_selector(config.floppy_a,FILE_SELECTOR_DISK_A);
+  setup_file_selector(config.floppy_b,FILE_SELECTOR_DISK_B);
 }
 
 void menu(void) {
