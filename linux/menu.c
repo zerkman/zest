@@ -30,12 +30,8 @@ extern int tolower (int __c);
 #include "menu.h"
 #include "zui.h"
 #include "osd.h"
+#include "setup.h"
 
-extern void cold_reset();           // From setup.c
-extern void warm_reset();           // From setup.c
-extern void set_wakestate(int ws);  // From setup.c
-extern int get_wakestate(void);     // From setup.c
-extern void load_rom(const char *filename);
 extern int disk_image_changed;      // From floppy.c
 extern void *disk_image_filename;   // From floppy.c
 

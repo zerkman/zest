@@ -14,7 +14,7 @@ cat <<EOF > $TARGET/root/zestboot
 case "\$1" in
   start)
         printf "Starting zeST: "
-        /usr/sbin/zeST /boot/rom.img &
+        /usr/sbin/zeST /boot/zest.cfg &
         echo \$! > /var/run/zest.pid
         [ \$? = 0 ] && echo "OK" || echo "FAIL"
         ;;

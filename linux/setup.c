@@ -31,6 +31,7 @@
 #include <signal.h>
 
 #include "menu.h"
+#include "config.h"
 
 #include "sil9022a.h"
 
@@ -44,27 +45,20 @@ void * thread_ikbd(void * arg);
 #define ST_MEM_ADDR 0x10000000
 #define ST_MEM_SIZE 0x1000000
 
-#define CFG_COLR 0x0000
-#define CFG_MONO 0x0004
-
-#define CFG_256K 0x0000
-#define CFG_512K 0x0010
-#define CFG_1M   0x0030
-#define CFG_2M   0x0070
-#define CFG_2_5M 0x0090
-#define CFG_4M   0x00f0
-
-#define CFG_WS1  0x0200
-#define CFG_WS2  0x0300
-#define CFG_WS3  0x0100
-#define CFG_WS4  0x0000
-#define CFG_WSMK 0x0300
-
-
 volatile uint32_t *parmreg;
 int parmfd;
 
 volatile int thr_end = 0;
+
+static void setup_cfg(int reset) {
+  static const int mem_cfg[] = {0,1,3,7,9,15};
+  static const int ws_cfg[] = {2,3,1,0};
+  int cfg = reset;
+  cfg |= config.mono?4:0;
+  cfg |= mem_cfg[config.mem_size]<<4;
+  cfg |= ws_cfg[config.wakestate-1]<<8;
+  parmreg[0] = cfg;
+}
 
 void *uio_map(const char *file, size_t length, int *fd) {
   void *p;
@@ -97,60 +91,43 @@ void pl_reset(void) {
 }
 
 int usage(const char *progname) {
-  printf("usage: %s [OPTIONS] rom.img [floppy.mfm]\n\n"
-    "OPTIONS are:\n"
-    " --color     Set video to color mode (default)\n"
-    " --mono      Set video to monochrome mode\n"
-    " --mem=VAL   Choose memory size\n"
-    "             Possible values: 256K, 512K, 1M (default), 2M, 2.5M, 4M\n"
-    " --ws=X      Set wakestate\n"
-    "             Possible values: 1, 2, 3, 4 (default)\n"
+  printf("usage: %s [OPTIONS] config.cfg\n"
     , progname);
   return 1;
 }
 
 static uint8_t *mem_array;
-static int cfg;
 
 void cold_reset() {
-  parmreg[0] = cfg|2; // Bit 0 clear=reset
+  setup_cfg(2); // Bit 0 clear=reset
   memset(mem_array+8,0,0x1fff8);
-  int i;
-  for (i=4; i<8; ++i) {
-      parmreg[i] = 0xffffffff;
-  }
-  parmreg[0] = cfg|3; // end reset
+  setup_cfg(3); // end reset
 }
 
 void warm_reset() {
-  parmreg[0] = cfg|2; // Bit 0 clear=reset
-  parmreg[0] = cfg|3; // |3="end reset"
+  setup_cfg(2); // Bit 0 clear=reset
+  setup_cfg(3); // |3="end reset"
 }
 
 void set_wakestate(int ws) {
-  switch (ws) {
-    case 1: cfg = (cfg&~CFG_WSMK) | CFG_WS1; break;
-    case 2: cfg = (cfg&~CFG_WSMK) | CFG_WS2; break;
-    case 3: cfg = (cfg&~CFG_WSMK) | CFG_WS3; break;
-    case 4: cfg = (cfg&~CFG_WSMK) | CFG_WS4; break;
-  }
+  config.wakestate = ws;
+  setup_cfg(3);
 }
 
 int get_wakestate(void) {
-  switch (cfg&CFG_WSMK) {
-    case CFG_WS1: return 1;
-    case CFG_WS2: return 2;
-    case CFG_WS3: return 3;
-    case CFG_WS4: return 4;
-  }
-  return 0;
+  return config.wakestate;
 }
 
-void load_rom(const char *filename) {
+int load_rom(const char *filename) {
   FILE *bootfd = fopen(filename,"rb");
+  if (!bootfd) {
+    printf("Could not open ROM file `%s`\n",filename);
+    return 1;
+  }
   fread(mem_array+0xfc0000,1,0x30000,bootfd);
   fclose(bootfd);
   memcpy(mem_array,mem_array+0xfc0000,8);
+  return 0;
 }
 
 static void signal_handler(int sig) {
@@ -158,78 +135,44 @@ static void signal_handler(int sig) {
 }
 
 int main(int argc, char **argv) {
-  int cfg_video = CFG_COLR;
-  int cfg_mem = CFG_1M;
-  int cfg_ws = CFG_WS4;
   int has_sil;
-  memset(file_selector_state, 0, sizeof(FILE_SELECTOR_STATE)*FILE_SELECTOR_VIEWS);
-  getcwd(file_selector_state[0].current_directory, PATH_MAX);
-  strcat(file_selector_state[0].current_directory, "/");
-  for (int i=1;i<FILE_SELECTOR_VIEWS;i++) {
-    strcpy(file_selector_state[i].current_directory,file_selector_state[0].current_directory);
-  }
 
-  const char *binfilename = NULL;
-  const char *floppyfilename = NULL;
+  const char *configfilename = NULL;
   int a = 0;
   while (++a<argc) {
     const char *arg = argv[a];
-    if (arg[0]=='-') {
-      if (!strcmp(arg,"--color")) {
-        cfg_video = CFG_COLR;
-      } else if (!strcmp(arg,"--mono")) {
-        cfg_video = CFG_MONO;
-      } else if (!strncmp(arg,"--mem=",6)) {
-        arg += 6;
-        if (!strcmp(arg,"256K")) {
-          cfg_mem = CFG_256K;
-        } else if (!strcmp(arg,"512K")) {
-          cfg_mem = CFG_512K;
-        } else if (!strcmp(arg,"1M")) {
-          cfg_mem = CFG_1M;
-        } else if (!strcmp(arg,"2M")) {
-          cfg_mem = CFG_2M;
-        } else if (!strcmp(arg,"2.5M")) {
-          cfg_mem = CFG_2_5M;
-        } else if (!strcmp(arg,"4M")) {
-          cfg_mem = CFG_4M;
-        } else return usage(argv[0]);
-      } else if (!strncmp(arg,"--ws=",5)) {
-        switch(arg[5]) {
-          case '1': cfg_ws = CFG_WS1; break;
-          case '2': cfg_ws = CFG_WS2; break;
-          case '3': cfg_ws = CFG_WS3; break;
-          case '4': cfg_ws = CFG_WS4; break;
-          default:
-            return usage(argv[0]);
-        }
-      }
-       else return usage(argv[0]);
-    }
-    else if (binfilename == NULL) {
-      binfilename = arg;
-      // TODO: factor this code?
-      if (*arg != '/') {
-        getcwd(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file, PATH_MAX);
-        strcat(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file, "/");
-      }
-      strcat(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file,arg);
-    } else if (floppyfilename == NULL) {
-      floppyfilename = arg;
-      if (*arg != '/') {
-        getcwd(file_selector_state[FILE_SELECTOR_DISK_A].selected_file, PATH_MAX);
-        strcat(file_selector_state[FILE_SELECTOR_DISK_A].selected_file, "/");
-      }
-      strcat(file_selector_state[FILE_SELECTOR_DISK_A].selected_file,arg); // TODO: support for drive B?
+    if (configfilename == NULL) {
+      configfilename = arg;
     } else {
       return usage(argv[0]);
     }
   }
-  if (binfilename == NULL) {
+  if (configfilename == NULL) {
     usage(argv[0]);
     return 1;
   }
-  cfg = cfg_ws | cfg_mem | cfg_video;
+
+  config_load(configfilename);
+
+  // TODO: make the below stuff cleaner (try not to modify other modules' variables)
+  memset(file_selector_state, 0, sizeof(FILE_SELECTOR_STATE)*FILE_SELECTOR_VIEWS);
+  if (config.flopimg_dir==NULL) {
+    getcwd(file_selector_state[0].current_directory, PATH_MAX);
+  } else {
+    strcpy(file_selector_state[0].current_directory,config.flopimg_dir);
+  }
+  strcat(file_selector_state[0].current_directory, "/");
+  for (int i=1;i<FILE_SELECTOR_VIEWS;i++) {
+    strcpy(file_selector_state[i].current_directory,file_selector_state[0].current_directory);
+  }
+  if (config.rom_file==NULL) {
+    printf("Fatal: no ROM file configured in config file\n");
+    return 1;
+  }
+  strcpy(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file,config.rom_file);
+  if (config.floppy_a) {
+    strcpy(file_selector_state[FILE_SELECTOR_DISK_A].selected_file,config.floppy_a);
+  }
 
   pl_reset();
 
@@ -238,6 +181,10 @@ int main(int argc, char **argv) {
     return 1;
   }
   parmreg[0] = 0;  /* software reset signal */
+  int i;
+  for (i=4; i<8; ++i) {
+      parmreg[i] = 0xffffffff;
+  }
 
   int memfd = open("/dev/mem",O_RDWR|O_SYNC);
   if (memfd < 0) {
@@ -257,7 +204,7 @@ int main(int argc, char **argv) {
     // status = hdmi_init(14850,5000,2200,1350);
     /* 1080p60 */
     // status = hdmi_init(14850,6000,2200,1125);
-    if (cfg & CFG_MONO) {
+    if (config.mono) {
       /* Mono */
       status = hdmi_set_mode(3200,7129,896,501);
     } else {
@@ -272,28 +219,18 @@ int main(int argc, char **argv) {
   }
 
   memset(mem_array+0xfa0000,0xff,0x20000);
+  if (load_rom(config.rom_file)!=0) return 1;
+
   pthread_t kbd_thr;
   pthread_create(&kbd_thr,NULL,thread_ikbd,NULL);
   pthread_t floppy_thr;
-  pthread_create(&floppy_thr,NULL,thread_floppy,(void*)floppyfilename);
+  pthread_create(&floppy_thr,NULL,thread_floppy,NULL);
 
   struct sigaction sa = {0};
   sa.sa_handler = signal_handler;
   sigaction(SIGTERM,&sa,NULL);
   sigaction(SIGINT,&sa,NULL);
 
-  /*
-  int c;
-  do {
-    do_reset();
-    c = getchar();
-    printf("new reset\n");
-    parmreg[0] = 0;
-    usleep(10000);
-  } while (c!='q');
-  thr_end = 1;
-  */
-  load_rom(binfilename);
   cold_reset();
   while (thr_end==0) {
     usleep(10000);

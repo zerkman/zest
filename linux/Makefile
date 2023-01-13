@@ -26,18 +26,21 @@ AR=$(TOOLCHAIN)ar
 
 TARGETS=zeST
 CFLAGS=-g -Wall -Os
+LDLIBS=`pkg-config --libs inih`
 
 all: $(TARGETS)
 
 clean:
 	rm -f *.o $(TARGETS)
 
-zeST: setup.o floppy.o floppy_img.o ikbd.o sil9022a.o osd.o zui.o menu.o input.o
+zeST: setup.o floppy.o floppy_img.o ikbd.o sil9022a.o osd.o zui.o menu.o input.o config.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-setup.o: setup.c
+setup.o: setup.c config.h setup.h
 
-menu.o: menu.c zui.h
+config.o: config.c config.h
+
+menu.o: menu.c zui.h setup.h
 
 osd.o: osd.c osd.h
 

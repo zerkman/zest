@@ -165,11 +165,15 @@ In the configuration menu, choose **Target options**. In this menu:
  - As **Target Architecture Variant**, select **cortex-A9**.
  - Enable **NEON SIMD** and **VFP** extension support options.
 
-Then you can choose some additional tools to be installed on the Linux system.
-For this, go back to the main menu, then choose **Target packages**.
-I strongly suggest you add at least `lrzsz` (in **Networking Applications**) so you can transfer files through Zmodem between your computer and the Zynq's Linux system.
+Then, go back to the main menu, then choose **Target packages**. This is where additional tools and libraries are installed on the board's Linux system.
 
-In **Filesystem images**, enable **cpio the root filesystem**, choose **xz** as the compression method, and enable **Create U-Boot image of the root filesystem**.
+One mandatory library that is required by zeST is `inih`. To install it:
+ - Go to **Libraries**, then **Text and terminal handling**.
+ - Enable **inih**.
+
+I strongly suggest you also add at least `lrzsz` (in **Networking Applications**) so you can transfer files through the serial console (Zmodem protocol) between your computer and the Zynq's Linux system.
+
+Back to the main menu, in **Filesystem images**, enable **cpio the root filesystem**, choose **xz** as the compression method, and enable **Create U-Boot image of the root filesystem**.
 
 When everything is set up, exit the menu, and save your settings when asked.
 Type the command `make` to build everything. This will take quite a while.
