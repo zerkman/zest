@@ -3,9 +3,9 @@
 TARGET=output/target
 SRCDIR=`dirname $0`/..
 
-if test ! -d $TARGET/boot ; then
-  mkdir $TARGET/boot
-  echo "/dev/mmcblk0p1 /boot vfat flush,dirsync,noatime,noexec,nodev 0 0" >> $TARGET/etc/fstab
+if test ! -d $TARGET/sdcard ; then
+  mkdir $TARGET/sdcard
+  echo "/dev/mmcblk0p1 /sdcard vfat flush,dirsync,noatime,noexec,nodev 0 0" >> $TARGET/etc/fstab
 fi
 
 if test ! -f $TARGET/root/zestboot ; then
@@ -14,7 +14,7 @@ cat <<EOF > $TARGET/root/zestboot
 case "\$1" in
   start)
         printf "Starting zeST: "
-        /usr/sbin/zeST /boot/zest.cfg &
+        /usr/bin/zeST /sdcard/zest.cfg &
         echo \$! > /var/run/zest.pid
         [ \$? = 0 ] && echo "OK" || echo "FAIL"
         ;;
@@ -22,6 +22,7 @@ case "\$1" in
         printf "Stopping zeST: "
         /bin/kill \`/bin/cat /var/run/zest.pid\`
         [ \$? = 0 ] && echo "OK" || echo "FAIL"
+        rm -f /var/run/zest.pid
         ;;
   restart|reload)
         "\$0" stop
@@ -36,4 +37,4 @@ EOF
   ln -s ../../root/zestboot $TARGET/etc/init.d/S99zest
 fi
 
-cp $SRCDIR/linux/zeST $TARGET/usr/sbin
+cp $SRCDIR/linux/zeST $TARGET/usr/bin
