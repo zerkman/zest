@@ -22,6 +22,8 @@
 
 #include <stdint.h>
 
+#define MAX_SCANLINES 192
+
 // Initialize the OSD system
 int osd_init(void);
 

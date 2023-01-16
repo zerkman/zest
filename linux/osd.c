@@ -21,9 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-
-#define MAX_SCANLINES 192
-
+#include "osd.h"
 
 void *uio_map(const char *file, size_t length, int *fd);
 
