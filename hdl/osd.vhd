@@ -32,7 +32,7 @@ entity on_screen_display is
 		-- Width of S_AXI data bus
 		DATA_WIDTH : integer := 32;
 		-- Width of S_AXI address bus
-		ADDR_WIDTH : integer := 12
+		ADDR_WIDTH : integer := 13
 	);
 	port (
 		-- Global Clock Signal
@@ -98,11 +98,11 @@ entity on_screen_display is
 
 		-- video signals
 		pclk   : in std_logic;
-		idata  : in std_logic_vector(15 downto 0);
+		idata  : in std_logic_vector(23 downto 0);
 		ivsync : in std_logic;
 		ihsync : in std_logic;
 		ide    : in std_logic;
-		odata  : out std_logic_vector(15 downto 0);
+		odata  : out std_logic_vector(23 downto 0);
 		ovsync : out std_logic;
 		ohsync : out std_logic;
 		ode    : out std_logic;
@@ -404,8 +404,9 @@ architecture arch_imp of on_screen_display is
 	signal s_hsync   : std_logic;
 	signal s_de      : std_logic;
 
-	constant clr_offset : integer := 16;
-	constant chr_offset : integer := 400;
+	constant clr_offset : integer := 20;
+	constant spr_offset : integer := 1172;
+	constant chr_offset : integer := 1236;
 
 	signal varcnt    : integer range 0 to 4;    -- variable load counter
 	signal show      : std_logic;               -- show/hide the OSD
@@ -413,8 +414,8 @@ architecture arch_imp of on_screen_display is
 	signal ydstart   : integer range 0 to 4095; -- Y display start (nb of lines from the top border)
 	signal xchars    : integer range 0 to 127;  -- number of characters per line
 	signal ychars    : integer range 0 to 127;  -- number of lines of characters
-	signal clrcnt    : integer range 0 to 5;    -- colours load counter
-	type colr_t is array (0 to 3) of std_logic_vector(15 downto 0);
+	signal clrcnt    : integer range 0 to 8;    -- colours load counter
+	type colr_t is array (0 to 7) of std_logic_vector(23 downto 0);
 	signal colr      : colr_t;
 
 	signal xcnt      : signed(12 downto 0); -- X pixel counter
@@ -428,8 +429,8 @@ architecture arch_imp of on_screen_display is
 	signal clrp      : integer range 0 to 2**(ADDR_WIDTH-2)-1;  -- colours position
 	signal transp    : std_logic;
 	signal pix       : std_logic_vector(7 downto 0);
-	signal cfg       : integer range 0 to 3;    -- foreground colour
-	signal cbg       : integer range 0 to 3;    -- background colour
+	signal cfg       : integer range 0 to 7;    -- foreground colour
+	signal cbg       : integer range 0 to 7;    -- background colour
 
 begin
 
@@ -542,10 +543,11 @@ begin
 		variable chrd    : std_logic_vector(15 downto 0);   -- character data
 		variable chr     : integer range 0 to 255;          -- current character
 		variable vs_busy : std_logic;
+		variable x       : std_logic_vector(31 downto 0);
 
 	begin
 		if s_axi_aresetn = '0' then
-			odata <= x"0000";
+			odata <= x"000000";
 			s_vsync <= '0';
 			s_hsync <= '0';
 			s_de <= '0';
@@ -625,21 +627,35 @@ begin
 				pxok <= '0';
 			elsif clrcnt > 0 and vs_busy = '0' then
 				clrcnt <= clrcnt + 1;
+				ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
+				clrp <= clrp + 1;
+				-- big endian read
+				x := ram_dout2(7 downto 0)&ram_dout2(15 downto 8)&ram_dout2(23 downto 16)&ram_dout2(31 downto 24);
 				if clrcnt = 1 then
 					ram_re2 <= '1';
-					ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
-					clrp <= clrp + 1;
-				elsif clrcnt = 2 then
-					ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
-					clrp <= clrp + 1;
 				elsif clrcnt = 3 then
+					colr(0) <= x(31 downto 8);
+					colr(1)(23 downto 16) <= x(7 downto 0);
+				elsif clrcnt = 4 then
+					colr(1)(15 downto 0) <= x(31 downto 16);
+					colr(2)(23 downto 8) <= x(15 downto 0);
+				elsif clrcnt = 5 then
+					colr(2)(7 downto 0) <= x(31 downto 24);
+					colr(3) <= x(23 downto 0);
+				elsif clrcnt = 6 then
+					colr(4) <= x(31 downto 8);
+					colr(5)(23 downto 16) <= x(7 downto 0);
+				elsif clrcnt = 7 then
 					ram_addr2 <= (others => '0');
 					ram_re2 <= '0';
-					colr(0) <= ram_dout2(15 downto 0);
-					colr(1) <= ram_dout2(31 downto 16);
-				elsif clrcnt = 4 then
-					colr(2) <= ram_dout2(15 downto 0);
-					colr(3) <= ram_dout2(31 downto 16);
+					clrp <= clrp;
+					colr(5)(15 downto 0) <= x(31 downto 16);
+					colr(6)(23 downto 8) <= x(15 downto 0);
+				elsif clrcnt = 8 then
+					ram_addr2 <= (others => '0');
+					clrp <= clrp;
+					colr(6)(7 downto 0) <= x(31 downto 24);
+					colr(7) <= x(23 downto 0);
 					clrcnt <= 0;
 				end if;
 			elsif ide = '1' and show = '1' then
@@ -655,8 +671,8 @@ begin
 						elsif xcnt(2 downto 0) = "111" then
 							chrd := ram_dout2((chrp mod 2)*16+15 downto (chrp mod 2)*16);
 							chr := to_integer(unsigned(chrd(7 downto 0)));
-							cfg <= to_integer(unsigned(chrd(9 downto 8)));
-							cbg <= to_integer(unsigned(chrd(11 downto 10)));
+							cfg <= to_integer(unsigned(chrd(10 downto 8)));
+							cbg <= to_integer(unsigned(chrd(13 downto 11)));
 							if chr = 0 then
 								transp <= '1';
 							else

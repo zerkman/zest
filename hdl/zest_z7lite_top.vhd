@@ -114,11 +114,11 @@ architecture structure of zest_top is
 			W_DONE_0 : out std_logic;
 			clk : out std_logic;
 			iD_0 : in std_logic_vector(15 downto 0);
-			idata : in std_logic_vector(15 downto 0);
+			idata : in std_logic_vector(23 downto 0);
 			ide : in std_logic;
 			ihsync : in std_logic;
 			ivsync : in std_logic;
-			odata : out std_logic_vector(15 downto 0);
+			odata : out std_logic_vector(23 downto 0);
 			ode : out std_logic;
 			ohsync : out std_logic;
 			ovsync : out std_logic;
@@ -236,11 +236,11 @@ architecture structure of zest_top is
 	signal audio_lr		: std_logic_vector(23 downto 0);
 
 	signal dblpix		: std_logic_vector(15 downto 0);
+	signal dblpix24		: std_logic_vector(23 downto 0);
 	signal dblvsync		: std_logic;
 	signal dblhsync		: std_logic;
 	signal dblde		: std_logic;
-	signal opix			: std_logic_vector(15 downto 0);
-	signal opix24		: std_logic_vector(23 downto 0);
+	signal opix			: std_logic_vector(23 downto 0);
 	signal ovsync		: std_logic;
 	signal ohsync		: std_logic;
 	signal ode			: std_logic;
@@ -249,7 +249,7 @@ begin
 	soft_resetn <= out_reg0(0);
 	soft_reset <= not soft_resetn;
 	led <= not clken_err & (fdd_drv0_select or soft_reset);
-	opix24 <= opix(15 downto 11) & "000" & opix(10 downto 5) & "00" & opix(4 downto 0) & "000";
+	dblpix24 <= dblpix(15 downto 11) & "000" & dblpix(10 downto 5) & "00" & dblpix(4 downto 0) & "000";
 	ram_A <= x"00" & ram_A_23 & '0';
 	ram_offvald <= out_reg0(1);
 	monomon <= out_reg0(2);
@@ -323,7 +323,7 @@ begin
 		DS_0 => ram_DS,
 		W_DONE_0 => ram_W_DONE,
 		R_DONE_0 => ram_R_DONE,
-		idata => dblpix,
+		idata => dblpix24,
 		ide => dblde,
 		ihsync => dblhsync,
 		ivsync => dblvsync,
@@ -453,7 +453,7 @@ begin
 		clk => pclk,
 		sclk => p5clk,
 		reset => soft_reset,
-		rgb => opix24,
+		rgb => opix,
 		vsync => ovsync,
 		hsync => ohsync,
 		de => ode,

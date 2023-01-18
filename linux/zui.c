@@ -282,7 +282,7 @@ int select_focused(int sel) {
 }
 
 extern volatile int thr_end;
-extern uint8_t osd_palette[3][12];
+extern uint8_t osd_palette[3][24];
 extern volatile uint32_t *parmreg;
 extern int _xchars;
 extern int _ychars;

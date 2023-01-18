@@ -55,17 +55,17 @@ extern void *disk_image_filename;   // From floppy.c
 // - At the moment zeST does not have support for two floppies.
 
 #define XCHARS 60
-#define YCHARS 20   // XCHARS*YCHARS must not exceed 1248
+#define YCHARS 20   // XCHARS*YCHARS must not exceed 1624
 #define XPOS 176
 #define YPOS 116
 #define FSEL_XCHARS 40
 #define FSEL_YCHARS 24 // TODO: no idea why yet, but setting this value any higher some garbage appears on screen
 #define FSEL_XPOS 200
 #define FSEL_YPOS 40
-#if (FSEL_XCHARS*FSEL_YCHARS)>1248
+#if (FSEL_XCHARS*FSEL_YCHARS)>1624
 #error Too many characters (FSEL_XCHARS*FSEL_YCHARS)
 #endif
-#if (XCHARS*YCHARS)>1248
+#if (XCHARS*YCHARS)>1624
 #error Too many characters (XCHARS*YCHARS)
 #endif
 
@@ -445,7 +445,7 @@ ZuiWidget * menu_form(void) {
   return form;
 }
 
-const uint8_t osd_palette[3][12]={
+const uint8_t osd_palette[3][24]={
   {
     0x40,0x40,0x40,
     0xc0,0xc0,0xc0,
@@ -477,13 +477,13 @@ void menu(void) {
     102,51,254,
     102,51,254
   };
-  uint8_t osd_palette0[8][12];
+  uint8_t osd_palette0[8][24];
 
   osd_init();
   osd_set_palette_all(osd_palette[0]);
   int i;
   for (i=0;i<8;++i) {
-    memcpy(osd_palette0[i],osd_palette[0],12);
+    memcpy(osd_palette0[i],osd_palette[0],24);
     memcpy(&osd_palette0[i][3],&colour1[i*3],3);
   }
   osd_set_palette(0,8,osd_palette0);

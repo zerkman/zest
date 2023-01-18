@@ -34,9 +34,12 @@ volatile struct {
   uint16_t ychars;          // number of characters in the OSD (height)
   uint16_t xpos;            // X position of the OSD from the left border
   uint16_t ypos;            // Y position of the OSD from the top border
-  uint32_t config[13];      // reserved
-  uint16_t palette[MAX_SCANLINES][4]; // max 192 scanlines (24 chars), 4 colours per scanline
-  uint16_t text[1248];      // max. 1248 displayed characters
+  uint16_t sprt_pos[8][2];  // X and Y sprite position
+  uint32_t sprt_colour[8];  // sprite colour
+  uint32_t config[1];       // reserved
+  uint8_t palette[MAX_SCANLINES][8][3]; // max 192 scanlines (24 chars), 8 colours per scanline
+  uint16_t sprt_data[8][16]; // sprite pixel data
+  uint16_t text[1624];      // max. 1624 displayed characters
 } *osdreg;                  // size = 4096 bytes
 
 int osdfd;
@@ -45,7 +48,7 @@ int _ychars;
 
 int osd_init(void) {
   if (osdreg == NULL) {
-    osdreg = uio_map("/dev/uio1",0x1000,&osdfd);
+    osdreg = uio_map("/dev/uio1",0x2000,&osdfd);
     if (osdreg == NULL) {
       return 1;
     }
@@ -91,7 +94,7 @@ void osd_clear(int bgc) {
   if (osdreg != NULL) {
     int n = _xchars*_ychars;
     int i;
-    int v = (bgc&3)<<10 | ' ';
+    int v = (bgc&7)<<11 | ' ';
     volatile uint16_t *p = osdreg->text;
     for (i=0; i<n; ++i) {
       *p++ = v;
@@ -103,7 +106,7 @@ void osd_text(const char *text, int x, int y, int fgc, int bgc) {
   if (osdreg != NULL) {
     int i;
     int l = strlen(text);
-    int mode = (fgc&3)<<8 | (bgc&3)<<10;
+    int mode = (fgc&7)<<8 | (bgc&7)<<11;
     volatile uint16_t *p = osdreg->text + y*_xchars + x;
     for (i=0; i<l; ++i) {
       *p++ = mode | (uint8_t)text[i];
@@ -113,40 +116,24 @@ void osd_text(const char *text, int x, int y, int fgc, int bgc) {
 
 void osd_putchar(int c, int x, int y, int fgc, int bgc) {
   if (osdreg != NULL) {
-    osdreg->text[y*_xchars + x] = (c&255) | (fgc&3)<<8 | (bgc&3)<<10;
+    osdreg->text[y*_xchars + x] = (c&255) | (fgc&7)<<8 | (bgc&7)<<11;
   }
 }
 
-// convert standard 24-bit palette into low level format
-static void convert_palette(uint16_t palette[4], const uint8_t data[4*3]) {
-  const uint8_t *pdata = data;
-  int i;
-  for (i=0; i<4; ++i) {
-    unsigned int r = *pdata++;
-    unsigned int g = *pdata++;
-    unsigned int b = *pdata++;
-    palette[i] = (r&0xf8)<<8 | (g&0xfc)<<3 | (b&0xf8)>>3;
-  }
-}
-
-void osd_set_palette_all(const uint8_t data[4*3]) {
+void osd_set_palette_all(const uint8_t data[8*3]) {
   if (osdreg != NULL) {
-    uint16_t palette[4];
-    convert_palette(palette,data);
     int i;
     for (i=0; i<MAX_SCANLINES; ++i) {
-      memcpy((void*)osdreg->palette[i],palette,8);
+      memcpy((void*)osdreg->palette[i],data,8*3);
     }
   }
 }
 
-void osd_set_palette(int row, int nrows, const uint8_t data[][4*3]) {
+void osd_set_palette(int row, int nrows, const uint8_t data[][8*3]) {
   if (osdreg != NULL) {
     int i;
     for (i=0; i<nrows; ++i) {
-      uint16_t palette[4];
-      convert_palette(palette,data[i]);
-      memcpy((void*)osdreg->palette[row+i],palette,8);
+      memcpy((void*)osdreg->palette[row+i],data[i],8*3);
     }
   }
 }

@@ -17,6 +17,7 @@
 # You can set the path to your local buildroot toolchain by uncommenting the
 # following line and setting the correct path.
 #export PATH:=$(HOME)/src/buildroot-2022.02.8/output/host/bin:$(PATH)
+export PATH:=$(HOME)/loc/src/buildroot-2022.02.8/output/host/bin:$(PATH)
 
 TOOLCHAIN=arm-linux-
 CC=$(TOOLCHAIN)gcc
@@ -35,6 +36,7 @@ clean:
 
 zeST: setup.o floppy.o floppy_img.o ikbd.o sil9022a.o osd.o zui.o menu.o input.o config.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	$(TOOLCHAIN)strip $@
 
 setup.o: setup.c config.h setup.h
 
