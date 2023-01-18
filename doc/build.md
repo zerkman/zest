@@ -4,7 +4,7 @@
 ## Required material
 
 You’ll need:
- - Vivado and Vitis IDE. The version I used is 2020.2.
+ - Vivado and Vitis IDE. The version I used is [2020.2](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/archive.html).
  - Development tools:
    - git
    - make
