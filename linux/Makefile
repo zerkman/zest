@@ -46,7 +46,7 @@ osd.o: osd.c osd.h
 
 zui.o: zui.c zui.h input.h
 
-floppy.o: floppy.c floppy_img.h
+floppy.o: floppy.c floppy_img.h config.h
 
 floppy_img.o: floppy_img.c floppy_img.h
 

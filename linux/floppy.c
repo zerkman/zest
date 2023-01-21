@@ -28,6 +28,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "floppy_img.h"
 
 extern volatile uint32_t *parmreg;
@@ -41,8 +42,8 @@ void * thread_floppy(void * arg) {
   unsigned int oldaddr=2000;
 
   Flopimg *img = NULL;
-  if (arg) {
-    img = flopimg_open(arg,0,3);
+  if (config.floppy_a) {
+    img = flopimg_open(config.floppy_a,0,3);
     if (img==NULL) {
       printf("Error opening floppy image file\n");
       return NULL;
