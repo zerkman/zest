@@ -260,7 +260,7 @@ begin
 				DRQ <= '0';
 				INTRQ <= '0';
 				ipcnt <= x"0";
-				if command(3) = '0' and motor_on = '0' then
+				if motor_on = '0' then
 					-- motor on (S7)
 					motor_on <= '1';
 					ipcnt <= x"6";
@@ -426,7 +426,7 @@ begin
 				DRQ <= '0';
 				INTRQ <= '0';
 				ipcnt <= x"0";
-				if command(3) = '0' and motor_on = '0' then
+				if motor_on = '0' then
 					-- enable spin-up sequence
 					motor_on <= '1';	-- motor on
 					ipcnt <= x"6";
@@ -713,7 +713,7 @@ begin
 				motor_on <= '1';	-- motor on
 				DRQ <= '0';
 				ipcnt <= x"0";
-				if command(3) = '0' and motor_on = '0' then
+				if motor_on = '0' then
 					-- enable spin-up sequence
 					ipcnt <= x"6";
 				end if;
