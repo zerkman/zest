@@ -154,25 +154,12 @@ int main(int argc, char **argv) {
 
   config_load(configfilename);
 
-  // TODO: make the below stuff cleaner (try not to modify other modules' variables)
-  memset(file_selector_state, 0, sizeof(FILE_SELECTOR_STATE)*FILE_SELECTOR_VIEWS);
-  if (config.flopimg_dir==NULL) {
-    getcwd(file_selector_state[0].current_directory, PATH_MAX);
-  } else {
-    strcpy(file_selector_state[0].current_directory,config.flopimg_dir);
-  }
-  strcat(file_selector_state[0].current_directory, "/");
-  for (int i=1;i<FILE_SELECTOR_VIEWS;i++) {
-    strcpy(file_selector_state[i].current_directory,file_selector_state[0].current_directory);
-  }
   if (config.rom_file==NULL) {
     printf("Fatal: no ROM file configured in config file\n");
     return 1;
   }
-  strcpy(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file,config.rom_file);
-  if (config.floppy_a) {
-    strcpy(file_selector_state[FILE_SELECTOR_DISK_A].selected_file,config.floppy_a);
-  }
+
+  menu_init();
 
   pl_reset();
 

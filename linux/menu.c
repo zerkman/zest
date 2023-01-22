@@ -31,6 +31,23 @@ extern int tolower (int __c);
 #include "zui.h"
 #include "osd.h"
 #include "setup.h"
+#include "config.h"
+
+#define FILE_SELECTOR_VIEWS 3
+
+typedef struct _file_selector_state {
+  int file_selector_current_top;
+  int total_listing_files;
+  int file_selector_cursor_position;
+  char selected_file[PATH_MAX];
+  char current_directory[PATH_MAX];
+} FILE_SELECTOR_STATE;
+
+enum {
+  FILE_SELECTOR_DISK_A,
+  FILE_SELECTOR_DISK_B,
+  FILE_SELECTOR_TOS_IMAGE
+};
 
 extern int disk_image_changed;      // From floppy.c
 extern void *disk_image_filename;   // From floppy.c
@@ -80,8 +97,8 @@ static int buttonclick_cold_reset(ZuiWidget* obj) {
   return 0;
 }
 
-FILE_SELECTOR_STATE file_selector_state[FILE_SELECTOR_VIEWS];
-FILE_SELECTOR_STATE *current_view;
+static FILE_SELECTOR_STATE file_selector_state[FILE_SELECTOR_VIEWS];
+static FILE_SELECTOR_STATE *current_view;
 int view;
 
 // File selector state
@@ -465,6 +482,24 @@ const uint8_t osd_palette[3][24]={
     255, 0, 0
   },
 };
+
+// Menu initialization
+void menu_init(void) {
+  memset(file_selector_state, 0, sizeof(FILE_SELECTOR_STATE)*FILE_SELECTOR_VIEWS);
+  if (config.flopimg_dir==NULL) {
+    getcwd(file_selector_state[0].current_directory, PATH_MAX);
+  } else {
+    strcpy(file_selector_state[0].current_directory,config.flopimg_dir);
+  }
+  strcat(file_selector_state[0].current_directory, "/");
+  for (int i=1;i<FILE_SELECTOR_VIEWS;i++) {
+    strcpy(file_selector_state[i].current_directory,file_selector_state[0].current_directory);
+  }
+  strcpy(file_selector_state[FILE_SELECTOR_TOS_IMAGE].selected_file,config.rom_file);
+  if (config.floppy_a) {
+    strcpy(file_selector_state[FILE_SELECTOR_DISK_A].selected_file,config.floppy_a);
+  }
+}
 
 void menu(void) {
   static const uint8_t colour1[8*3]={

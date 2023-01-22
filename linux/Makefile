@@ -40,7 +40,7 @@ setup.o: setup.c config.h setup.h
 
 config.o: config.c config.h
 
-menu.o: menu.c zui.h setup.h
+menu.o: menu.c menu.h zui.h setup.h osd.h config.h
 
 osd.o: osd.c osd.h
 

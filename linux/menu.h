@@ -1,5 +1,5 @@
 /*
-  * floppy_img.h - floppy disk image file management
+  * menu.h - Setup menu
   *
   * Copyright (c) 2022,2023 Francois Galea <fgalea at free.fr>
   * This program is free software: you can redistribute it and/or modify
@@ -17,25 +17,9 @@
   */
 
 
-#ifndef __FLOPPY_IMG__
-#define __FLOPPY_IMG__
+#ifndef __MENU_H__
+#define __MENU_H__
 
-#define FILE_SELECTOR_VIEWS 3
-
-typedef struct _file_selector_state {
-  int file_selector_current_top;
-  int total_listing_files;
-  int file_selector_cursor_position;
-  char selected_file[PATH_MAX];
-  char current_directory[PATH_MAX];
-} FILE_SELECTOR_STATE;
-
-enum {
-  FILE_SELECTOR_DISK_A,
-  FILE_SELECTOR_DISK_B,
-  FILE_SELECTOR_TOS_IMAGE
-};
-
-extern FILE_SELECTOR_STATE file_selector_state[FILE_SELECTOR_VIEWS];
+void menu_init(void);
 
 #endif
