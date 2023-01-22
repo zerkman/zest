@@ -87,6 +87,9 @@ extern void *disk_image_filename;   // From floppy.c
 #endif
 
 static const int file_selector_filename_lines=FSEL_YCHARS-2;
+static FILE_SELECTOR_STATE file_selector_state[FILE_SELECTOR_VIEWS];
+static FILE_SELECTOR_STATE *current_view;
+int view;
 
 static int buttonclick_warm_reset(ZuiWidget* obj)
 {
@@ -99,15 +102,12 @@ static int buttonclick_cold_reset(ZuiWidget* obj) {
   return 0;
 }
 
-static FILE_SELECTOR_STATE file_selector_state[FILE_SELECTOR_VIEWS];
-static FILE_SELECTOR_STATE *current_view;
-int view;
 
 // File selector state
 char file_selector_list[FSEL_YCHARS-2][FSEL_XCHARS];
 glob_t glob_info;
 char *directory_filenames[1024];  // Holds pointers to filtered directory items inside the glob struct
-char blank_line[FSEL_XCHARS-1]="                                       "; // TODO: this should idealy be resized depending on FSEL_XCHARS
+char blank_line[FSEL_XCHARS]="                                       "; // TODO: this should idealy be resized depending on FSEL_XCHARS
 
 void populate_file_array()
 {
@@ -277,7 +277,17 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
   return 0;
 }
 
+static int buttonclick_fsel_cancel(ZuiWidget* obj) {
+  globfree(&glob_info);
+  return 1;
+}
+
 static int buttonclick_fsel_ok(ZuiWidget* obj) {
+  if (current_view->total_listing_files==0)
+  {
+    // Someone pressed Ok in an empty directory, let's cancel
+    return buttonclick_fsel_cancel(obj);
+  }
   char *selected_item=directory_filenames[current_view->file_selector_current_top+current_view->file_selector_cursor_position];
   if (selected_item[strlen(selected_item)-1]=='/') {
     // Enter directory
@@ -306,11 +316,6 @@ static int buttonclick_fsel_ok_reset(ZuiWidget* obj) {
     buttonclick_cold_reset(obj);
   }
   return ret;
-}
-
-static int buttonclick_fsel_cancel(ZuiWidget* obj) {
-  globfree(&glob_info);
-  return 1;
 }
 
 static void eject_floppy(int drive)
