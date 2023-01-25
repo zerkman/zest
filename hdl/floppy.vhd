@@ -56,12 +56,17 @@ architecture behavioral of floppy_drive is
 	signal nextdata   : std_logic_vector(NBITS-1 downto 0);
 	signal wrq        : std_logic;
 	signal step_ff    : std_logic;
+	signal s_indexn   : std_logic;
+	signal s_track0n  : std_logic;
 
 begin
 
-	read_datan <= not data_sr(NBITS-1);
-	host_track <= std_logic_vector(track) & not side0;
+	indexn <= s_indexn when drv_select = '0' else '1';
+	read_datan <= (not data_sr(NBITS-1)) when drv_select = '0' else '1';
+	track0n <= s_track0n when drv_select = '0' else '1';
 	write_protn <= '1';
+
+	host_track <= std_logic_vector(track) & not side0;
 
 -- next host data word
 process(data_sr,write_data,write_gate)
@@ -88,61 +93,20 @@ begin
 			host_r <= '0';
 			host_w <= '0';
 			host_addr <= (others => '0');
-			track0n <= '0';
-			indexn <= '0';
+			s_track0n <= '0';
+			s_indexn <= '0';
 		elsif clken = '1' then
 			if drv_select = '0' then
 				step_ff <= step;
 				if step = '1' and step_ff = '0' then
 					if direction = '1' and track < 83 then
 						track <= track + 1;
-						track0n <= '1';
+						s_track0n <= '1';
 					elsif direction = '0' and track > 0 then
 						track <= track - 1;
-						track0n <= '1';
+						s_track0n <= '1';
 						if track - 1 = 0 then
-							track0n <= '0';
-						end if;
-					end if;
-				end if;
-				if motor_on = '1' then
-					if ccnt < 1599999 then
-						ccnt <= ccnt + 1;
-						if ccnt = 176-1 then	-- minimun 160 = 20 us
-							indexn <= '1';
-						end if;
-					else
-						ccnt <= (others => '0');
-						indexn <= '0';
-					end if;
-					if ccnt(4 downto 0) = "11111" then
-						-- new data bit
-						host_intr <= '0';
-						if write_gate = '1' then
-							wrq <= '1';
-						end if;
-						data_sr <= nextdata;
-						if ccnt(LOGNBITS+4 downto 5) = (LOGNBITS-1 downto 0 => '1') or ccnt = 1599999 then
-							-- shift register is full (write) or empty (read)
-							if ccnt = 1599999 then
-								host_addr <= (others => '0');
-								for i in 0 to LASTNB-1 loop
-									host_din(i*8+7 downto i*8) <= nextdata(((LASTNB-1)-i)*8+7 downto ((LASTNB-1)-i)*8);
-								end loop;
-								host_din(NBITS-1 downto LASTNB*8) <= (others => '0');
-							else
-								host_addr <= std_logic_vector(ccnt(20 downto LOGNBITS+5)+1);
-								for i in 0 to NBITS/8-1 loop
-									host_din(i*8+7 downto i*8) <= nextdata(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
-								end loop;
-							end if;
-							host_w <= wrq;
-							host_r <= '1';
-							host_intr <= '1';
-							for i in 0 to NBITS/8-1 loop
-								data_sr(i*8+7 downto i*8) <= host_dout(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
-							end loop;
-							wrq <= '0';
+							s_track0n <= '0';
 						end if;
 					end if;
 				end if;
@@ -150,6 +114,49 @@ begin
 				host_r <= '0';
 				host_w <= '0';
 				step_ff <= '0';
+			end if;
+			if motor_on = '1' then
+				if ccnt < 1599999 then
+					ccnt <= ccnt + 1;
+					if ccnt = 176-1 then	-- minimun 160 = 20 us
+						s_indexn <= '1';
+					end if;
+				else
+					ccnt <= (others => '0');
+					s_indexn <= '0';
+				end if;
+				if ccnt(4 downto 0) = "11111" then
+					-- new data bit
+					host_intr <= '0';
+					if write_gate = '1' and drv_select = '0' then
+						wrq <= '1';
+					end if;
+					data_sr <= nextdata;
+					if ccnt(LOGNBITS+4 downto 5) = (LOGNBITS-1 downto 0 => '1') or ccnt = 1599999 then
+						-- shift register is full (write) or empty (read)
+						if ccnt = 1599999 then
+							host_addr <= (others => '0');
+							for i in 0 to LASTNB-1 loop
+								host_din(i*8+7 downto i*8) <= nextdata(((LASTNB-1)-i)*8+7 downto ((LASTNB-1)-i)*8);
+							end loop;
+							host_din(NBITS-1 downto LASTNB*8) <= (others => '0');
+						else
+							host_addr <= std_logic_vector(ccnt(20 downto LOGNBITS+5)+1);
+							for i in 0 to NBITS/8-1 loop
+								host_din(i*8+7 downto i*8) <= nextdata(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
+							end loop;
+						end if;
+						host_w <= wrq;
+						host_r <= '1';
+						host_intr <= '1';
+						for i in 0 to NBITS/8-1 loop
+							data_sr(i*8+7 downto i*8) <= host_dout(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
+						end loop;
+						wrq <= '0';
+					end if;
+				end if;
+			else
+				s_indexn <= '1';
 			end if;
 		end if;
 	end if;

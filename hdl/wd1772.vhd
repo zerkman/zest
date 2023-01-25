@@ -902,7 +902,12 @@ begin
 					cmd_st <= c4_trig;
 				elsif command(2) = '1' then
 					-- wait for next index pulse
-					ipcnt <= x"1";
+					if motor_on = '0' then
+						motor_on <= '1';
+						ipcnt <= x"6";
+					else
+						ipcnt <= x"1";
+					end if;
 					cmd_st <= c4_wip;
 				else
 					cmd_st <= idle;
