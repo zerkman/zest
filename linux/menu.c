@@ -497,6 +497,10 @@ const uint8_t osd_palette[3][24]={
 static void setup_file_selector(const char *filename, int state_id)
 {
   FILE_SELECTOR_STATE *state = &file_selector_state[state_id];
+  if (filename==NULL) {
+    sprintf(state->current_directory,"%s/",config.flopimg_dir);
+    return;
+  }
   if (*filename==0) {
     return; // Already initialised at the start of main
   }

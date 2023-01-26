@@ -93,6 +93,7 @@ void config_load(const char *filename) {
   config.rom_file = NULL;
   config.flopimg_dir = NULL;
   config.floppy_a = NULL;
+  config.floppy_b = NULL;
 
   if (ini_parse(filename,handler,&config) < 0) {
     printf("Can't load `%s`\n",filename);
