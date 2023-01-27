@@ -122,7 +122,9 @@ void * thread_floppy(void * arg) {
     }
   }
 
-  flopimg_close(img);
+  if (img) {
+    flopimg_close(img);
+  }
 
   return NULL;
 }
