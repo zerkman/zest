@@ -361,7 +361,10 @@ Flopimg * flopimg_open(const char *filename, int rdonly, int skew) {
   memset(img,0,sizeof(Flopimg));
 
   img->fd = open(filename,rdonly?O_RDONLY:O_RDWR);
-  if (img->fd == -1) return NULL;
+  if (img->fd == -1) {
+    printf("Could not open floppy image file `%s`\n",filename);
+    return NULL;
+  }
 
   img->format = format;
   img->rdonly = rdonly;
