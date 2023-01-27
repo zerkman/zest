@@ -59,6 +59,11 @@ static int memorysize(const char *x) {
 static int handler(void* user, const char* section, const char* name, const char* value) {
   ZestConfig* pconfig = user;
 
+  if (strlen(value)==0) {
+    // empty setting -> set NULL value
+    value = NULL;
+  }
+
   #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
   if (MATCH("main","mono")) {
     pconfig->mono = truefalse(value);
@@ -72,13 +77,13 @@ static int handler(void* user, const char* section, const char* name, const char
       pconfig->wakestate = ws;
     }
   } else if (MATCH("main","rom_file")) {
-    pconfig->rom_file = strdup(value);
+    if (value) pconfig->rom_file = strdup(value);
   } else if (MATCH("floppy","flopimg_dir")) {
-    pconfig->flopimg_dir = strdup(value);
+    if (value) pconfig->flopimg_dir = strdup(value);
   } else if (MATCH("floppy","floppy_a")) {
-    pconfig->floppy_a = strdup(value);
+    if (value) pconfig->floppy_a = strdup(value);
   } else if (MATCH("floppy","floppy_b")) {
-    pconfig->floppy_b = strdup(value);
+    if (value) pconfig->floppy_b = strdup(value);
   }
   else {
     return 0;  /* unknown section/name, error */
