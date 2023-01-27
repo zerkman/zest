@@ -46,7 +46,6 @@ void * thread_floppy(void * arg) {
     img = flopimg_open(config.floppy_a,0,3);
     if (img==NULL) {
       printf("Error opening floppy image file\n");
-      return NULL;
     }
   }
   unsigned int pos=0,pos1=0,posw=0;
