@@ -28,7 +28,7 @@
 #include "floppy_img.h"
 
 static const uint8_t *findam(const uint8_t *p, const uint8_t *buf_end) {
-  static const uint8_t head[] = {0,0,0,0,0,0,0,0,0,0,0,0,0xa1,0xa1,0xa1};
+  static const uint8_t head[] = {0,0,0,0xa1,0xa1,0xa1};
   buf_end -= sizeof(head);
   while (p<buf_end) {
     if (memcmp(p,head,sizeof(head))==0) {
@@ -44,26 +44,26 @@ static const uint8_t *find_sector(const uint8_t *p, int track, int side, int sec
   int ok = 0;
   while (!ok) {
     p = findam(p,p_end);
-    if (p==NULL || p[15]!=0xfe || p[16]!=track || p[17]!=side) {
+    if (p==NULL || p[6]!=0xfe || p[7]!=track || p[8]!=side) {
       printf("wrong ID address mark\n");
       ok = 2;
       break;
     }
     else {
-      ok = p[18]==sector?1:0;
+      ok = p[9]==sector?1:0;
     }
 
-    p += 20;
+    p += 11;
     p = findam(p,p_end);
-    if (p==NULL || p[15]!=0xfb) {
+    if (p==NULL || p[6]!=0xfb) {
       printf("wrong data address mark\n");
       ok = 2;
       break;
     }
-    if (!ok) p += 514;
+    if (!ok) p += 521;
   }
   if (ok==1) {
-    p += 16;
+    p += 7;
     return p;
   }
   return NULL;

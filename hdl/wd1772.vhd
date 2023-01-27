@@ -60,7 +60,7 @@ architecture behavioral of wd1772 is
 	signal DIR		: std_logic;
 	type amd_t is ( init,am1,am2,am3 );
 	signal amd_st	: amd_t;
-	signal amd_cnt	: unsigned(4 downto 0);
+	signal amd_cnt	: unsigned(1 downto 0);
 	signal byte_cnt	: unsigned(4 downto 0);
 	signal crc0		: std_logic_vector(7 downto 0);
 	signal dat_btc	: unsigned(9 downto 0);		-- byte counter for sector read/write
@@ -154,7 +154,7 @@ begin
 				-- AM detection state machine
 				case amd_st is
 				when init =>
-					amd_cnt <= to_unsigned(22,amd_cnt'length);
+					amd_cnt <= to_unsigned(1,amd_cnt'length);
 					amd_st <= am1;
 				when am1 =>
 					if DSR = x"4e" then
@@ -162,14 +162,16 @@ begin
 							amd_cnt <= amd_cnt - 1;
 						end if;
 					elsif DSR = x"00" and amd_cnt = 0 then
-						amd_cnt <= to_unsigned(11,amd_cnt'length);
+						amd_cnt <= to_unsigned(2,amd_cnt'length);
 						amd_st <= am2;
 					else
-						amd_cnt <= to_unsigned(22,amd_cnt'length);
+						amd_cnt <= to_unsigned(1,amd_cnt'length);
 					end if;
 				when am2 =>
-					if DSR = x"00" and amd_cnt > 0 then
-						amd_cnt <= amd_cnt - 1;
+					if DSR = x"00" then
+						if amd_cnt > 0 then
+							amd_cnt <= amd_cnt - 1;
+						end if;
 					elsif DSR = x"a1" and amd_cnt = 0 then
 						amd_cnt <= to_unsigned(2,amd_cnt'length);
 						amd_st <= am3;
