@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -366,11 +367,11 @@ static void save_st(Flopimg *img) {
 Flopimg * flopimg_open(const char *filename, int rdonly, int skew, int interleave) {
   int format = -1;
   char *rpp = strrchr(filename,'.');
-  if (rpp && (strcmp(rpp,".mfm")==0 || strcmp(rpp,".MFM")==0)) {
+  if (rpp && strcasecmp(rpp,".mfm")==0) {
     format = 0;
-  } else if (rpp && (strcmp(rpp,".st")==0 || strcmp(rpp,".ST")==0)) {
+  } else if (rpp && strcasecmp(rpp,".st")==0) {
     format = 1;
-  } else if (rpp && (strcmp(rpp,".msa")==0 || strcmp(rpp,".MSA")==0)) {
+  } else if (rpp && strcasecmp(rpp,".msa")==0) {
     format = 2;
   } else {
     printf("Could not determine the floppy image file format\n");
