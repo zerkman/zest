@@ -43,7 +43,7 @@ void * thread_floppy(void * arg) {
 
   Flopimg *img = NULL;
   if (config.floppy_a) {
-    img = flopimg_open(config.floppy_a,0,3);
+    img = flopimg_open(config.floppy_a,0,3,1);
     if (img==NULL) {
       printf("Error opening floppy image file\n");
     }
@@ -117,7 +117,7 @@ void * thread_floppy(void * arg) {
     if (disk_image_changed) {
       if (img)
         flopimg_close(img);
-      img = flopimg_open(disk_image_filename,0,3);
+      img = flopimg_open(disk_image_filename,0,3,1);
       disk_image_changed = 0;
     }
   }

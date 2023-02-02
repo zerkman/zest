@@ -37,7 +37,7 @@ typedef struct {
 
 } Flopimg;
 
-Flopimg * flopimg_open(const char *filename, int rdonly, int skew);
+Flopimg * flopimg_open(const char *filename, int rdonly, int skew, int interleave);
 
 /* set writeback flag = rewrite image file when closed */
 void flopimg_writeback(Flopimg *img);

@@ -161,7 +161,7 @@ static int guess_size(Flopimg *img) {
   return 0;
 }
 
-static void load_st(Flopimg *img, int skew) {
+static void load_st(Flopimg *img, int skew, int interleave) {
   unsigned int bps;
   int track,side;
   uint8_t buf[512*11];
@@ -241,10 +241,32 @@ static void load_st(Flopimg *img, int skew) {
 
   crc16_init();
 
-  int sec_shift = skew ? img->nsectors-1 : 0;
+  int sec_shift = 1;
+  if (interleave==0) interleave = 1;
+  if (interleave==1 && img->nsectors==11) interleave = 2;
   for (track=0; track<img->ntracks; ++track) {
+    // compute order of sectors depending on skew and interleave
+    int i;
+    unsigned int written = 0;
+    int sec_no = sec_shift;
+    unsigned char order[img->nsectors];
+    memset(order,0,img->nsectors);
+    for (i=0; i<img->nsectors; ++i) {
+      order[sec_no] = i;
+      written |= 1<<sec_no;
+      sec_no += interleave;
+      if (sec_no>=img->nsectors) sec_no -= img->nsectors;
+      if (i+1<img->nsectors) {
+        while ((written&1<<sec_no) != 0) {
+          sec_no = (sec_no+1<img->nsectors) ? sec_no+1 : 0;
+        }
+      }
+    }
+    sec_shift -= img->nsectors-skew;
+    if (sec_shift<0) sec_shift += img->nsectors;
+
     for (side=0; side<img->nsides; ++side) {
-      int sector,i;
+      int sector;
       uint8_t *p0 = flopimg_trackpos(img,track,side);
       uint8_t *p = p0;
       unsigned int crc;
@@ -281,9 +303,9 @@ static void load_st(Flopimg *img, int skew) {
         }
       }
       for (i=0; i<gap1; ++i) *p++ = 0x4E;
+
       for (sector=0; sector<img->nsectors; ++sector) {
-        int sec_no = sector+sec_shift;
-        if (sec_no>=img->nsectors) sec_no -= img->nsectors;
+        sec_no = order[sector];
         for (i=0; i<gap2; ++i) *p++ = 0x00;
         for (i=0; i<3; ++i) *p++ = 0xA1;
         *p++ = 0xFE;
@@ -310,8 +332,6 @@ static void load_st(Flopimg *img, int skew) {
         printf("format error\n");
       }
     }
-    sec_shift += img->nsectors-skew;
-    if (sec_shift>=img->nsectors) sec_shift -= img->nsectors;
   }
 
 }
@@ -343,7 +363,7 @@ static void save_st(Flopimg *img) {
   }
 }
 
-Flopimg * flopimg_open(const char *filename, int rdonly, int skew) {
+Flopimg * flopimg_open(const char *filename, int rdonly, int skew, int interleave) {
   int format = -1;
   char *rpp = strrchr(filename,'.');
   if (rpp && (strcmp(rpp,".mfm")==0 || strcmp(rpp,".MFM")==0)) {
@@ -372,7 +392,7 @@ Flopimg * flopimg_open(const char *filename, int rdonly, int skew) {
   if (format==0) {
     load_mfm(img);
   } else if (format==1 || format==2) {
-    load_st(img,3);
+    load_st(img,skew,interleave);
   }
 
   return img;
