@@ -104,6 +104,11 @@ static unsigned int readwb(const unsigned char *ptr) {
   return v;
 }
 
+static void writewb(unsigned char *ptr, uint16_t v) {
+  ptr[0] = v>>8;
+  ptr[1] = v;
+}
+
 static void load_mfm(Flopimg *img) {
   int size = read(img->fd,img->buf,6250*2*MAXTRACK);
   int sectors = 0;
@@ -162,7 +167,7 @@ static int guess_size(Flopimg *img) {
   return 0;
 }
 
-static void load_st(Flopimg *img, int skew, int interleave) {
+static void load_st_msa(Flopimg *img, int skew, int interleave) {
   unsigned int bps;
   int track,side;
   uint8_t buf[512*11];
@@ -364,6 +369,90 @@ static void save_st(Flopimg *img) {
   }
 }
 
+// try to pack a chunk of data in MSA RLE format
+// returns packed size or -1 if packing was unsuccessful
+static int msa_pack(uint8_t *dest, const uint8_t *src, int len) {
+  int pklen = 0;
+  const uint8_t *p = src, *src_end = src+len;
+
+  while (p<src_end) {
+    const uint8_t *prev = p;
+    unsigned int pkv = *p++;
+    while (p<src_end && *p==pkv) p++;
+    int n = p-prev;
+    if ((n>4||pkv==0xE5) && pklen+4<len) {
+      *dest++ = 0xE5;
+      *dest++ = pkv;
+      *dest++ = n>>8;
+      *dest++ = n;
+      pklen += 4;
+    } else if (pklen+n<len) {
+      int i;
+      for (i=0;i<n;++i) *dest++ = pkv;
+      pklen += n;
+    } else {
+      return -1;
+    }
+  }
+  return pklen;
+}
+
+static void save_msa(Flopimg *img) {
+  lseek(img->fd,0,SEEK_SET);
+
+  // Read sectors, tracks, sides from the buffer, in case the disk has been reformatted
+  const uint8_t *p = find_sector(img->buf,0,0,1);
+  int sectors = readw(p+0x18);
+  int nsides = readw(p+0x1a);
+  int ntracks = readw(p+0x13)/(sectors*nsides);
+
+  // write MSA header
+  uint8_t header[10];
+  memcpy(header+0,"\x0e\x0f",2);
+  writewb(header+2,sectors);
+  writewb(header+4,nsides-1);
+  writewb(header+6,0);
+  writewb(header+8,ntracks-1);
+  write(img->fd,header,10);
+  off_t length = 10;
+
+  int track;
+  for (track=0; track<ntracks; ++track) {
+    int side;
+    for (side=0; side<nsides; ++side) {
+      int sector;
+      uint8_t trbuf[11*512];
+      p = flopimg_trackpos(img,track,side);
+      // copy the sectors in order
+      for (sector=0; sector<sectors; ++sector) {
+        const uint8_t *sp = find_sector(p,track,side,sector+1);
+        if (sp==NULL) {
+          printf("sector not found\n");
+          return;
+        }
+        memcpy(trbuf+sector*512,sp,512);
+      }
+      // try to compress the track
+      uint8_t pkbuf[2+11*512];
+      int pklen = msa_pack(pkbuf+2,trbuf,sectors*512);
+      if (pklen<0) {
+        // compression failed, writing uncompressed
+        writewb(pkbuf,sectors*512);
+        write(img->fd,pkbuf,2);
+        write(img->fd,trbuf,sectors*512);
+        length += 2+sectors*512;
+      } else {
+        // write the compressed data
+        writewb(pkbuf,pklen);
+        write(img->fd,pkbuf,2+pklen);
+        length += 2+pklen;
+      }
+    }
+  }
+
+  ftruncate(img->fd,length);
+}
+
 Flopimg * flopimg_open(const char *filename, int rdonly, int skew, int interleave) {
   int format = -1;
   char *rpp = strrchr(filename,'.');
@@ -393,7 +482,7 @@ Flopimg * flopimg_open(const char *filename, int rdonly, int skew, int interleav
   if (format==0) {
     load_mfm(img);
   } else if (format==1 || format==2) {
-    load_st(img,skew,interleave);
+    load_st_msa(img,skew,interleave);
   }
 
   return img;
@@ -417,8 +506,10 @@ void flopimg_sync(Flopimg *img) {
   if (img->wrb) {
     if (img->format==0) {
       save_mfm(img);
-    } else {
+    } else if (img->format==1) {
       save_st(img);
+    } else if (img->format==2) {
+      save_msa(img);
     }
     img->wrb = 0;
   }
