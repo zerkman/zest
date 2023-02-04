@@ -135,3 +135,59 @@ void osd_set_palette(int row, int nrows, const uint8_t data[][8*3]) {
     }
   }
 }
+
+
+void osd_calculate_gradient(const uint8_t col1[3], const uint8_t col2[3], int steps, uint8_t *output)
+{
+  if (steps<2 || steps>MAX_SCANLINES) return;
+  uint32_t current_r = col1[0] << 24;
+  uint32_t current_g = col1[1] << 24;
+  uint32_t current_b = col1[2] << 24;
+  uint32_t step_r = (int32_t)((col2[0] << 24)-current_r) / (steps-1);
+  uint32_t step_g = (int32_t)((col2[1] << 24)-current_g) / (steps-1);
+  uint32_t step_b = (int32_t)((col2[2] << 24)-current_b) / (steps-1);
+  int i;
+  current_r += 0x800000;
+  current_g += 0x800000;
+  current_b += 0x800000;
+  for (i = 0; i < steps; i++)
+  {
+    *output++ = current_r >> 24;
+    *output++ = current_g >> 24;
+    *output++ = current_b >> 24;
+    current_r += step_r;
+    current_g += step_g;
+    current_b += step_b;
+  }
+  // Here's an equivalent routine (more or less) using floats
+  // Don't forget to "#include <math.h>" if you wish to use this
+  /*
+  float current_r = (float)col1[0];
+  float current_g = (float)col1[1];
+  float current_b = (float)col1[2];
+  float step_r = ((float)col2[0]-current_r) / (float)(steps-1);
+  float step_g = ((float)col2[1]-current_g) / (float)(steps-1);
+  float step_b = ((float)col2[2]-current_b) / (float)(steps-1);
+  int i;
+  for (i = 0; i < steps; i++)
+  {
+    *output++ = (uint8_t)(rintf(current_r));
+    *output++ = (uint8_t)(rintf(current_g));
+    *output++ = (uint8_t)(rintf(current_b));
+    current_r += step_r;
+    current_g += step_g;
+    current_b += step_b;
+  }
+  */
+}
+void osd_set_palette_with_one_gradient(const uint8_t static_cols[8*3],uint8_t gradient[MAX_SCANLINES][3],int gradient_index)
+{
+  uint8_t current_palette[8*3];
+  memcpy(current_palette,static_cols,8*3);
+  int i;
+  uint8_t *gradient_rgb=&current_palette[gradient_index*3];
+  for (i=0;i<MAX_SCANLINES;++i) {
+    memcpy(gradient_rgb,gradient[i],3);
+    osd_set_palette(i,1,(const uint8_t (*)[24]) current_palette);
+  }
+}

@@ -54,4 +54,9 @@ void osd_set_palette_all(const uint8_t data[8*3]);
 // set colour palettes to a group of scanlines
 void osd_set_palette(int row, int nrows, const uint8_t data[][8*3]);
 
+// calculate a gradient between 2 colours and for a number of steps
+void osd_calculate_gradient(const uint8_t col1[3], const uint8_t col2[3], int steps, uint8_t *output);
+
+void osd_set_palette_with_one_gradient(const uint8_t static_cols[8*3],uint8_t gradient[MAX_SCANLINES][3],int gradient_index);
+
 #endif
