@@ -88,7 +88,7 @@ begin
 	mode_bus <= mode_bus_1 or mode_bus_2;
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
-	RDATn <= RAMn or delay_loadn;
+	RDATn <= (DMAn and RAMn) or not iRWn or delay_loadn;
 	CMPCSn <= '0' when cmpcsn_en = '1' and iA(23 downto 6) & "000000" = x"ff8240" and iUDSn = '0' and iASn = '0' else '1';
 
 	-- RAM access control
