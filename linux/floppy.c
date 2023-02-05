@@ -63,7 +63,7 @@ void * thread_floppy(void * arg) {
     int status = poll(&pfd,1,5);
     if (thr_end) break;
     if (status==-1) {
-      perror("UIO interrupts");
+      perror("UIO interrupts");
       break;
     } else if (status==0) {
       continue;

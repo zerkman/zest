@@ -144,7 +144,7 @@ The generation of the board support package (BSP) and first stage bootloader (FS
 
 This process will create the whole Linux filesystem for your Zynq board, as well as the build toolchain that can be used for builing the Linux kernel, u-boot and the userland applications.
 
-This procedure has been successfully tested using buildroot version 2022.02.8.
+This procedure has been successfully tested using buildroot version 2022.02.9.
 It should most probably work on more recent versions.
 
 ### Buildroot setup
@@ -152,12 +152,12 @@ It should most probably work on more recent versions.
 Fetch the buildroot sources:
 
     $ cd $HOME/src
-    $ wget https://buildroot.org/downloads/buildroot-2022.02.8.tar.xz
-    $ tar xf buildroot-2022.02.8.tar.xz
+    $ wget https://buildroot.org/downloads/buildroot-2022.02.9.tar.xz
+    $ tar xf buildroot-2022.02.9.tar.xz
 
 Now a bit of configuration must be done. Issue the commands:
 
-    $ cd buildroot-2022.02.8
+    $ cd buildroot-2022.02.9
     $ make menuconfig
 
 In the configuration menu, choose **Target options**. In this menu:
@@ -184,9 +184,9 @@ During the Buildroot build process, a full-featured cross GCC toolchain is also 
 
 In `$HOME/src/zest/linux`, edit the `Makefile` file. You should find a commented out line of the form:
 
-    #export PATH:=$(HOME)/src/buildroot-2022.02.8/output/host/bin:$(PATH)
+    #export PATH:=$(HOME)/src/buildroot-2022.02.9/output/host/bin:$(PATH)
 
-If you installed Buildroot at the default location `$HOME/src/buildroot-2022.02.8`, you may just uncomment this line my removing the leading `#` comment symbol. Otherwise, modify the line to point to the location of your Buildroot toolchain.
+If you installed Buildroot at the default location `$HOME/src/buildroot-2022.02.9`, you may just uncomment this line my removing the leading `#` comment symbol. Otherwise, modify the line to point to the location of your Buildroot toolchain.
 
 Save the modified file, close your file editor and type the commands:
 
@@ -201,11 +201,11 @@ After the Buildroot build, a base version of the root filesystem has been create
 
 The customisation is done by a `buildroot_post_build.sh` script file from the `zest/setup` directory. Run it from the Buildroot main directory, and build the root filesystem again (this time should be very quick):
 
-    $ cd $HOME/src/buildroot-2022.02.8
+    $ cd $HOME/src/buildroot-2022.02.9
     $ sh $HOME/src/zest/setup/buildroot_post_build.sh
     $ make
 
-The Linux filesystem image will be created as the `buildroot-2022.02.8/output/images/rootfs.cpio.uboot` file. Copy it to your `setup` dir:
+The Linux filesystem image will be created as the `buildroot-2022.02.9/output/images/rootfs.cpio.uboot` file. Copy it to your `setup` dir:
 
     $ cp output/images/rootfs.cpio.uboot $HOME/src/zest/setup/rootfs.ub
 
@@ -216,7 +216,7 @@ During the Buildroot build process, a full-featured cross GCC toolchain is also 
 For the following steps (u-boot and Linux kernel), you may set up the environement to use the buildroot cross compilation toolchain:
 
     $ export ARCH=arm
-    $ export CROSS_COMPILE=$HOME/src/buildroot-2022.02.8/output/host/bin/arm-linux-
+    $ export CROSS_COMPILE=$HOME/src/buildroot-2022.02.9/output/host/bin/arm-linux-
 
 ## Build the u-boot bootloader
 
