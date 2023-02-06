@@ -84,7 +84,7 @@ static void crc16_init(void) {
 
 static unsigned int crc16(const void *buf,size_t size) {
   const uint8_t *p = buf;
-  unsigned int crc = 0xffff;
+  unsigned int crc = 0xcdb4;
   while (size-->0)
     crc = crc16_table[crc>>8^*p++]^(crc&0xff)<<8;
   return crc;

@@ -175,19 +175,24 @@ begin
 					elsif DSR = x"a1" and amd_cnt = 0 then
 						amd_cnt <= to_unsigned(2,amd_cnt'length);
 						amd_st <= am3;
+						if upd_crc = '1' then
+							crc <= x"cdb4";
+						end if;
 					else
 						amd_st <= init;
 					end if;
 				when am3 =>
-					if DSR = x"a1" and amd_cnt > 0 then
+					if DSR = x"a1" then
+						if upd_crc = '1' then
+							crc <= x"cdb4";
+						end if;
 						amd_cnt <= amd_cnt - 1;
 						if amd_cnt - 1 = 0 then
 							amd_dtam <= '1';
 							amd_st <= init;
-							if upd_crc = '1' then
-								crc <= x"ffff";
-							end if;
 						end if;
+					else
+						amd_st <= init;
 					end if;
 				end case;
 			end if;
@@ -656,7 +661,7 @@ begin
 							DSR <= x"fb";
 						end if;
 						upd_crc <= '1';
-						crc <= x"ffff";
+						crc <= x"cdb4";
 						cmd_st <= c2_3wrdata;
 					else
 						DSR <= x"a1";
@@ -878,7 +883,7 @@ begin
 			when c3_wrtrwf5 =>
 				if ds_full = '1' then
 					upd_crc <= '1';
-					crc <= x"ffff";
+					crc <= x"cdb4";
 					cmd_st <= c3_wrtrwb1;
 				end if;
 			when c3_wrtrwcrc =>
