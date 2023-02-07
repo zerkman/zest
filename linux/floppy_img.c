@@ -119,15 +119,19 @@ static void load_mfm(Flopimg *img) {
     if (p) {
       sectors = readw(p+0x18);
       img->nsides = readw(p+0x1a);
-      img->ntracks = readw(p+0x13)/(sectors*img->nsides);
-    } else {
-      int pos = lseek(img->fd,0,SEEK_END);
-      if (pos>6250*100) {
+      if (sectors<9 || sectors>11 || img->nsides<1 || img->nsides>2) {
+        p = NULL;
+      } else {
+        img->ntracks = readw(p+0x13)/(sectors*img->nsides);
+      }
+    }
+    if (p==NULL) {
+      if (size>6250*100) {
         img->nsides = 2;
-        img->ntracks = pos/(6250*2);
+        img->ntracks = size/(6250*2);
       } else {
         img->nsides = 1;
-        img->ntracks = pos/6250;
+        img->ntracks = size/6250;
       }
     }
   }
