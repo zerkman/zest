@@ -28,6 +28,26 @@
 
 #include "floppy_img.h"
 
+static unsigned int crc16(const void *buf,size_t size) {
+  static uint16_t crc16_table[256];
+  static int once = 0;
+  if (once==0) {
+    unsigned int i,j;
+    for (i=0; i<256; ++i) {
+      unsigned int w = i<<8;
+      for (j=0; j<8; ++j)
+        w = (w<<1) ^ (0x1021&-((w>>15)&1));
+      crc16_table[i] = w;
+    }
+    once = 1;
+  }
+  const uint8_t *p = buf;
+  unsigned int crc = 0xcdb4;
+  while (size-->0)
+    crc = crc16_table[crc>>8^*p++]^(crc&0xff)<<8;
+  return crc;
+}
+
 static const uint8_t *findam(const uint8_t *p, const uint8_t *buf_end) {
   static const uint8_t head[] = {0,0,0,0xa1,0xa1,0xa1};
   buf_end -= sizeof(head);
@@ -53,6 +73,13 @@ static const uint8_t *find_sector(const uint8_t *p, int track, int side, int sec
     else {
       ok = p[9]==sector?1:0;
     }
+    int size = 128<<p[10];
+
+    unsigned int crc = p[11]<<8|p[12];
+    unsigned int crc2 = crc16(p+6,5);
+    if (crc!=crc2) {
+      printf("warning: bad IDAM CRC on track:%d side:%d sector:%d\n",track,side,sector);
+    }
 
     p += 11;
     p = findam(p,p_end);
@@ -61,33 +88,19 @@ static const uint8_t *find_sector(const uint8_t *p, int track, int side, int sec
       ok = 2;
       break;
     }
-    if (!ok) p += 521;
+    p += 7;
+    crc = p[size]<<8|p[size+1];
+    crc2 = crc16(p-1,size+1);
+    if (crc!=crc2) {
+      printf("warning: bad DAM CRC on track:%d side:%d sector:%d\n",track,side,sector);
+    }
+
+    if (!ok) p += size+2;
   }
   if (ok==1) {
-    p += 7;
     return p;
   }
   return NULL;
-}
-
-static uint16_t crc16_table[256];
-
-static void crc16_init(void) {
-  unsigned int i,j;
-  for (i=0; i<256; ++i) {
-     unsigned int w = i<<8;
-     for (j=0; j<8; ++j)
-       w = (w<<1) ^ (0x1021&-((w>>15)&1));
-     crc16_table[i] = w;
-  }
-}
-
-static unsigned int crc16(const void *buf,size_t size) {
-  const uint8_t *p = buf;
-  unsigned int crc = 0xcdb4;
-  while (size-->0)
-    crc = crc16_table[crc>>8^*p++]^(crc&0xff)<<8;
-  return crc;
 }
 
 static unsigned int readw(const unsigned char *ptr) {
@@ -176,8 +189,6 @@ static void load_st_msa(Flopimg *img, int skew, int interleave) {
   int track,side;
   uint8_t buf[512*11];
 
-  crc16_init();
-
   if (img->format==1)
   {
     // ST file format
@@ -251,8 +262,6 @@ static void load_st_msa(Flopimg *img, int skew, int interleave) {
       gap5 = 664;
     }
   }
-
-  crc16_init();
 
   int sec_shift = 1;
   if (interleave==0) interleave = 1;
