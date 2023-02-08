@@ -903,6 +903,7 @@ begin
 					status(6) <= '0';	-- write protect
 				end if;
 				DRQ <= '0';
+				wgs <= '0';
 				if command(3) = '1' then
 					cmd_st <= c4_trig;
 				elsif command(2) = '1' then
