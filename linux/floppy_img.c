@@ -186,30 +186,33 @@ static void load_st_msa(Flopimg *img, int skew, int interleave) {
     read(img->fd,buf,32);
     lseek(img->fd, 0, SEEK_SET);
 
-    img->nsectors = readw(buf+0x18);
-    img->nsides = readw(buf+0x1a);
-    img->ntracks = readw(buf+0x13)/(img->nsectors*img->nsides);
-    printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,img->nsectors);
+    // specific case when creating an image, at that point the file is empty so we skip geometry detection
+    if (img->rdonly || img->image_size>=512) {
+      img->nsectors = readw(buf+0x18);
+      img->nsides = readw(buf+0x1a);
+      img->ntracks = readw(buf+0x13)/(img->nsectors*img->nsides);
+      printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,img->nsectors);
 
-    bps = readw(buf+0x0b);
-    if (bps!=512) {
-      printf("invalid sector size:%u\n",bps);
-      if (!guess_size(img)) {
-        return;
+      bps = readw(buf+0x0b);
+      if (bps!=512) {
+        printf("invalid sector size:%u\n",bps);
+        if (!guess_size(img)) {
+          return;
+        }
       }
-    }
 
-    if (img->nsectors<9 || img->nsectors>11) {
-      printf("unsupported number of sectors per track:%u\n",img->nsectors);
-      if (!guess_size(img)) {
-        return;
+      if (img->nsectors<9 || img->nsectors>11) {
+        printf("unsupported number of sectors per track:%u\n",img->nsectors);
+        if (!guess_size(img)) {
+          return;
+        }
       }
-    }
 
-    if (img->ntracks > MAXTRACK || img->ntracks < 0) {
-      printf("unsupported number of tracks:%u\n", img->ntracks);
-      if (!guess_size(img)) {
-        return;
+      if (img->ntracks > MAXTRACK || img->ntracks < 0) {
+        printf("unsupported number of tracks:%u\n", img->ntracks);
+        if (!guess_size(img)) {
+          return;
+        }
       }
     }
   } else {
@@ -225,7 +228,7 @@ static void load_st_msa(Flopimg *img, int skew, int interleave) {
     img->nsides = readwb(buf+4)+1;
     unsigned short start_track = readwb(buf+6);
     if (start_track != 0) {
-      printf("Partial .msa file supplied. It starts at track %d. This is currently not supported\n", start_track + 1);
+      printf("Partial .msa file supplied. It starts at track %d. This is currently not supported\n", start_track);
       return;
     }
     img->ntracks = readwb(buf+8)+1;
