@@ -503,15 +503,13 @@ begin
 	shifter_RWn <= bus_RWn;
 	shifter_A <= bus_A(5 downto 1);
 
-	process(shifter_rgb,shifter_mono,blankn,monomon) is
-		begin
-			rgb <= (others => '0');
-			if monomon = '1' then
-				rgb <= (others => shifter_mono);
-			elsif blankn = '1' then
-				rgb <= shifter_rgb;
-			end if;
-		end process;
+	rgb_mix: entity video_mixer port map (
+		monomon => monomon,
+		shifter_rgb => shifter_rgb,
+		shifter_mono => shifter_mono,
+		blankn => blankn,
+		rgb => rgb
+	);
 
 	mfp:entity mc68901 port map (
 		clk => clk,
