@@ -293,7 +293,8 @@ begin
 	stbus:entity atarist_bus port map(
 		cpu_d => cpu_oD,
 		cpu_e => cpu_RWn,
-		shifter_d => shifter_oD,
+		shifter_od => shifter_oD,
+		shifter_e => shifter_CSn,
 		ram_d => ram_oD,
 		ram_e => RDATn,
 		ram_latch => LATCH,
@@ -307,7 +308,8 @@ begin
 		dma_d => dma_oD,
 		psg_d => psg_od,
 		psg_e => psg_csn,
-		d => bus_D
+		d => bus_D,
+		shifter_id => shifter_iD
 	);
 
 	bus_A <= cpu_A;
@@ -499,7 +501,6 @@ begin
 		mono => shifter_mono,
 		rgb => shifter_rgb
 	);
-	shifter_iD <= (bus_D or (15 downto 0 => shifter_CSn)) and ram_oD;
 	shifter_RWn <= bus_RWn;
 	shifter_A <= bus_A(5 downto 1);
 

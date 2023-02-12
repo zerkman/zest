@@ -22,7 +22,8 @@ entity atarist_bus is
 	port (
 		cpu_d		: in std_logic_vector(15 downto 0);
 		cpu_e		: in std_logic;
-		shifter_d	: in std_logic_vector(15 downto 0);
+		shifter_od	: in std_logic_vector(15 downto 0);
+		shifter_e	: in std_logic;
 		ram_d		: in std_logic_vector(15 downto 0);
 		ram_e		: in std_logic;
 		ram_latch	: in std_logic;
@@ -37,12 +38,14 @@ entity atarist_bus is
 		psg_d		: in std_logic_vector(7 downto 0);
 		psg_e		: in std_logic;
 
-		d			: out std_logic_vector(15 downto 0)
+		d			: out std_logic_vector(15 downto 0);
+		shifter_id	: out std_logic_vector(15 downto 0)
 	);
 end atarist_bus;
 
 architecture rtl of atarist_bus is
 	signal ram_ds	: std_logic_vector(15 downto 0);
+	signal bus_d	: std_logic_vector(15 downto 0);
 begin
 
 	process(ram_latch,ram_d)
@@ -52,12 +55,15 @@ begin
 		end if;
 	end process;
 
-d <= (cpu_d or (15 downto 0 => cpu_e)) and shifter_d
+bus_d <= (cpu_d or (15 downto 0 => cpu_e)) and shifter_od
 		and (ram_ds or (15 downto 0 => ram_e or not cpu_e))
 		and (x"ff" & (mmu_d and mfp_d)) and ("111111" & glue_d & x"ff")
 		and ((acia_ikbd_d or (7 downto 0 => acia_ikbd_e nand cpu_e)) & x"ff")
 		and ((acia_midi_d or (7 downto 0 => acia_midi_e nand cpu_e)) & x"ff")
 		and ((psg_d or (7 downto 0 => psg_e)) & x"ff")
 		and dma_d;
+d <= bus_d;
+
+shifter_id <= (bus_d or (15 downto 0 => shifter_e)) and ram_d;
 
 end architecture;
