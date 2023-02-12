@@ -271,7 +271,6 @@ architecture structure of atarist_mb is
 	signal psg_a			: std_logic_vector(15 downto 0);
 	signal psg_b			: std_logic_vector(15 downto 0);
 	signal psg_c			: std_logic_vector(15 downto 0);
-	signal sndsum			: signed(17 downto 0);
 
 begin
 	reset <= not resetn;
@@ -655,8 +654,6 @@ begin
 	psg_bc2 <= '1';
 	psg_ia <= (others => '0');
 	psg_ib <= (others => '0');
-	sndsum <= resize(signed(psg_a),sndsum'length) + resize(signed(psg_b),sndsum'length) + resize(signed(psg_c),sndsum'length);
-	sound <= std_logic_vector(sndsum(17 downto 2));
 	psg:entity ym2149 port map (
 		clk => clk,
 		aclken => en2rck,
@@ -673,6 +670,13 @@ begin
 		a => psg_a,
 		b => psg_b,
 		c => psg_c
+	);
+
+	snd_mix:entity sound_mixer port map (
+		psg_a => psg_a,
+		psg_b => psg_b,
+		psg_c => psg_c,
+		sound => sound
 	);
 
 end structure;
