@@ -20,10 +20,15 @@ use ieee.numeric_std.all;
 
 entity sound_mixer is
 	port (
+		clk			: in std_logic;
+		enck		: in std_logic;
+		isound_clk	: in std_logic;
+
 		psg_a		: in std_logic_vector(15 downto 0);
 		psg_b		: in std_logic_vector(15 downto 0);
 		psg_c		: in std_logic_vector(15 downto 0);
 
+		sound_clk	: out std_logic;
 		sound		: out std_logic_vector(15 downto 0)
 	);
 end sound_mixer;
@@ -34,5 +39,15 @@ begin
 
 	sndsum <= resize(signed(psg_a),sndsum'length) + resize(signed(psg_b),sndsum'length) + resize(signed(psg_c),sndsum'length);
 	sound <= std_logic_vector(sndsum(17 downto 2));
+
+	process(clk)
+	begin
+		if rising_edge(clk) then
+			if enck = '1' then
+				sound_clk <= isound_clk;
+			end if;
+		end if;
+	end process;
+
 
 end architecture;

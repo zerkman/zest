@@ -37,6 +37,7 @@ entity atarist_mb is
 		vsync : out std_logic;
 		rgb : out std_logic_vector(8 downto 0);
 
+		sound_clk : out std_logic;
 		sound : out std_logic_vector(15 downto 0);
 
 		ikbd_clkren : out std_logic;
@@ -122,6 +123,7 @@ architecture structure of atarist_mb is
 	signal en2fck		: std_logic;
 	signal en32ck		: std_logic;
 	signal en2_4576ck	: std_logic;
+	signal ck48			: std_logic;
 	signal ck05			: std_logic;
 	signal clken_err	: std_logic;
 	signal clken_video	: std_logic;
@@ -360,16 +362,17 @@ begin
 			wakestate => wakestate,
 			enNC1 => enNC1,         -- enable 8 MHz rising edges
 			enNC2 => enNC2,         -- enable 8 MHz falling edges
-			en16rck => en16rck,     -- 16 MHz rising edge
-			en16fck => en16fck,     -- 16 MHz falling edge
-			en8rck => en8rck,       -- 8 MHz rising edge
-			en8fck => en8fck,       -- 8 MHz falling edge
-			en32ck => en32ck,       -- 32 MHz rising edge
-			en4rck => en4rck,       -- 4 MHz rising edge
-			en4fck => en4fck,       -- 4 MHz falling edge
-			en2rck => en2rck,       -- 2 MHz rising edge
-			en2fck => en2fck,       -- 2 MHz falling edge
-			en2_4576 => en2_4576ck, -- 2.4576 MHz rising edge
+			en16rck => en16rck,     -- enable 16 MHz rising edge
+			en16fck => en16fck,     -- enable 16 MHz falling edge
+			en8rck => en8rck,       -- enable 8 MHz rising edge
+			en8fck => en8fck,       -- enable 8 MHz falling edge
+			en32ck => en32ck,       -- enable 32 MHz rising edge
+			en4rck => en4rck,       -- enable 4 MHz rising edge
+			en4fck => en4fck,       -- enable 4 MHz falling edge
+			en2rck => en2rck,       -- enable 2 MHz rising edge
+			en2fck => en2fck,       -- enable 2 MHz falling edge
+			en2_4576 => en2_4576ck, -- enable 2.4576 MHz rising edge
+			ck48 => ck48,			-- 48 kHz clock
 			ck05 => ck05,           -- 500 kHz clock
 			error => clken_err	    -- time out error
 		);
@@ -671,9 +674,13 @@ begin
 	);
 
 	snd_mix:entity sound_mixer port map (
+		clk => clk,
+		enck => en8rck,
+		isound_clk => ck48,
 		psg_a => psg_a,
 		psg_b => psg_b,
 		psg_c => psg_c,
+		sound_clk => sound_clk,
 		sound => sound
 	);
 

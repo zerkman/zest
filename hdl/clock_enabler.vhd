@@ -35,16 +35,17 @@ entity clock_enabler is
 		wakestate	: in std_logic_vector(1 downto 0);
 		enNC1		: in std_logic;		-- enable 8 MHz rising edges
 		enNC2		: in std_logic;		-- enable 8 MHz falling edges
-		en8rck		: out std_logic;	-- 8 MHz rising edge
-		en8fck		: out std_logic;	-- 8 MHz falling edge
-		en16rck		: out std_logic;	-- 16 MHz rising edge
-		en16fck		: out std_logic;	-- 16 MHz falling edge
-		en32ck		: out std_logic;	-- 32 MHz rising edge
-		en4rck		: out std_logic;	-- 4 MHz rising edge
-		en4fck		: out std_logic;	-- 4 MHz falling edge
-		en2rck		: out std_logic;	-- 2 MHz rising edge
-		en2fck		: out std_logic;	-- 2 MHz falling edge
-		en2_4576	: out std_logic;	-- 2.4576 MHz rising edge
+		en8rck		: out std_logic;	-- enable 8 MHz rising edge
+		en8fck		: out std_logic;	-- enable 8 MHz falling edge
+		en16rck		: out std_logic;	-- enable 16 MHz rising edge
+		en16fck		: out std_logic;	-- enable 16 MHz falling edge
+		en32ck		: out std_logic;	-- enable 32 MHz rising edge
+		en4rck		: out std_logic;	-- enable 4 MHz rising edge
+		en4fck		: out std_logic;	-- enable 4 MHz falling edge
+		en2rck		: out std_logic;	-- enable 2 MHz rising edge
+		en2fck		: out std_logic;	-- enable 2 MHz falling edge
+		en2_4576	: out std_logic;	-- enable 2.4576 MHz rising edge
+		ck48		: out std_logic;	-- 48 kHz clock
 		ck05		: out std_logic;	-- 500 kHz clock
 		error		: out std_logic		-- time out error
 	);
@@ -58,6 +59,8 @@ architecture behavioral of clock_enabler is
 
 	signal cnt			: unsigned(CPT_BITS-1 downto 0);
 	signal cnt24		: unsigned(15 downto 0);
+	signal cnt48		: integer range 0 to 1000-1;
+	signal sclk			: std_logic;
 	signal cnt05		: unsigned(3 downto 0);
 	signal cnt2			: unsigned(1 downto 0);
 	signal delay		: std_logic;
@@ -79,6 +82,7 @@ begin
 	en2fck <= en2 and cnt2(1) and not cnt2(0);
 	en2_4576 <= en24;
 	ck05 <= cnt05(3);
+	ck48 <= sclk;
 	cnt2 <= cnt05(1 downto 0) + unsigned(wakestate);
 	error <= err;
 
@@ -108,6 +112,8 @@ begin
 			if (reset = '1') then
 				cnt <= (others => '0');
 				cnt24 <= (others => '0');
+				cnt48 <= 0;
+				sclk <= '0';
 				delay <= '0';
 				phase <= '0';
 				en1 <= '0';
@@ -146,13 +152,21 @@ begin
 				if cnt(CPT_BITS-1) = '1' then
 					err <= '1';
 				end if;
-				if new_phase = '1' or delay = '1' then
+				if new_phase = '1' or delay = '1' then		-- 32 MHz clock
 					-- 32*2400/31333 ~= 2.451 MHz
 					if cnt24+2400 >= 31333 then
 						en24 <= '1';
 						cnt24 <= cnt24 + 2400 - 31333;
 					else
 						cnt24 <= cnt24 + 2400;
+					end if;
+
+					-- 2*48000*1000/3 = 32 MHz
+					if cnt48 + 3 < 1000 then
+						cnt48 <= cnt48 + 3;
+					else
+						cnt48 <= cnt48 + 3 - 1000;
+						sclk <= not sclk;
 					end if;
 				end if;
 			end if;

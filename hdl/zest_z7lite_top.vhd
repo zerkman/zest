@@ -232,7 +232,6 @@ architecture structure of zest_top is
 	signal isound		: std_logic_vector(15 downto 0);
 	signal osound		: std_logic_vector(15 downto 0);
 	signal sound_clk	: std_logic;
-	signal sclk_cnt		: unsigned(15 downto 0);
 	signal audio_lr		: std_logic_vector(23 downto 0);
 
 	signal dblpix		: std_logic_vector(15 downto 0);
@@ -345,6 +344,7 @@ begin
 		hsync => hsync,
 		vsync => vsync,
 		rgb => rgb,
+		sound_clk => sound_clk,
 		sound => isound,
 		ikbd_clkren => ikbd_clkren,
 		ikbd_clkfen => ikbd_clkfen,
@@ -466,27 +466,6 @@ begin
 		tx_d_n => hdmi_tx_d_n,
 		tx_d_p => hdmi_tx_d_p
 	);
-
-	soundclk:process(pclk) is
-		constant SAMPLE_FREQ : integer := 48000;
-		-- NUM and DIV are integers such that 2*SAMPLE_FREQ*NUM/DIV = clk frequency
-		constant NUM : integer := 1000;
-		constant DIV : integer := 3;             -- 2*48000*1000/3 = 32 MHz
-		begin
-			if rising_edge(pclk) then
-				if soft_resetn = '0' then
-						sound_clk <= '0';
-						sclk_cnt <= (others => '0');
-				else
-						if sclk_cnt + DIV < NUM then
-								sclk_cnt <= sclk_cnt + DIV;
-						else
-								sclk_cnt <= sclk_cnt + DIV - NUM;
-								sound_clk <= not sound_clk;
-						end if;
-				end if;
-			end if;
-		end process;
 
 	-- On the Z7-Lite board, Ethernet PHY is connected to the PL.
 	-- As the PHY is 10/100mbit it uses MII (Media-independent interface).

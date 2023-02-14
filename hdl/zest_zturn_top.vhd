@@ -299,6 +299,7 @@ begin
 		hsync => hsync,
 		vsync => vsync,
 		rgb => rgb,
+		sound_clk => open,
 		sound => isound,
 		ikbd_clkren => ikbd_clkren,
 		ikbd_clkfen => ikbd_clkfen,
