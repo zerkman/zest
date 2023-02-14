@@ -62,7 +62,7 @@ end zest_top;
 
 
 architecture structure of zest_top is
-	component ps_domain_wrapper is
+	component ps_domain is
 		port (
 			A_0 : in std_logic_vector(31 downto 0);
 			DDR_addr : inout std_logic_vector(14 downto 0);
@@ -88,8 +88,12 @@ architecture structure of zest_top is
 			FIXED_IO_ps_clk : inout std_logic;
 			FIXED_IO_ps_porb : inout std_logic;
 			FIXED_IO_ps_srstb : inout std_logic;
-			IIC_0_0_scl_io : inout std_logic;
-			IIC_0_0_sda_io : inout std_logic;
+			IIC_0_0_scl_i : in std_logic;
+			IIC_0_0_scl_o : out std_logic;
+			IIC_0_0_scl_t : out std_logic;
+			IIC_0_0_sda_i : in std_logic;
+			IIC_0_0_sda_o : out std_logic;
+			IIC_0_0_sda_t : out std_logic;
 			IRQ_F2P_0 : in std_logic_vector(0 to 0);
 			OFFSET_0 : in std_logic_vector(31 downto 0);
 			OFFVALD_0 : in std_logic;
@@ -102,15 +106,14 @@ architecture structure of zest_top is
 			idata : in std_logic_vector(23 downto 0);
 			ide : in std_logic;
 			ihsync : in std_logic;
-			ivsync : in std_logic;
-			odata : out std_logic_vector(23 downto 0);
-			ode : out std_logic;
-			ohsync : out std_logic;
-			ovsync : out std_logic;
 			in_reg0_0 : in std_logic_vector(31 downto 0);
 			in_reg1_0 : in std_logic_vector(31 downto 0);
 			in_reg8_11_0 : in std_logic_vector(127 downto 0);
+			ivsync : in std_logic;
 			oD_0 : out std_logic_vector(15 downto 0);
+			odata : out std_logic_vector(23 downto 0);
+			ode : out std_logic;
+			ohsync : out std_logic;
 			out_reg0_0 : out std_logic_vector(31 downto 0);
 			out_reg1_0 : out std_logic_vector(31 downto 0);
 			out_reg2_0 : out std_logic_vector(31 downto 0);
@@ -120,6 +123,7 @@ architecture structure of zest_top is
 			out_reg6_0 : out std_logic_vector(31 downto 0);
 			out_reg7_0 : out std_logic_vector(31 downto 0);
 			out_reg8_11_0 : out std_logic_vector(127 downto 0);
+			ovsync : out std_logic;
 			resetn : out std_logic;
 			vid_clk : out std_logic
 		);
@@ -130,6 +134,13 @@ architecture structure of zest_top is
 	signal pclk			: std_logic;
 	signal soft_resetn	: std_logic;
 	signal irq_f2p		: std_logic_vector(0 downto 0);
+
+	signal I2C0_scl_i	: std_logic;
+	signal I2C0_scl_o	: std_logic;
+	signal I2C0_scl_t	: std_logic;
+	signal I2C0_sda_i	: std_logic;
+	signal I2C0_sda_o	: std_logic;
+	signal I2C0_sda_t	: std_logic;
 
 	signal clken_err	: std_logic;
 	signal rgb 			: std_logic_vector(8 downto 0);
@@ -226,7 +237,11 @@ begin
 	ram_offset <= out_reg1;
 	in_reg0(12 downto 0) <= (others => '0');
 
-	psd:ps_domain_wrapper port map(
+	I2C0_SCL <= I2C0_scl_o when I2C0_scl_t = '0' else 'Z';
+	I2C0_scl_i <= I2C0_SCL;
+	I2C0_SDA <= I2C0_sda_o when I2C0_sda_t = '0' else 'Z';
+	I2C0_sda_i <= I2C0_SDA;
+	psd:ps_domain port map(
 		DDR_addr => DDR_addr,
 		DDR_ba => DDR_ba,
 		DDR_cas_n => DDR_cas_n,
@@ -248,8 +263,12 @@ begin
 		FIXED_IO_ps_clk => FIXED_IO_ps_clk,
 		FIXED_IO_ps_porb => FIXED_IO_ps_porb,
 		FIXED_IO_ps_srstb => FIXED_IO_ps_srstb,
-		IIC_0_0_scl_io => I2C0_SCL,
-		IIC_0_0_sda_io => I2C0_SDA,
+		IIC_0_0_scl_i => I2C0_scl_i,
+		IIC_0_0_scl_o => I2C0_scl_o,
+		IIC_0_0_scl_t => I2C0_scl_t,
+		IIC_0_0_sda_i => I2C0_sda_i,
+		IIC_0_0_sda_o => I2C0_sda_o,
+		IIC_0_0_sda_t => I2C0_sda_t,
 		IRQ_F2P_0 => irq_f2p,
 		clk => clk,
 		in_reg0_0 => in_reg0,

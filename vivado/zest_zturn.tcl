@@ -1306,15 +1306,6 @@ cr_bd_ps_domain ""
 set_property REGISTERED_WITH_MANAGER "1" [get_files ps_domain.bd ]
 set_property SYNTH_CHECKPOINT_MODE "Hierarchical" [get_files ps_domain.bd ]
 
-#call make_wrapper to create wrapper files
-if { [get_property IS_LOCKED [ get_files -norecurse ps_domain.bd] ] == 1  } {
-  import_files -fileset sources_1 [file normalize "${origin_dir}/vivado/zest_zturn/zest_zturn.gen/sources_1/bd/ps_domain/hdl/ps_domain_wrapper.vhd" ]
-} else {
-  set wrapper_path [make_wrapper -fileset sources_1 -files [ get_files -norecurse ps_domain.bd] -top]
-  add_files -norecurse -fileset sources_1 $wrapper_path
-}
-
-
 # Create 'synth_1' run (if not found)
 if {[string equal [get_runs -quiet synth_1] ""]} {
     create_run -name synth_1 -part xc7z020clg400-1 -flow {Vivado Synthesis 2019} -strategy "Vivado Synthesis Defaults" -report_strategy {No Reports} -constrset constrs_1

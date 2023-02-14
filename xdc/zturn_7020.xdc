@@ -62,6 +62,6 @@ set_property PACKAGE_PIN R14 [get_ports {LEDS[2]}]
 set_property CFGBVS VCCO [current_design]
 set_property CONFIG_VOLTAGE 3.3 [current_design]
 
-set_clock_groups -asynchronous -group [get_clocks clk_fpga_0] -group [get_clocks -of_objects [get_pins psd/ps_domain_i/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT0]]
+set_clock_groups -asynchronous -group [get_clocks clk_fpga_0] -group [get_clocks -of_objects [get_pins psd/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT0]]
 
 set_property BITSTREAM.GENERAL.COMPRESS True [current_design]
