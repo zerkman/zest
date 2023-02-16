@@ -346,7 +346,7 @@ begin
 							if ((phase or chan(i).tone) and (noise_reg(0) or chan(i).noise)) = '1' then
 								chan(i).value <= vol;
 							else
-								chan(i).value <= std_logic_vector(-signed(vol));
+								chan(i).value <= x"0000";
 							end if;
 						end loop;
 					end if;

@@ -123,6 +123,7 @@ architecture structure of atarist_mb is
 	signal en2fck		: std_logic;
 	signal en32ck		: std_logic;
 	signal en2_4576ck	: std_logic;
+	signal en250ck		: std_logic;
 	signal ck48			: std_logic;
 	signal ck05			: std_logic;
 	signal clken_err	: std_logic;
@@ -281,6 +282,7 @@ begin
 	ikbd_clkren <= en2rck;
 	ikbd_clkfen <= en2fck;
 	fdd_clken <= en8rck;
+	sound_clk <= ck48;
 
 	a <= ram_A;
 	ds <= ram_DS;
@@ -372,9 +374,10 @@ begin
 			en2rck => en2rck,       -- enable 2 MHz rising edge
 			en2fck => en2fck,       -- enable 2 MHz falling edge
 			en2_4576 => en2_4576ck, -- enable 2.4576 MHz rising edge
-			ck48 => ck48,			-- 48 kHz clock
+			en250ck => en250ck,     -- enable 250 kHz rising edge
+			ck48 => ck48,           -- 48 kHz clock
 			ck05 => ck05,           -- 500 kHz clock
-			error => clken_err	    -- time out error
+			error => clken_err      -- time out error
 		);
 	enNC1 <= clken_video;
 	enNC2 <= clken_bus and clken_dma;
@@ -675,12 +678,12 @@ begin
 
 	snd_mix:entity sound_mixer port map (
 		clk => clk,
-		enck => en8rck,
-		isound_clk => ck48,
+		cken => en8rck,
+		reset => reset,
+		psg_cken => en250ck,
 		psg_a => psg_a,
 		psg_b => psg_b,
 		psg_c => psg_c,
-		sound_clk => sound_clk,
 		sound => sound
 	);
 
