@@ -29,17 +29,22 @@ entity sound_mixer is
 		psg_b		: in std_logic_vector(15 downto 0);
 		psg_c		: in std_logic_vector(15 downto 0);
 
+		sound_clk	: in std_logic;
 		sound		: out std_logic_vector(15 downto 0)
 	);
 end sound_mixer;
 
 architecture rtl of sound_mixer is
-	signal x0		: integer range -32768 to 32767;
-	signal x1		: integer range -32768 to 32767;
-	signal y0		: integer range -32768 to 32767;
+	signal snd_clk1	: std_logic;
+	signal x0		: integer range -2**15 to 2**15-1;
+	signal x1		: integer range -2**15 to 2**15-1;
+	signal y0		: integer range -2**15 to 2**15-1;
+	signal y1		: integer range -2**15 to 2**15-1;
+	signal z0		: integer range -2**15 to 2**15-1;
+	signal z1		: integer range -2**25 to 2**25-1;
 begin
 
-	sound <= std_logic_vector(to_signed(y0,16));
+	sound <= std_logic_vector(to_signed(z0,16));
 
 	-- Low pass filter simulating the STF's YM output RC circuitry
 	-- method taken from the Hatari ST emulator
@@ -52,6 +57,8 @@ begin
 				y0 <= 0;
 			elsif psg_cken = '1' then
 				-- PSG state has changed
+				x0 <= (to_integer(signed(psg_a)) + to_integer(signed(psg_b)) + to_integer(signed(psg_c)))/4;
+				x1 <= x0;
 				if x0 >= y0 then
 					-- YM Pull up:   fc = 7586.1 Hz (44.1 KHz), fc = 8257.0 Hz (48 KHz)
 					y0 <= (3*(x0 + x1) + (2*y0)) / 8;
@@ -59,10 +66,30 @@ begin
 					-- R8 Pull down: fc = 1992.0 Hz (44.1 KHz), fc = 2168.0 Hz (48 KHz)
 					y0 <= ((x0 + x1) + (6*y0)) / 8;
 				end if;
-				x0 <= (to_integer(signed(psg_a)) + to_integer(signed(psg_b)) + to_integer(signed(psg_c)))/4;
-				x1 <= x0;
 			end if;
 		end if;
 	end process;
+
+	-- DC adjuster as a IIR HPF
+	-- method taken from the Hatari ST emulator
+	z0 <= z1/(2**9);
+	process(clk)
+	begin
+		if rising_edge(clk) then
+			if reset = '1' then
+				snd_clk1 <= '0';
+				y1 <= 0;
+				z1 <= 0;
+			else
+				snd_clk1 <= sound_clk;
+				if sound_clk = '0' and snd_clk1 = '1' then	-- low edge of sound clock
+					-- apply DC correcting HPF
+					z1 <= z1 + (y0 - y1)*(2**9) - z0;
+					y1 <= y0;
+				end if;
+			end if;
+		end if;
+	end process;
+
 
 end architecture;
