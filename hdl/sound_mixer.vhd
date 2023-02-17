@@ -47,14 +47,19 @@ begin
 	sound <= std_logic_vector(to_signed(z0,16));
 
 	-- Low pass filter simulating the STF's YM output RC circuitry
-	-- method taken from the Hatari ST emulator
+	-- + DC adjuster as a IIR HPF
+	-- methods taken from the Hatari ST emulator
+	z0 <= z1/(2**9);
 	process(clk)
 	begin
 		if rising_edge(clk) then
 			if reset = '1' then
+				snd_clk1 <= '0';
 				x0 <= 0;
 				x1 <= 0;
 				y0 <= 0;
+				y1 <= 0;
+				z1 <= 0;
 			elsif psg_cken = '1' then
 				-- PSG state has changed
 				x0 <= (to_integer(signed(psg_a)) + to_integer(signed(psg_b)) + to_integer(signed(psg_c)))/4;
@@ -66,21 +71,6 @@ begin
 					-- R8 Pull down: fc = 1992.0 Hz (44.1 KHz), fc = 2168.0 Hz (48 KHz)
 					y0 <= ((x0 + x1) + (6*y0)) / 8;
 				end if;
-			end if;
-		end if;
-	end process;
-
-	-- DC adjuster as a IIR HPF
-	-- method taken from the Hatari ST emulator
-	z0 <= z1/(2**9);
-	process(clk)
-	begin
-		if rising_edge(clk) then
-			if reset = '1' then
-				snd_clk1 <= '0';
-				y1 <= 0;
-				z1 <= 0;
-			else
 				snd_clk1 <= sound_clk;
 				if sound_clk = '0' and snd_clk1 = '1' then	-- low edge of sound clock
 					-- apply DC correcting HPF
