@@ -29,14 +29,22 @@ entity sound_mixer is
 		psg_b		: in std_logic_vector(15 downto 0);
 		psg_c		: in std_logic_vector(15 downto 0);
 
-		sound_clk	: in std_logic;
-		sound		: out std_logic_vector(15 downto 0)
+		snd_clk		: in std_logic;
+		osnd		: out std_logic_vector(15 downto 0)
 	);
 end sound_mixer;
 
 architecture rtl of sound_mixer is
+	type alu_mode_t is ( ALU_NOP, ALU_MOVE, ALU_ADD, ALU_SUB );
+	signal alu_mode	: alu_mode_t;
+	signal alu_i	: integer range -2**25 to 2**25-1;
+	signal alu_o	: integer range -2**25 to 2**25-1;
+
+	signal mix_st	: integer range 0 to 29;
+
 	signal snd_clk1	: std_logic;
-	signal x0		: integer range -2**15 to 2**15-1;
+	signal sndc		: integer range -2**15 to 2**15-1;
+	signal x0		: integer range -2**16 to 2**16-1;
 	signal x1		: integer range -2**15 to 2**15-1;
 	signal y0		: integer range -2**15 to 2**15-1;
 	signal y1		: integer range -2**15 to 2**15-1;
@@ -44,39 +52,158 @@ architecture rtl of sound_mixer is
 	signal z1		: integer range -2**25 to 2**25-1;
 begin
 
-	sound <= std_logic_vector(to_signed(z0,16));
+	osnd <= std_logic_vector(to_signed(z0,16));
+
+	-- Simple ALU logic
+	process(clk)
+	begin
+		if rising_edge(clk) then
+			case alu_mode is
+			when ALU_NOP =>
+				null;
+			when ALU_MOVE =>
+				alu_o <= alu_i;
+			when ALU_ADD =>
+				alu_o <= alu_o + alu_i;
+			when ALU_SUB =>
+				alu_o <= alu_o - alu_i;
+			end case;
+		end if;
+	end process;
 
 	-- Low pass filter simulating the STF's YM output RC circuitry
 	-- + DC adjuster as a IIR HPF
 	-- methods taken from the Hatari ST emulator
-	z0 <= z1/(2**9);
 	process(clk)
 	begin
 		if rising_edge(clk) then
 			if reset = '1' then
 				snd_clk1 <= '0';
+				alu_mode <= ALU_NOP;
 				x0 <= 0;
 				x1 <= 0;
 				y0 <= 0;
 				y1 <= 0;
+				z0 <= 0;
 				z1 <= 0;
-			elsif psg_cken = '1' then
-				-- PSG state has changed
-				x0 <= (to_integer(signed(psg_a)) + to_integer(signed(psg_b)) + to_integer(signed(psg_c)))/4;
-				x1 <= x0;
-				if x0 >= y0 then
-					-- YM Pull up:   fc = 7586.1 Hz (44.1 KHz), fc = 8257.0 Hz (48 KHz)
-					y0 <= (3*(x0 + x1) + (2*y0)) / 8;
-				else
-					-- R8 Pull down: fc = 1992.0 Hz (44.1 KHz), fc = 2168.0 Hz (48 KHz)
-					y0 <= ((x0 + x1) + (6*y0)) / 8;
-				end if;
-				snd_clk1 <= sound_clk;
-				if sound_clk = '0' and snd_clk1 = '1' then	-- low edge of sound clock
-					-- apply DC correcting HPF
-					z1 <= z1 + (y0 - y1)*(2**9) - z0;
+				mix_st <= 0;
+			else
+				mix_st <= mix_st + 1;
+				case mix_st is
+				when 0 =>
+					if psg_cken = '0' then
+						mix_st <= 0;
+					end if;
+				when 1 =>
+					alu_i <= to_integer(signed(psg_a));
+					alu_mode <= ALU_MOVE;
+					x0 <= to_integer(signed(psg_b));
+					sndc <= to_integer(signed(psg_c));
+				when 2 =>
+					alu_i <= x0;		-- psg_b
+					alu_mode <= ALU_ADD;
+				when 3 =>
+					-- psg_a
+					alu_i <= sndc;		-- psg_c
+				when 4 =>
+					-- psg_a + psg_b
+					alu_mode <= ALU_NOP;
+				when 5 =>
+					-- psg_a + psg_b + psg_c
+					alu_i <= 4*alu_o;
+					alu_mode <= ALU_ADD;
+				when 6 =>
+					-- psg_a + psg_b + psg_c
+					alu_mode <= ALU_NOP;
+				when 7 =>
+					-- 5*(psg_a + psg_b + psg_c)
+					x0 <= alu_o/16;		-- x0 <= 5*(psg_a + psg_b + psg_c)/16
+				when 8 =>
+					alu_i <= x0;
+					alu_mode <= ALU_MOVE;
+				when 9 =>
+					alu_i <= x1;
+					alu_mode <= ALU_ADD;
+				when 10 =>
+					-- x0
+					alu_mode <= ALU_NOP;
+				when 11 =>
+					-- x0 + x1
+					x0 <= alu_o;
+					x1 <= x0;
+					if x0 < y0 then
+						mix_st <= 16;
+					end if;
+				when 12 =>
+					-- x0 >= y0 -> pullup
+					alu_i <= alu_o;		-- x0 + x1
+					alu_mode <= ALU_ADD;
+				when 13 =>
+					null;
+				when 14 =>
+					-- 2*(x0 + x1)
+					alu_i <= 2*y0;
+				when 15 =>
+					-- 3*(x0 + x1)
+					alu_mode <= ALU_NOP;
+					mix_st <= 21;
+				when 16 =>
+					-- x0 < y0 -> pulldown
+					alu_i <= 2*y0;
+					alu_mode <= ALU_MOVE;
+				when 17 =>
+					alu_mode <= ALU_ADD;
+				when 18 =>
+					-- 2*y0
+					null;
+				when 19 =>
+					-- 4*y0
+					alu_i <= x0;		-- x0 + x1
+				when 20 =>
+					-- 6*y0
+					alu_mode <= ALU_NOP;
+				when 21 =>
+					-- from 15: 3*(x0 + x1) + 2*y0
+					-- from 20: x0 + x1 + 6*y0
+					y0 <= alu_o/8;
+					snd_clk1 <= snd_clk;
+					if snd_clk = '0' and snd_clk1 = '1' then	-- low edge of sound clock
+						-- proceed to next step
+						null;
+					else
+						-- go to idle state
+						mix_st <= 0;
+					end if;
+				when 22 =>
+					alu_i <= y0;
+					alu_mode <= ALU_MOVE;
+				when 23 =>
+					alu_i <= y1;
+					alu_mode <= ALU_SUB;
+				when 24 =>
+					-- y0
+					alu_mode <= ALU_NOP;
+				when 25 =>
+					-- y0 - y1
+					alu_i <= alu_o*(2**9);
+					alu_mode <= ALU_MOVE;
+				when 26 =>
+					alu_i <= z1;
+					alu_mode <= ALU_ADD;
+				when 27 =>
+					-- (y0 - y1)<<9
+					alu_i <= z0;
+					alu_mode <= ALU_SUB;
+				when 28 =>
+					-- z1 + (y0 - y1)<<9
+					alu_mode <= ALU_NOP;
+				when 29 =>
+					-- z1 + (y0 - y1)<<9 - z0;
+					z1 <= alu_o;
+					z0 <= alu_o/(2**9);
 					y1 <= y0;
-				end if;
+					mix_st <= 0;
+				end case;
 			end if;
 		end if;
 	end process;

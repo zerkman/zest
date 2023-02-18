@@ -684,8 +684,8 @@ begin
 		psg_a => psg_a,
 		psg_b => psg_b,
 		psg_c => psg_c,
-		sound_clk => ck48,
-		sound => sound
+		snd_clk => ck48,
+		osnd => sound
 	);
 
 end structure;
