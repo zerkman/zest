@@ -41,6 +41,8 @@ void * thread_floppy(void * arg);
 /* from ikbd.c */
 void * thread_ikbd(void * arg);
 
+/* from infomsg.c */
+void * thread_infomsg(void * arg);
 
 #define ST_MEM_ADDR 0x10000000
 #define ST_MEM_SIZE 0x1000000
@@ -50,6 +52,9 @@ int parmfd;
 
 volatile int thr_end = 0;
 
+static int sound_mute = 0;
+static int sound_vol = 16;
+
 static void setup_cfg(int reset) {
   static const int mem_cfg[] = {0,1,3,7,9,15};
   static const int ws_cfg[] = {2,3,1,0};
@@ -57,6 +62,8 @@ static void setup_cfg(int reset) {
   cfg |= config.mono?4:0;
   cfg |= mem_cfg[config.mem_size]<<4;
   cfg |= ws_cfg[config.wakestate-1]<<8;
+  if (sound_mute==0)
+    cfg |= sound_vol<<10;
   parmreg[0] = cfg;
 }
 
@@ -116,6 +123,24 @@ void set_wakestate(int ws) {
 
 int get_wakestate(void) {
   return config.wakestate;
+}
+
+int get_sound_vol(void) {
+  return sound_vol;
+}
+
+void set_sound_vol(int x) {
+  sound_vol = x;
+  setup_cfg(3);
+}
+
+int get_sound_mute(void) {
+  return sound_mute;
+}
+
+void set_sound_mute(int x) {
+  sound_mute = x?1:0;
+  setup_cfg(3);
 }
 
 int load_rom(const char *filename) {
@@ -212,6 +237,8 @@ int main(int argc, char **argv) {
   pthread_create(&kbd_thr,NULL,thread_ikbd,NULL);
   pthread_t floppy_thr;
   pthread_create(&floppy_thr,NULL,thread_floppy,NULL);
+  pthread_t infomsg_thr;
+  pthread_create(&infomsg_thr,NULL,thread_infomsg,NULL);
 
   struct sigaction sa = {0};
   sa.sa_handler = signal_handler;
@@ -225,6 +252,7 @@ int main(int argc, char **argv) {
   parmreg[0] = 0;
   pthread_join(kbd_thr,NULL);
   pthread_join(floppy_thr,NULL);
+  pthread_join(infomsg_thr,NULL);
   if (has_sil) {
     hdmi_stop();
   }

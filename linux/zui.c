@@ -299,7 +299,7 @@ int zui_run(int xpos, int ypos, ZuiWidget *obj) {
   osd_set_size(panel->width,panel->height);
   osd_set_position(xpos,ypos);
   display(obj);
-  osd_show(1);
+  osd_show();
   int shift = 0;
   focused = next_focusable(obj,NULL);
   if (focused) {

@@ -24,6 +24,8 @@ entity sound_mixer is
 		cken		: in std_logic;
 		reset		: in std_logic;
 
+		vol			: in std_logic_vector(4 downto 0);
+
 		psg_cken	: in std_logic;
 		psg_a		: in std_logic_vector(15 downto 0);
 		psg_b		: in std_logic_vector(15 downto 0);
@@ -40,7 +42,7 @@ architecture rtl of sound_mixer is
 	signal alu_i	: integer range -2**25 to 2**25-1;
 	signal alu_o	: integer range -2**25 to 2**25-1;
 
-	signal mix_st	: integer range 0 to 29;
+	signal mix_st	: integer range 0 to 36;
 
 	signal snd_clk1	: std_logic;
 	signal sndc		: integer range -2**15 to 2**15-1;
@@ -50,9 +52,12 @@ architecture rtl of sound_mixer is
 	signal y1		: integer range -2**15 to 2**15-1;
 	signal z0		: integer range -2**15 to 2**15-1;
 	signal z1		: integer range -2**25 to 2**25-1;
+	signal sound	: integer range -2**20 to 2**20-1;
+	signal bid		: integer range 0 to 4;
+
 begin
 
-	osnd <= std_logic_vector(to_signed(z0,16));
+	osnd <= std_logic_vector(to_signed(sound/16,16));
 
 	-- Simple ALU logic
 	process(clk)
@@ -87,6 +92,7 @@ begin
 				z0 <= 0;
 				z1 <= 0;
 				mix_st <= 0;
+				sound <= 0;
 			else
 				mix_st <= mix_st + 1;
 				case mix_st is
@@ -196,12 +202,28 @@ begin
 					alu_mode <= ALU_SUB;
 				when 28 =>
 					-- z1 + (y0 - y1)<<9
-					alu_mode <= ALU_NOP;
+					alu_i <= 0;
+					alu_mode <= ALU_MOVE;
 				when 29 =>
 					-- z1 + (y0 - y1)<<9 - z0;
 					z1 <= alu_o;
 					z0 <= alu_o/(2**9);
 					y1 <= y0;
+					alu_i <= alu_o/(2**9);
+					alu_mode <= ALU_NOP;
+					bid <= 0;
+				when 30 to 34 =>
+					if vol(bid) = '1' then
+						alu_mode <= ALU_ADD;
+					else
+						alu_mode <= ALU_NOP;
+					end if;
+					alu_i <= alu_i*2;
+					bid <= bid+1;
+				when 35 =>
+					alu_mode <= ALU_NOP;
+				when 36 =>
+					sound <= alu_o;
 					mix_st <= 0;
 				end case;
 			end if;

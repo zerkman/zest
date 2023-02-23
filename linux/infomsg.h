@@ -1,7 +1,7 @@
 /*
- * setup.h - Setup code for PL / Linux on Z-Turn board
+ * infomsg.h - Information message display on OSD
  *
- * Copyright (c) 2020-2023 Francois Galea <fgalea at free.fr>
+ * Copyright (c) 2023 Francois Galea <fgalea at free.fr>
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -16,37 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef __SETUP_H__
-#define __SETUP_H__
 
-// Cold reset
-void cold_reset();
+#ifndef __INFOMSG_H__
+#define __INFOMSG_H__
 
-// Warm Reset
-void warm_reset();
+void infomsg_display(const char* msg);
 
-// Set wakestate (ws=1-4)
-void set_wakestate(int ws);
+void infomsg_hide(void);
 
-// Get current wakestate (1-4)
-int get_wakestate(void);
+void vol_mute(void);
 
-// Load ROM file
-// returns 0 on success
-int load_rom(const char *filename);
+void vol_down(void);
 
-// get sound volume (0-31)
-int get_sound_vol(void);
-
-// set sound volume (x=0-31)
-void set_sound_vol(int x);
-
-// get sound mute state (0:unmuted, 1:muted)
-int get_sound_mute(void);
-
-// set sound mute state (0:unmute, other:mute)
-void set_sound_mute(int x);
-
+void vol_up(void);
 
 #endif
-

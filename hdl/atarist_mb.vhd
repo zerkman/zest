@@ -37,6 +37,7 @@ entity atarist_mb is
 		vsync : out std_logic;
 		rgb : out std_logic_vector(8 downto 0);
 
+		sound_vol : in std_logic_vector(4 downto 0);
 		sound_clk : out std_logic;
 		sound : out std_logic_vector(15 downto 0);
 
@@ -680,6 +681,7 @@ begin
 		clk => clk,
 		cken => en8rck,
 		reset => reset,
+		vol => sound_vol,
 		psg_cken => en250ck,
 		psg_a => psg_a,
 		psg_b => psg_b,

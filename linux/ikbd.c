@@ -23,15 +23,14 @@
 #include <linux/input-event-codes.h>
 
 #include "input.h"
+#include "menu.h"
+#include "infomsg.h"
 
 #define JOY_EMU_LED_FILE "/sys/class/leds/led1/brightness"
 
 extern volatile uint32_t *parmreg;
 
 extern volatile int thr_end;
-
-// From menu.c
-void menu(void);
 
 
 void led_status(int fd,int st) {
@@ -182,6 +181,15 @@ void * thread_ikbd(void * arg) {
             case KEY_PAGEUP:
             case KEY_SCROLLLOCK:
               menu();
+              break;
+            case KEY_MUTE:
+              if (evvalue) vol_mute();
+              break;
+            case KEY_VOLUMEDOWN:
+              if (evvalue) vol_down();
+              break;
+            case KEY_VOLUMEUP:
+              if (evvalue) vol_up();
               break;
             // default:
             //   printf("Key code:%d val:%d\n",evcode,evvalue);

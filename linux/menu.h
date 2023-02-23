@@ -22,4 +22,6 @@
 
 void menu_init(void);
 
+void menu(void);
+
 #endif
