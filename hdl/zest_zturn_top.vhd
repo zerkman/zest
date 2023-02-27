@@ -403,11 +403,13 @@ begin
 		ihsync => hsync,
 		ide => de,
 		ipix => pix,
+		isndck => '0',
 		isound => isound,
 		ovsync => pvsync,
 		ohsync => phsync,
 		ode => pde,
 		opix => ppix,
+		osndck => open,
 		osound => osound
 	);
 

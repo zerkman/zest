@@ -232,7 +232,8 @@ architecture structure of zest_top is
 	signal isound		: std_logic_vector(15 downto 0);
 	signal osound		: std_logic_vector(15 downto 0);
 	signal sound_vol	: std_logic_vector(4 downto 0);
-	signal sound_clk	: std_logic;
+	signal isound_clk	: std_logic;
+	signal osound_clk	: std_logic;
 	signal audio_lr		: std_logic_vector(23 downto 0);
 
 	signal dblpix		: std_logic_vector(15 downto 0);
@@ -347,7 +348,7 @@ begin
 		vsync => vsync,
 		rgb => rgb,
 		sound_vol => sound_vol,
-		sound_clk => sound_clk,
+		sound_clk => isound_clk,
 		sound => isound,
 		ikbd_clkren => ikbd_clkren,
 		ikbd_clkfen => ikbd_clkfen,
@@ -429,11 +430,13 @@ begin
 		ihsync => hsync,
 		ide => de,
 		ipix => pix,
+		isndck => isound_clk,
 		isound => isound,
 		ovsync => pvsync,
 		ohsync => phsync,
 		ode => pde,
 		opix => ppix,
+		osndck => osound_clk,
 		osound => osound
 	);
 
@@ -463,7 +466,7 @@ begin
 		audio_en => '1',
 		audio_l => audio_lr,
 		audio_r => audio_lr,
-		audio_clk => sound_clk,
+		audio_clk => osound_clk,
 		tx_clk_n => hdmi_tx_clk_n,
 		tx_clk_p => hdmi_tx_clk_p,
 		tx_d_n => hdmi_tx_d_n,
