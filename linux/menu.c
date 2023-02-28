@@ -256,6 +256,14 @@ void read_directory(char *path) {
   directory_filenames[current_view->total_listing_files]=0; // Terminate list
 }
 
+static void update_file_selector_when_entering_new_directory()
+{
+  globfree(&glob_info);
+  read_directory(current_view->current_directory);
+  current_view->file_selector_cursor_position=current_view->file_selector_current_top=0;
+  update_file_listing();
+}
+
 static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
   int i=strlen(current_view->current_directory);
   if (i==1) {
@@ -269,10 +277,8 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
   p[1]=0;   // Just null terminate after the /, this will remove the rightmost directory name
 
   // Update the form
-  globfree(&glob_info);
-  read_directory(current_view->current_directory);
-  current_view->file_selector_cursor_position=0;
-  update_file_listing();
+  update_file_selector_when_entering_new_directory();
+
   return 0;
 }
 
@@ -292,10 +298,7 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
     // Enter directory
     // Append the selected item (AKA directory name) to the global path (it already has a trailing slash and all)
     strcat(current_view->current_directory,selected_item);
-    globfree(&glob_info);
-    read_directory(current_view->current_directory);
-    current_view->file_selector_cursor_position=0;
-    update_file_listing();
+    update_file_selector_when_entering_new_directory();
     return 0;   // Don't exit the dialog yet
   }
   if (view==FILE_SELECTOR_DISK_A||view==FILE_SELECTOR_DISK_B) {
@@ -378,15 +381,19 @@ static void setup_item_selector(int selector_view) {
       char *p=current_view->selected_file+strlen(current_view->current_directory);
       while (i) {
         if (strcmp(i, p)==0) {
+          // Initially we try center the cursor position
           current_view->file_selector_current_top=l-file_selector_filename_lines/2;
           current_view->file_selector_cursor_position=file_selector_filename_lines/2;
           if (current_view->file_selector_current_top<0) {
+            // Oops, our centering sent us above the top most item, so clamp
             current_view->file_selector_current_top=0;
             current_view->file_selector_cursor_position=l;
           } else if (current_view->file_selector_current_top>current_view->total_listing_files-file_selector_filename_lines) {
+            // Oops, our centering sent us below the bottom most item, so clamp
             current_view->file_selector_current_top=current_view->total_listing_files-file_selector_filename_lines;
             current_view->file_selector_cursor_position=l-(current_view->total_listing_files-file_selector_filename_lines);
           } else if (current_view->total_listing_files<file_selector_filename_lines) {
+            // We don't have enough files in the directory to fill the entire view, so reset everything
             current_view->file_selector_current_top=0;
             current_view->file_selector_cursor_position=l;
           }
@@ -523,6 +530,20 @@ void menu_init(void) {
 static uint8_t gradient[MAX_SCANLINES][3];
 static const uint8_t gradient1_col1[3] = { 0xB1, 0x2B, 0x7F };
 static const uint8_t gradient1_col2[3] = { 0x72, 0xA1, 0xDF };
+static const uint8_t gradients[12][2][3]={
+  {{0x80,0xc0,0xff},{0x88,0x88,0x88}},  // Light blue->Gray
+  {{0x00,0xcc,0xcc},{0x88,0x88,0x88}},  // Cyan->Gray
+  {{245,177,97},  {236,54,110},  },
+  {{33,103,43},   {117,162,61},  },
+  {{174,68,223},  {246,135,135}, },
+  {{216,27,96},   {237,107,154}, },
+  {{255,166,0},   {255,99,97},   },
+  {{7,121,222},   {20,72,140},   },
+  {{0x32, 0x8B, 0x31}, {0x96, 0xCF, 0x24},},            //#328B31 -> #96CF24
+  {{0x99, 0x45, 0xFF}, {0x19, 0xFB, 0x9B},},            //#9945FF -> #19FB9B
+  {{0x06, 0xEB, 0x5B}, {0x00, 0x78, 0xE6},},            //#06EB5B -> #0078E6
+  {{0xFE, 0x37, 0xAF}, {0xFE, 0x07, 0x9C},},            //#FE37AF -> #FE079C
+};
 
 //extern void osd_calculate_gradient(uint8_t col1[3], uint8_t col2[3], int steps, uint8_t *output);
 void menu(void) {
