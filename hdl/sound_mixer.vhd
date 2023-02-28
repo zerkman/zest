@@ -223,7 +223,13 @@ begin
 				when 35 =>
 					alu_mode <= ALU_NOP;
 				when 36 =>
-					sound <= alu_o;
+					if alu_o/16 > 32767 then
+						sound <= 32767;
+					elsif alu_o/16 < -32767 then
+						sound <= -32767;
+					else
+						sound <= alu_o/16;
+					end if;
 					mix_st <= 0;
 				end case;
 			end if;
