@@ -137,6 +137,7 @@ architecture structure of zest_atari_st_core is
 	signal phsync		: std_logic;
 	signal pde			: std_logic;
 
+	signal isound_clk	: std_logic;
 	signal isound		: std_logic_vector(15 downto 0);
 	signal sound		: std_logic_vector(15 downto 0);
 	signal sound_vol	: std_logic_vector(4 downto 0);
@@ -237,7 +238,7 @@ begin
 		vsync => st_vsync,
 		rgb => st_rgb,
 		sound_vol => sound_vol,
-		sound_clk => open,
+		sound_clk => isound_clk,
 		sound => isound,
 		ikbd_clkren => ikbd_clkren,
 		ikbd_clkfen => ikbd_clkfen,
@@ -318,7 +319,7 @@ begin
 		ihsync => st_hsync,
 		ide => st_de,
 		ipix => pix,
-		isndck => '0',
+		isndck => isound_clk,
 		isound => isound,
 		ovsync => pvsync,
 		ohsync => phsync,
