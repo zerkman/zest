@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include "osd.h"
 
-void *uio_map(const char *file, size_t length, int *fd);
+extern volatile uint32_t *parmreg;
 
 volatile struct {
   unsigned int show       : 1;    // show the OSD
@@ -46,10 +46,10 @@ int _ychars;
 
 int osd_init(void) {
   if (osdreg == NULL) {
-    osdreg = uio_map("/dev/uio1",0x2000,&osdfd);
-    if (osdreg == NULL) {
+    if (parmreg == NULL) {
       return 1;
     }
+    osdreg = (void*)(((uint8_t*)parmreg)+0x2000);
   }
   return 0;
 }

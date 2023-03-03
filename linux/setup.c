@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
 
   pl_reset();
 
-  parmreg = uio_map("/dev/uio0",0x40,&parmfd);
+  parmreg = uio_map("/dev/uio0",0x4000,&parmfd);
   if (parmreg == NULL) {
     return 1;
   }
@@ -207,7 +207,6 @@ int main(int argc, char **argv) {
   if (mem_array == MAP_FAILED) {
     printf("Could not allocate the shared memory block: %s\n", strerror(errno));
   }
-  parmreg[1] = ST_MEM_ADDR;
 
   has_sil = !hdmi_init();
   if (has_sil) {
