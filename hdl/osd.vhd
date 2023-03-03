@@ -29,115 +29,63 @@ use work.all;
 
 entity on_screen_display is
 	generic (
-		-- Width of S_AXI data bus
-		DATA_WIDTH : integer := 32;
-		-- Width of S_AXI address bus
-		ADDR_WIDTH : integer := 13
+		DATA_WIDTH_BITS	: integer := 5;		-- log2(width of data bus)
+		ADDR_WIDTH		: integer := 13		-- Width of address bus
 	);
 	port (
-		-- Global Clock Signal
-		s_axi_aclk      : in std_logic;
-		-- Global Reset Signal. This Signal is Active LOW
-		s_axi_aresetn   : in std_logic;
-		-- Write address (issued by master, acceped by Slave)
-		s_axi_awaddr    : in std_logic_vector(ADDR_WIDTH-1 downto 0);
-		-- Write channel Protection type. This signal indicates the
-		-- privilege and security level of the transaction, and whether
-		-- the transaction is a data access or an instruction access.
-		s_axi_awprot    : in std_logic_vector(2 downto 0);
-		-- Write address valid. This signal indicates that the master signaling
-		-- valid write address and control information.
-		s_axi_awvalid   : in std_logic;
-		-- Write address ready. This signal indicates that the slave is ready
-		-- to accept an address and associated control signals.
-		s_axi_awready   : out std_logic;
-		-- Write data (issued by master, acceped by Slave)
-		s_axi_wdata     : in std_logic_vector(DATA_WIDTH-1 downto 0);
-		-- Write strobes. This signal indicates which byte lanes hold
-		-- valid data. There is one write strobe bit for each eight
-		-- bits of the write data bus.
-		s_axi_wstrb     : in std_logic_vector((DATA_WIDTH/8)-1 downto 0);
-		-- Write valid. This signal indicates that valid write
-		-- data and strobes are available.
-		s_axi_wvalid    : in std_logic;
-		-- Write ready. This signal indicates that the slave
-		-- can accept the write data.
-		s_axi_wready    : out std_logic;
-		-- Write response. This signal indicates the status
-		-- of the write transaction.
-		s_axi_bresp     : out std_logic_vector(1 downto 0);
-		-- Write response valid. This signal indicates that the channel
-		-- is signaling a valid write response.
-		s_axi_bvalid    : out std_logic;
-		-- Response ready. This signal indicates that the master
-		-- can accept a write response.
-		s_axi_bready    : in std_logic;
-		-- Read address (issued by master, acceped by Slave)
-		s_axi_araddr    : in std_logic_vector(ADDR_WIDTH-1 downto 0);
-		-- Protection type. This signal indicates the privilege
-		-- and security level of the transaction, and whether the
-		-- transaction is a data access or an instruction access.
-		s_axi_arprot    : in std_logic_vector(2 downto 0);
-		-- Read address valid. This signal indicates that the channel
-		-- is signaling valid read address and control information.
-		s_axi_arvalid   : in std_logic;
-		-- Read address ready. This signal indicates that the slave is
-		-- ready to accept an address and associated control signals.
-		s_axi_arready   : out std_logic;
-		-- Read data (issued by slave)
-		s_axi_rdata     : out std_logic_vector(DATA_WIDTH-1 downto 0);
-		-- Read response. This signal indicates the status of the
-		-- read transfer.
-		s_axi_rresp     : out std_logic_vector(1 downto 0);
-		-- Read valid. This signal indicates that the channel is
-		-- signaling the required read data.
-		s_axi_rvalid    : out std_logic;
-		-- Read ready. This signal indicates that the master can
-		-- accept the read data and response information.
-		s_axi_rready    : in std_logic;
+		clk				: in std_logic;
+		resetn			: in std_logic;
+
+		-- bridge bus signals
+		bridge_addr		: in std_logic_vector(ADDR_WIDTH-1 downto DATA_WIDTH_BITS-3);
+		bridge_r		: in std_logic;
+		bridge_r_data	: out std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+		bridge_w		: in std_logic;
+		bridge_w_data	: in std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+		bridge_w_strb	: in std_logic_vector(2**(DATA_WIDTH_BITS-3)-1 downto 0);
 
 		-- video signals
-		pclk   : in std_logic;
-		idata  : in std_logic_vector(23 downto 0);
-		ivsync : in std_logic;
-		ihsync : in std_logic;
-		ide    : in std_logic;
-		odata  : out std_logic_vector(23 downto 0);
-		ovsync : out std_logic;
-		ohsync : out std_logic;
-		ode    : out std_logic;
+		pclk			: in std_logic;
+		idata			: in std_logic_vector(23 downto 0);
+		ivsync			: in std_logic;
+		ihsync			: in std_logic;
+		ide				: in std_logic;
+		odata			: out std_logic_vector(23 downto 0);
+		ovsync			: out std_logic;
+		ohsync			: out std_logic;
+		ode				: out std_logic;
 
-		intr   : out std_logic
+		intr			: out std_logic
 	);
 end on_screen_display;
 
 architecture arch_imp of on_screen_display is
 
-	type axi_st_t is ( IDLE, WR, RD, RD1, RD2 );
-	signal axi_st       : axi_st_t;
+	type br_st_t is ( IDLE, WR, RD, RD1, RD2 );
+	signal br_st		: br_st_t;
 
 	-- Example-specific design signals
-	-- local parameter for addressing 32 bit / 64 bit DATA_WIDTH
+	-- local parameter for addressing 32 bit / 64 bit 2**DATA_WIDTH_BITS
 	-- ADDR_LSB is used for addressing 32/64 bit registers/memories
 	-- ADDR_LSB = 2 for 32 bits (n downto 2)
 	-- ADDR_LSB = 3 for 64 bits (n downto 3)
-	constant ADDR_LSB	: integer := (DATA_WIDTH/32)+1;
+	constant ADDR_LSB	: integer := (2**DATA_WIDTH_BITS/32)+1;
 	-- address bits are in range (ADDR_MSB downto ADDR_LSB)
 	constant ADDR_MSB	: integer := ADDR_WIDTH-1;
 
 	-- RAM signals
-	signal ram_addr1 : std_logic_vector(ADDR_MSB-ADDR_LSB downto 0);
-	signal ram_addr2 : std_logic_vector(ADDR_MSB-ADDR_LSB downto 0);
-	signal ram_din1  : std_logic_vector(DATA_WIDTH-1 downto 0);
-	signal ram_din2  : std_logic_vector(DATA_WIDTH-1 downto 0);
-	signal ram_wsb1  : std_logic_vector((DATA_WIDTH/8)-1 downto 0);
-	signal ram_wsb2  : std_logic_vector((DATA_WIDTH/8)-1 downto 0);
-	signal ram_dout1 : std_logic_vector(DATA_WIDTH-1 downto 0);
-	signal ram_dout2 : std_logic_vector(DATA_WIDTH-1 downto 0);
-	signal ram_we1   : std_logic;
-	signal ram_we2   : std_logic;
-	signal ram_re1   : std_logic;
-	signal ram_re2   : std_logic;
+	signal ram_addr1	: std_logic_vector(ADDR_MSB-ADDR_LSB downto 0);
+	signal ram_addr2	: std_logic_vector(ADDR_MSB-ADDR_LSB downto 0);
+	signal ram_din1		: std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+	signal ram_din2		: std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+	signal ram_wsb1		: std_logic_vector(2**(DATA_WIDTH_BITS-3)-1 downto 0);
+	signal ram_wsb2		: std_logic_vector(2**(DATA_WIDTH_BITS-3)-1 downto 0);
+	signal ram_dout1	: std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+	signal ram_dout2	: std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+	signal ram_we1		: std_logic;
+	signal ram_we2		: std_logic;
+	signal ram_re1		: std_logic;
+	signal ram_re2		: std_logic;
 
 	-- Bitmap font
 	type font_t is array (0 to (256*8)-1) of std_logic_vector(7 downto 0);
@@ -400,47 +348,47 @@ architecture arch_imp of on_screen_display is
 		x"00",x"fe",x"00",x"00",x"00",x"00",x"00",x"00"  -- 255
 		);
 
-	signal s_vsync   : std_logic;
-	signal s_hsync   : std_logic;
-	signal s_de      : std_logic;
+	signal s_vsync		: std_logic;
+	signal s_hsync		: std_logic;
+	signal s_de			: std_logic;
 
-	constant clr_offset : integer := 20;
-	constant spr_offset : integer := 1172;
-	constant chr_offset : integer := 1236;
+	constant clr_offset	: integer := 20;
+	constant spr_offset	: integer := 1172;
+	constant chr_offset	: integer := 1236;
 
-	signal varcnt    : integer range 0 to 4;    -- variable load counter
-	signal show      : std_logic;               -- show/hide the OSD
-	signal xdstart   : integer range 0 to 4095; -- X display start (nb of pixels from the left border)
-	signal ydstart   : integer range 0 to 4095; -- Y display start (nb of lines from the top border)
-	signal xchars    : integer range 0 to 127;  -- number of characters per line
-	signal ychars    : integer range 0 to 127;  -- number of lines of characters
-	signal clrcnt    : integer range 0 to 8;    -- colours load counter
+	signal varcnt		: integer range 0 to 4;		-- variable load counter
+	signal show			: std_logic;				-- show/hide the OSD
+	signal xdstart		: integer range 0 to 4095;	-- X display start (nb of pixels from the left border)
+	signal ydstart		: integer range 0 to 4095;	-- Y display start (nb of lines from the top border)
+	signal xchars		: integer range 0 to 127;	-- number of characters per line
+	signal ychars		: integer range 0 to 127;	-- number of lines of characters
+	signal clrcnt		: integer range 0 to 8;		-- colours load counter
 	type colr_t is array (0 to 7) of std_logic_vector(23 downto 0);
-	signal colr      : colr_t;
+	signal colr			: colr_t;
 
-	signal xcnt      : signed(12 downto 0); -- X pixel counter
-	signal ycnt      : signed(12 downto 0); -- Y pixel counter
-	signal pxok      : std_logic;
+	signal xcnt			: signed(12 downto 0);		-- X pixel counter
+	signal ycnt			: signed(12 downto 0);		-- Y pixel counter
+	signal pxok			: std_logic;
 
-	signal cpx       : unsigned(2 downto 0);  -- X position of the pixel in the character grid
-	signal cpy       : unsigned(3 downto 0);  -- Y position
+	signal cpx			: unsigned(2 downto 0);		-- X position of the pixel in the character grid
+	signal cpy			: unsigned(3 downto 0);		-- Y position
 
-	signal chrp      : integer range 0 to 2**(ADDR_WIDTH-1)-1;  -- character position
-	signal clrp      : integer range 0 to 2**(ADDR_WIDTH-2)-1;  -- colours position
-	signal transp    : std_logic;
-	signal pix       : std_logic_vector(7 downto 0);
-	signal cfg       : integer range 0 to 7;    -- foreground colour
-	signal cbg       : integer range 0 to 7;    -- background colour
+	signal chrp			: integer range 0 to 2**(ADDR_WIDTH-1)-1;	-- character position
+	signal clrp			: integer range 0 to 2**(ADDR_WIDTH-2)-1;	-- colours position
+	signal transp		: std_logic;
+	signal pix			: std_logic_vector(7 downto 0);
+	signal cfg			: integer range 0 to 7;		-- foreground colour
+	signal cbg			: integer range 0 to 7;		-- background colour
 
 begin
 
 	ram: entity ram_tdp
 		generic map (
-			DATA_WIDTH => DATA_WIDTH,
+			DATA_WIDTH => 2**DATA_WIDTH_BITS,
 			ADDR_WIDTH => (ADDR_MSB-ADDR_LSB+1)
 		)
 		port map (
-			clk1 => s_axi_aclk,
+			clk1 => clk,
 			clk2 => pclk,
 			addr1 => ram_addr1,
 			addr2 => ram_addr2,
@@ -456,81 +404,13 @@ begin
 			re2 => ram_re2
 		);
 
-	-- Implement AXI4-Lite access to the internal memory buffer.
-	-- Reads and writes are not treated simultaneously, so the same RAM channel
-	-- can be used for read and write, leaving the other channel to the
-	-- OSD system.
-	process(s_axi_aclk,s_axi_aresetn)
-	begin
-		if s_axi_aresetn = '0' then
-			axi_st <= IDLE;
-			s_axi_awready <= '0';
-			s_axi_wready <= '0';
-			s_axi_bvalid <= '0';
-			s_axi_bresp <= "00";
-			ram_addr1 <= (others => '0');
-			ram_din1 <= (others => '0');
-			ram_wsb1 <= (others => '0');
-			ram_we1 <= '0';
-			s_axi_arready <= '0';
-			s_axi_rvalid <= '0';
-			s_axi_rdata <= (others => '0');
-			s_axi_rresp <= "00";
-			ram_re1 <= '0';
-		elsif rising_edge(s_axi_aclk) then
-			case axi_st is
-				when IDLE =>
-					if s_axi_awvalid = '1' and s_axi_wvalid = '1' then
-						s_axi_awready <= '1';
-						s_axi_wready <= '1';
-						s_axi_bvalid <= '1';
-						s_axi_bresp <= "00";
-						ram_addr1 <= s_axi_awaddr(ADDR_MSB downto ADDR_LSB);
-						ram_din1 <= s_axi_wdata;
-						ram_we1 <= '1';
-						ram_wsb1 <= s_axi_wstrb;
-						axi_st <= WR;
-					elsif s_axi_arvalid = '1' then
-						s_axi_arready <= '1';
-						ram_addr1 <= s_axi_araddr(ADDR_MSB downto ADDR_LSB);
-						ram_re1 <= '1';
-						axi_st <= RD;
-					end if;
-
-				when WR =>
-					s_axi_awready <= '0';
-					s_axi_wready <= '0';
-					ram_addr1 <= (others => '0');
-					ram_din1 <= (others => '0');
-					ram_we1 <= '0';
-					ram_wsb1 <= (others => '0');
-					if s_axi_bready = '1' then
-						s_axi_bvalid <= '0';
-						axi_st <= IDLE;
-					end if;
-
-				when RD =>
-					s_axi_arready <= '0';
-					ram_re1 <= '0';
-					ram_addr1 <= (others => '0');
-					axi_st <= RD1;
-
-				when RD1 =>
-					s_axi_rvalid <= '1';
-					s_axi_rdata <= ram_dout1;
-					s_axi_rresp <= "00";    -- OKAY response
-					axi_st <= RD2;
-
-				when RD2 =>
-					if s_axi_rready = '1' then
-						s_axi_rvalid <= '0';
-						s_axi_rdata <= (others => '0');
-						axi_st <= IDLE;
-					end if;
-
-			end case;
-		end if;
-	end process;
+	-- Bridge bus access to the internal memory buffer
+	ram_addr1 <= bridge_addr;
+	ram_re1 <= bridge_r;
+	bridge_r_data <= ram_dout1;
+	ram_we1 <= bridge_w;
+	ram_din1 <= bridge_w_data;
+	ram_wsb1 <= bridge_w_strb;
 
 	-- video management
 	ovsync <= s_vsync;
@@ -539,14 +419,14 @@ begin
 	cpx <= unsigned(xcnt(cpx'length-1 downto 0));
 	cpy <= unsigned(ycnt(cpy'length-1 downto 0));
 
-	process(pclk,s_axi_aresetn) is
+	process(pclk,resetn) is
 		variable chrd    : std_logic_vector(15 downto 0);   -- character data
 		variable chr     : integer range 0 to 255;          -- current character
 		variable vs_busy : std_logic;
 		variable x       : std_logic_vector(31 downto 0);
 
 	begin
-		if s_axi_aresetn = '0' then
+		if resetn = '0' then
 			odata <= x"000000";
 			s_vsync <= '0';
 			s_hsync <= '0';

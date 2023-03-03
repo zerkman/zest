@@ -34,31 +34,28 @@ entity ddr_controller_interface is
 		-- Width of Address Bus
 		C_M_AXI_ADDR_WIDTH	: integer	:= 32;
 		-- Width of Data Bus
-		C_M_AXI_DATA_WIDTH	: integer	:= 32
+		C_M_AXI_DATA_WIDTH	: integer	:= 32;
+		-- RAM address offset
+		OFFSET				: unsigned(31 downto 0)	:= x"10000000"
 	);
 	port (
 		-- address
-		A		: in std_logic_vector(31 downto 0);
-		-- input data
-		iD		: in std_logic_vector(15 downto 0);
-		-- output data
-		oD		: out std_logic_vector(15 downto 0);
+		a		: in std_logic_vector(31 downto 0);
+		-- write data
+		w_d		: in std_logic_vector(15 downto 0);
+		-- read data
+		r_d		: out std_logic_vector(15 downto 0);
 		-- initiate write transaction
-		W		: in std_logic;
+		w		: in std_logic;
 		-- initiate read transaction
-		R		: in std_logic;
+		r		: in std_logic;
 		-- data strobe (for each byte of the data bus)
-		DS		: in std_logic_vector(1 downto 0);
-
-		-- address of the beginning of the array in DDR
-		OFFSET	: in std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
-		-- offset valid, used as enable signal
-		OFFVALD	: in std_logic;
+		ds		: in std_logic_vector(1 downto 0);
 
 		-- Write done signal
-		W_DONE	: out std_logic;
+		w_done	: out std_logic;
 		-- Read done signal
-		R_DONE	: out std_logic;
+		r_done	: out std_logic;
 
 		-- Asserts when ERROR is detected
 		ERROR	: out std_logic;
@@ -226,7 +223,7 @@ begin
 	--I/O Connections. Write Address (AW)
 	M_AXI_AWID	<= (others => '0');
 	--The AXI address is a concatenation of the target base address + active offset range
-	M_AXI_AWADDR	<= std_logic_vector(unsigned(axi_awaddr)+unsigned(OFFSET));
+	M_AXI_AWADDR	<= std_logic_vector(unsigned(axi_awaddr)+OFFSET);
 	--Burst LENgth is number of transaction beats, minus 1
 	M_AXI_AWLEN	<= std_logic_vector( to_unsigned(C_M_AXI_BURST_LEN - 1, 4) );
 	--Size should be C_M_AXI_DATA_WIDTH, in 2^SIZE bytes, otherwise narrow bursts are used
@@ -250,7 +247,7 @@ begin
 	M_AXI_BREADY	<= axi_bready;
 	--Read Address (AR)
 	M_AXI_ARID	<= (others => '0');
-	M_AXI_ARADDR	<= std_logic_vector(unsigned(axi_araddr)+unsigned(OFFSET));
+	M_AXI_ARADDR	<= std_logic_vector(unsigned(axi_araddr)+OFFSET);
 	--Burst LENgth is number of transaction beats, minus 1
 	M_AXI_ARLEN	<= std_logic_vector( to_unsigned(C_M_AXI_BURST_LEN - 1, 4) );
 	--Size should be C_M_AXI_DATA_WIDTH, in 2^n bytes, otherwise narrow bursts are used
@@ -267,7 +264,7 @@ begin
 	-- transfer done status
 	W_DONE	<= wdone;
 	R_DONE	<= rdone;
-	oD <= rod;
+	r_d <= rod;
 	ERROR <= write_resp_error;
 
 	----------------------
@@ -282,9 +279,9 @@ begin
 			if M_AXI_ARESETN = '0' then
 				init_read_ff <= '0';
 				init_write_ff <= '0';
-			elsif OFFVALD = '1' then
-				init_read_ff <= R;
-				init_write_ff <= W;
+			else
+				init_read_ff <= r;
+				init_write_ff <= w;
 			end if;
 		end if;
 	end process;
@@ -293,8 +290,8 @@ begin
 	-- Write Channels
 	----------------------
 
-	init_write <= OFFVALD and (not init_write_ff) and W and not axi_awvalid_ff and not axi_wvalid;
-	axi_awaddr(31 downto 2) <= A(31 downto 2);
+	init_write <= (not init_write_ff) and w and not axi_awvalid_ff and not axi_wvalid;
+	axi_awaddr(31 downto 2) <= a(31 downto 2);
 	axi_awaddr(1 downto 0) <= "00";
 	axi_awvalid <= M_AXI_ARESETN and (init_write or axi_awvalid_ff) and not axi_wvalid;
 	wdone <= (axi_bready and M_AXI_BVALID) or (w and wdone_ff);
@@ -325,21 +322,21 @@ begin
 					axi_wvalid <= '1';
 					axi_wlast <= '1';
 					-- enforce big endian writes
-					if A(1) = '0' then
+					if a(1) = '0' then
 						-- address ends with 00
 						axi_wdata(31 downto 16) <= x"0000";
-						axi_wdata(15 downto 8) <= iD(7 downto 0);
-						axi_wdata(7 downto 0) <= iD(15 downto 8);
+						axi_wdata(15 downto 8) <= w_d(7 downto 0);
+						axi_wdata(7 downto 0) <= w_d(15 downto 8);
 						axi_wstrb(3 downto 2) <= "00";
-						axi_wstrb(1) <= DS(0);
-						axi_wstrb(0) <= DS(1);
+						axi_wstrb(1) <= ds(0);
+						axi_wstrb(0) <= ds(1);
 					else
 						-- address ends with 10
-						axi_wdata(31 downto 24) <= iD(7 downto 0);
-						axi_wdata(23 downto 16) <= iD(15 downto 8);
+						axi_wdata(31 downto 24) <= w_d(7 downto 0);
+						axi_wdata(23 downto 16) <= w_d(15 downto 8);
 						axi_wdata(15 downto 0) <= x"0000";
-						axi_wstrb(3) <= DS(0);
-						axi_wstrb(2) <= DS(1);
+						axi_wstrb(3) <= ds(0);
+						axi_wstrb(2) <= ds(1);
 						axi_wstrb(1 downto 0) <= "00";
 					end if;
 				end if;
@@ -366,8 +363,8 @@ begin
 	------------------------------
 	-- Read Channels
 	------------------------------
-	init_read <= OFFVALD and (not init_read_ff) and R and not axi_arvalid_ff;
-	axi_araddr(31 downto 2) <= A(31 downto 2);
+	init_read <= (not init_read_ff) and r and not axi_arvalid_ff;
+	axi_araddr(31 downto 2) <= a(31 downto 2);
 	axi_araddr(1 downto 0) <= "00";
 	axi_arvalid <= M_AXI_ARESETN and (init_read or axi_arvalid_ff) and not axi_rready;
 	rdone <= (axi_rready and M_AXI_RVALID) or (r and rdone_ff);
@@ -401,8 +398,8 @@ begin
 					rdata_ff <= (others => '1');
 				end if;
 				if init_read = '1' then
-					ds_rd <= DS;
-					a1_rd <= A(1);
+					ds_rd <= ds;
+					a1_rd <= a(1);
 				end if;
 			end if;
 		end if;
