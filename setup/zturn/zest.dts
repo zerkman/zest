@@ -56,14 +56,8 @@
 	usb-phy = <&usb_phy0>;
 };
 
-&configurator_0{
+&bridge_host_0{
 	compatible = "generic-uio";
 	interrupt-parent = <&intc>;
 	interrupts = <0 29 1>;
-};
-
-&on_screen_display_0{
-	compatible = "generic-uio";
-	interrupt-parent = <&intc>;
-	interrupts = <0 30 1>;
 };
