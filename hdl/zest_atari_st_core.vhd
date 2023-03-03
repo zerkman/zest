@@ -75,6 +75,7 @@ end zest_atari_st_core;
 
 architecture structure of zest_atari_st_core is
 	signal soft_resetn	: std_logic;
+	signal clken		: std_logic;
 
 	signal dev_addr		: std_logic_vector(SUBADDR_WIDTH-1 downto DATA_WIDTH_BITS-3);
 	signal dev_r		: std_logic_vector(N_OUTPUTS-1 downto 0);
@@ -98,7 +99,6 @@ architecture structure of zest_atari_st_core is
 	signal ikbd_j1		: std_logic_vector(4 downto 0);
 	signal ikbd_k		: std_logic_vector(94 downto 0);
 
-	signal fdd_clken		: std_logic;
 	signal fdd_read_datan	: std_logic;
 	signal fdd_side0		: std_logic;
 	signal fdd_indexn		: std_logic;
@@ -226,6 +226,7 @@ begin
 	atarist:entity atarist_mb port map(
 		clk => clk,
 		resetn => soft_resetn,
+		clken => clken,
 		clken_error => clken_err,
 		monomon => monomon,
 		mem_top	=> mem_top,
@@ -242,7 +243,6 @@ begin
 		ikbd_clkfen => ikbd_clkfen,
 		ikbd_rx => ikbd_rx,
 		ikbd_tx => ikbd_tx,
-		fdd_clken => fdd_clken,
 		fdd_read_datan => fdd_read_datan,
 		fdd_side0 => fdd_side0,
 		fdd_indexn => fdd_indexn,
@@ -267,7 +267,7 @@ begin
 
 	fdd:entity floppy_drive port map (
 		clk => clk,
-		clken => fdd_clken,
+		clken => clken,
 		resetn => soft_resetn,
 
 		read_datan => fdd_read_datan,

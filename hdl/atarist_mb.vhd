@@ -26,6 +26,7 @@ entity atarist_mb is
 		clk : in std_logic;
 		resetn : in std_logic;
 
+		clken : out std_logic;
 		clken_error : out std_logic;
 		monomon : in std_logic;
 		mem_top	: in std_logic_vector(3 downto 0);
@@ -46,7 +47,6 @@ entity atarist_mb is
 		ikbd_rx : in std_logic;
 		ikbd_tx : out std_logic;
 
-		fdd_clken : out std_logic;
 		fdd_read_datan : in std_logic;
 		fdd_side0 : out std_logic;
 		fdd_indexn : in std_logic;
@@ -279,10 +279,10 @@ architecture structure of atarist_mb is
 begin
 	reset <= not resetn;
 	clken_error <= clken_err;
+	clken <= en8rck;
 	pclken <= en32ck;
 	ikbd_clkren <= en2rck;
 	ikbd_clkfen <= en2fck;
-	fdd_clken <= en8rck;
 	sound_clk <= ck48;
 
 	a <= ram_A;
