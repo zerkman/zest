@@ -28,21 +28,17 @@ library work;
 use work.all;
 
 entity on_screen_display is
-	generic (
-		DATA_WIDTH_BITS	: integer := 5;		-- log2(width of data bus)
-		ADDR_WIDTH		: integer := 13		-- Width of address bus
-	);
 	port (
 		clk				: in std_logic;
 		resetn			: in std_logic;
 
 		-- bridge bus signals
-		bridge_addr		: in std_logic_vector(ADDR_WIDTH-1 downto DATA_WIDTH_BITS-3);
+		bridge_addr		: in std_logic_vector(12 downto 2);
 		bridge_r		: in std_logic;
-		bridge_r_data	: out std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+		bridge_r_data	: out std_logic_vector(31 downto 0);
 		bridge_w		: in std_logic;
-		bridge_w_data	: in std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
-		bridge_w_strb	: in std_logic_vector(2**(DATA_WIDTH_BITS-3)-1 downto 0);
+		bridge_w_data	: in std_logic_vector(31 downto 0);
+		bridge_w_strb	: in std_logic_vector(3 downto 0);
 
 		-- video signals
 		pclk			: in std_logic;
@@ -64,12 +60,15 @@ architecture arch_imp of on_screen_display is
 	type br_st_t is ( IDLE, WR, RD, RD1, RD2 );
 	signal br_st		: br_st_t;
 
+	constant DATA_WIDTH_BITS: integer := 5;		-- log2(width of data bus)
+	constant ADDR_WIDTH		: integer := 13;	-- Width of address bus
+
 	-- Example-specific design signals
 	-- local parameter for addressing 32 bit / 64 bit 2**DATA_WIDTH_BITS
 	-- ADDR_LSB is used for addressing 32/64 bit registers/memories
 	-- ADDR_LSB = 2 for 32 bits (n downto 2)
 	-- ADDR_LSB = 3 for 64 bits (n downto 3)
-	constant ADDR_LSB	: integer := (2**DATA_WIDTH_BITS/32)+1;
+	constant ADDR_LSB	: integer := DATA_WIDTH_BITS-3;
 	-- address bits are in range (ADDR_MSB downto ADDR_LSB)
 	constant ADDR_MSB	: integer := ADDR_WIDTH-1;
 
