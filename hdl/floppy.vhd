@@ -145,7 +145,6 @@ begin
 				end if;
 				if ccnt(4 downto 0) = "11111" then
 					-- new data bit
-					host_intr <= '0';
 					if write_gate = '1' and (drv0_select = '0' or drv1_select = '0') then
 						wrq <= '1';
 					end if;
@@ -172,6 +171,8 @@ begin
 							data_sr(i*8+7 downto i*8) <= host_dout(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
 						end loop;
 						wrq <= '0';
+					elsif ccnt(LOGNBITS+4 downto 5) = (LOGNBITS-1 => '0', LOGNBITS-2 downto 0 => '1') then
+						host_intr <= '0';
 					end if;
 				end if;
 			else
