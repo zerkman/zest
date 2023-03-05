@@ -99,6 +99,8 @@ architecture structure of zest_atari_st_core is
 	signal ikbd_j1		: std_logic_vector(4 downto 0);
 	signal ikbd_k		: std_logic_vector(94 downto 0);
 
+	signal wp0				: std_logic;
+	signal wp1				: std_logic;
 	signal fdd_read_datan	: std_logic;
 	signal fdd_side0		: std_logic;
 	signal fdd_indexn		: std_logic;
@@ -163,7 +165,9 @@ begin
 	mem_top <= out_reg0(7 downto 4);
 	wakestate <= out_reg0(9 downto 8);
 	sound_vol <= out_reg0(14 downto 10);
-	in_reg0(12 downto 0) <= (others => '0');
+	wp0 <= out_reg0(15);
+	wp1 <= out_reg0(16);
+	in_reg0(11 downto 0) <= (others => '0');
 
 	dispatch: entity bridge_dispatcher port map (
 		host_addr => bridge_addr,
@@ -274,7 +278,8 @@ begin
 		read_datan => fdd_read_datan,
 		side0 => fdd_side0,
 		indexn => fdd_indexn,
-		drv_select => fdd_drv0_select,
+		drv0_select => fdd_drv0_select,
+		drv1_select => fdd_drv1_select,
 		motor_on => fdd_motor_on,
 		direction => fdd_direction,
 		step => fdd_step,
@@ -283,11 +288,14 @@ begin
 		track0n => fdd_track0n,
 		write_protn => fdd_write_protn,
 
+		host_wp0 => wp0,
+		host_wp1 => wp1,
 		host_intr => irq,
 		host_din => in_reg8_11,
 		host_dout => out_reg8_11,
 		host_r => in_reg0(31),
 		host_w => in_reg0(30),
+		host_drv => in_reg0(12),
 		host_addr => in_reg0(29 downto 21),
 		host_track => in_reg0(20 downto 13)
 	);

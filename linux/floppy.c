@@ -34,20 +34,34 @@
 extern volatile uint32_t *parmreg;
 extern int parmfd;
 extern volatile int thr_end;
-int disk_image_changed = 0;
-void *disk_image_filename;
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static Flopimg *img[2] = {NULL,NULL};
+
+// change or eject the floppy disk
+void change_floppy(const char *filename, int drive) {
+  // critical section so we don't deallocate anything while accessing data
+  pthread_mutex_lock(&mutex);
+  if (img[drive]!=NULL) {
+    flopimg_close(img[drive]);
+    img[drive] = NULL;
+  }
+  if (filename!=NULL) {
+    img[drive] = flopimg_open(filename,0,3,1);
+    if (img[drive]==NULL) {
+      printf("Error opening floppy image file: '%s'\n",filename);
+    }
+  }
+  pthread_mutex_unlock(&mutex);
+}
 
 void * thread_floppy(void * arg) {
   uint32_t n,oldn=0;
   unsigned int oldaddr=2000;
 
-  Flopimg *img = NULL;
-  if (config.floppy_a) {
-    img = flopimg_open(config.floppy_a,0,3,1);
-    if (img==NULL) {
-      printf("Error opening floppy image file\n");
-    }
-  }
+  change_floppy(config.floppy_a,0);
+  change_floppy(config.floppy_b,1);
+
   unsigned int pos=0,pos1=0,posw=0;
 
   struct pollfd pfd = { .fd=parmfd, .events=POLLIN };
@@ -79,6 +93,7 @@ void * thread_floppy(void * arg) {
     unsigned int w = in>>30&1;
     unsigned int addr = in>>21&0x1ff;
     unsigned int track = in>>13&0xff;
+    unsigned int drive = in>>12&1;
     if (oldn!=0 && n!=oldn+1) {
       printf("it=%u r=%u w=%u track=%u addr=%u\n",(unsigned)n,r,w,track,addr);
       fflush(stdout);
@@ -91,8 +106,10 @@ void * thread_floppy(void * arg) {
     }
     oldaddr = addr;
 
-    if (img && r) {
-      uint8_t *trkp = flopimg_trackpos(img,track>>1,track&1);
+    // start a critical section so the image is not changed during access
+    pthread_mutex_lock(&mutex);
+    if (img[drive] && r) {
+      uint8_t *trkp = flopimg_trackpos(img[drive],track>>1,track&1);
 
       posw = pos1;
       pos1 = pos;
@@ -109,22 +126,14 @@ void * thread_floppy(void * arg) {
         int count = posw<6240?16:10;
         memcpy(p,(void*)&parmreg[8],count);
 
-        flopimg_writeback(img);
+        flopimg_writeback(img[drive]);
       }
     }
-
-    // detect image change
-    if (disk_image_changed) {
-      if (img)
-        flopimg_close(img);
-      img = flopimg_open(disk_image_filename,0,3,1);
-      disk_image_changed = 0;
-    }
+    pthread_mutex_unlock(&mutex);
   }
 
-  if (img) {
-    flopimg_close(img);
-  }
+  change_floppy(NULL,0);
+  change_floppy(NULL,1);
 
   return NULL;
 }

@@ -517,8 +517,8 @@ uint8_t * flopimg_trackpos(Flopimg *img, int track, int side) {
       // convert single sided to double sided format
       int i;
       for (i=img->ntracks-1;i>=0;--i) {
-        uint8_t *dest = img->buf+(track*2)*6250;
-        uint8_t *src = img->buf+(track*1)*6250;
+        uint8_t *dest = img->buf+(i*2)*6250;
+        uint8_t *src = img->buf+(i*1)*6250;
         memcpy(dest,src,6250);
         memset(dest+6250,0,6250);
       }

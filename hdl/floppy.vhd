@@ -27,7 +27,8 @@ entity floppy_drive is
 		read_datan	: out std_logic;
 		side0		: in std_logic;
 		indexn		: out std_logic;
-		drv_select	: in std_logic;
+		drv0_select	: in std_logic;
+		drv1_select	: in std_logic;
 		motor_on	: in std_logic;
 		direction	: in std_logic;
 		step		: in std_logic;
@@ -36,37 +37,49 @@ entity floppy_drive is
 		track0n		: out std_logic;
 		write_protn	: out std_logic;
 
+		host_wp0	: in std_logic;
+		host_wp1	: in std_logic;
 		host_intr	: out std_logic;
 		host_din	: out std_logic_vector(127 downto 0);
 		host_dout	: in std_logic_vector(127 downto 0);
 		host_r		: out std_logic;
 		host_w		: out std_logic;
+		host_drv	: out std_logic;
 		host_addr	: out std_logic_vector(8 downto 0);
 		host_track	: out std_logic_vector(7 downto 0)
 	);
 end floppy_drive;
 
 architecture behavioral of floppy_drive is
-	constant NBITS    : integer := 128;
-	constant LOGNBITS : integer := 7;
-	constant LASTNB   : integer := 6250 mod (NBITS/8);
-	signal ccnt       : unsigned(20 downto 0);
-	signal track      : unsigned(6 downto 0);
-	signal data_sr    : std_logic_vector(NBITS-1 downto 0);
-	signal nextdata   : std_logic_vector(NBITS-1 downto 0);
-	signal wrq        : std_logic;
-	signal step_ff    : std_logic;
-	signal s_indexn   : std_logic;
-	signal s_track0n  : std_logic;
+	constant NBITS		: integer := 128;
+	constant LOGNBITS	: integer := 7;
+	constant LASTNB		: integer := 6250 mod (NBITS/8);
+	signal ccnt			: unsigned(20 downto 0);
+	signal track0		: unsigned(6 downto 0);
+	signal track1		: unsigned(6 downto 0);
+	signal data_sr		: std_logic_vector(NBITS-1 downto 0);
+	signal nextdata		: std_logic_vector(NBITS-1 downto 0);
+	signal wrq			: std_logic;
+	signal step_ff		: std_logic;
+	signal s_indexn		: std_logic;
 
 begin
 
-	indexn <= s_indexn when drv_select = '0' else '1';
-	read_datan <= (not data_sr(NBITS-1)) when drv_select = '0' else '1';
-	track0n <= s_track0n when drv_select = '0' else '1';
-	write_protn <= '1';
+	indexn <= s_indexn when drv0_select = '0' or drv1_select = '0' else '1';
+	read_datan <= (not data_sr(NBITS-1)) when drv0_select = '0' or drv1_select = '0' else '1';
+	write_protn <= '0' when (drv0_select = '0' and host_wp0 = '1') or (drv1_select = '0' and host_wp1 = '1') else '1';
+	track0n <= '0' when (drv0_select = '0' and track0 = 0) or (drv1_select = '0' and track1 = 0) else '1';
 
-	host_track <= std_logic_vector(track) & not side0;
+-- track position for the host
+process(drv0_select,drv1_select,track0,track1,side0)
+begin
+	host_track <= (others => '1');
+	if drv0_select = '0' then
+		host_track <= std_logic_vector(track0) & not side0;
+	elsif drv1_select = '0' then
+		host_track <= std_logic_vector(track1) & not side0;
+	end if;
+end process;
 
 -- next host data word
 process(data_sr,write_data,write_gate)
@@ -84,7 +97,8 @@ begin
 	if rising_edge(clk) then
 		if resetn = '0' then
 			ccnt <= (others => '0');
-			track <= (others => '0');
+			track0 <= (others => '0');
+			track1 <= (others => '0');
 			data_sr <= (others => '0');
 			wrq <= '0';
 			step_ff <= '1';
@@ -92,22 +106,26 @@ begin
 			host_din <= (others => '0');
 			host_r <= '0';
 			host_w <= '0';
+			host_drv <= '0';
 			host_addr <= (others => '0');
-			s_track0n <= '0';
 			s_indexn <= '0';
 		elsif clken = '1' then
-			if drv_select = '0' then
+			if drv0_select = '0' then
 				step_ff <= step;
 				if step = '1' and step_ff = '0' then
-					if direction = '1' and track < 83 then
-						track <= track + 1;
-						s_track0n <= '1';
-					elsif direction = '0' and track > 0 then
-						track <= track - 1;
-						s_track0n <= '1';
-						if track - 1 = 0 then
-							s_track0n <= '0';
-						end if;
+					if direction = '1' and track0 < 83 then
+						track0 <= track0 + 1;
+					elsif direction = '0' and track0 > 0 then
+						track0 <= track0 - 1;
+					end if;
+				end if;
+			elsif drv1_select = '0' then
+				step_ff <= step;
+				if step = '1' and step_ff = '0' then
+					if direction = '1' and track1 < 83 then
+						track1 <= track1 + 1;
+					elsif direction = '0' and track1 > 0 then
+						track1 <= track1 - 1;
 					end if;
 				end if;
 			else
@@ -128,7 +146,7 @@ begin
 				if ccnt(4 downto 0) = "11111" then
 					-- new data bit
 					host_intr <= '0';
-					if write_gate = '1' and drv_select = '0' then
+					if write_gate = '1' and (drv0_select = '0' or drv1_select = '0') then
 						wrq <= '1';
 					end if;
 					data_sr <= nextdata;
@@ -148,6 +166,7 @@ begin
 						end if;
 						host_w <= wrq;
 						host_r <= '1';
+						host_drv <= drv0_select;
 						host_intr <= '1';
 						for i in 0 to NBITS/8-1 loop
 							data_sr(i*8+7 downto i*8) <= host_dout(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);

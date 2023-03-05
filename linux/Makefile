@@ -40,13 +40,13 @@ setup.o: setup.c config.h setup.h
 
 config.o: config.c config.h
 
-menu.o: menu.c menu.h zui.h setup.h osd.h config.h
+menu.o: menu.c menu.h zui.h setup.h osd.h config.h floppy.h
 
 osd.o: osd.c osd.h
 
 zui.o: zui.c zui.h input.h
 
-floppy.o: floppy.c floppy_img.h config.h
+floppy.o: floppy.c floppy.h floppy_img.h config.h
 
 floppy_img.o: floppy_img.c floppy_img.h
 

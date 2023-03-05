@@ -32,6 +32,7 @@ extern int tolower (int __c);
 #include "osd.h"
 #include "setup.h"
 #include "config.h"
+#include "floppy.h"
 
 #define FILE_SELECTOR_VIEWS 3
 
@@ -48,9 +49,6 @@ enum {
   FILE_SELECTOR_DISK_B,
   FILE_SELECTOR_TOS_IMAGE
 };
-
-extern int disk_image_changed;      // From floppy.c
-extern void *disk_image_filename;   // From floppy.c
 
 // Stuff that would be nice for the UI lib:
 // - Changable text widgets (example: file selector text widgets that display the files)
@@ -302,9 +300,9 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
     return 0;   // Don't exit the dialog yet
   }
   if (view==FILE_SELECTOR_DISK_A||view==FILE_SELECTOR_DISK_B) {
+    int drive = view==FILE_SELECTOR_DISK_B;
     strcpy(current_view->selected_file, selected_item-strlen(current_view->current_directory));
-    disk_image_filename=selected_item-strlen(current_view->current_directory);  // TODO: support for drive B?
-    disk_image_changed=1;               // TODO: support for drive B?
+    change_floppy(selected_item-strlen(current_view->current_directory),drive);
   } else if (view==FILE_SELECTOR_TOS_IMAGE) {
     load_rom(selected_item);
     cold_reset();
@@ -320,18 +318,13 @@ static int buttonclick_fsel_ok_reset(ZuiWidget* obj) {
   return ret;
 }
 
-static void eject_floppy(int drive)
-{
-  disk_image_filename=0;
-}
-
 static int buttonclick_eject_floppy_a(ZuiWidget* obj) {
-  eject_floppy(0);
+  change_floppy(NULL,0);
   return 0;
 }
 
 static int buttonclick_eject_floppy_b(ZuiWidget* obj) {
-  eject_floppy(1);
+  change_floppy(NULL,1);
   return 0;
 }
 
@@ -340,7 +333,7 @@ ZuiWidget * menu_file_selector() {
   if (view==FILE_SELECTOR_DISK_A) {
     zui_add_child(form, zui_text(0, 0, "\x5    Select a disk image for drive A   \x7"));
   } else if (view==FILE_SELECTOR_DISK_B) {
-    zui_add_child(form, zui_text(0, 0, "\x5Select a disk image for drive B (dud) \x7"));
+    zui_add_child(form, zui_text(0, 0, "\x5    Select a disk image for drive B   \x7"));
   } else if (view==FILE_SELECTOR_TOS_IMAGE) {
     zui_add_child(form, zui_text(0, 0, "\x5          Select a TOS image          \x7"));
   }

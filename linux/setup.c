@@ -64,6 +64,8 @@ static void setup_cfg(int reset) {
   cfg |= ws_cfg[config.wakestate-1]<<8;
   if (sound_mute==0)
     cfg |= sound_vol<<10;
+  cfg |= config.floppy_a_write_protect<<15;
+  cfg |= config.floppy_b_write_protect<<16;
   parmreg[0] = cfg;
 }
 

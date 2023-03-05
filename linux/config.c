@@ -82,8 +82,12 @@ static int handler(void* user, const char* section, const char* name, const char
     if (value) pconfig->flopimg_dir = strdup(value);
   } else if (MATCH("floppy","floppy_a")) {
     if (value) pconfig->floppy_a = strdup(value);
+  } else if (MATCH("floppy","floppy_a_write_protect")) {
+    if (value) pconfig->floppy_a_write_protect = truefalse(value);
   } else if (MATCH("floppy","floppy_b")) {
     if (value) pconfig->floppy_b = strdup(value);
+  } else if (MATCH("floppy","floppy_b_write_protect")) {
+    if (value) pconfig->floppy_b_write_protect = truefalse(value);
   }
   else {
     return 0;  /* unknown section/name, error */
@@ -98,7 +102,9 @@ void config_load(const char *filename) {
   config.rom_file = NULL;
   config.flopimg_dir = NULL;
   config.floppy_a = NULL;
+  config.floppy_a_write_protect = 0;
   config.floppy_b = NULL;
+  config.floppy_b_write_protect = 0;
 
   if (ini_parse(filename,handler,&config) < 0) {
     printf("Can't load `%s`\n",filename);
