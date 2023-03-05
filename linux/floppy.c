@@ -58,6 +58,7 @@ void change_floppy(const char *filename, int drive) {
 void * thread_floppy(void * arg) {
   uint32_t n,oldn=0;
   unsigned int oldaddr=2000;
+  unsigned int r,w,addr=2000,track,drive;
 
   change_floppy(config.floppy_a,0);
   change_floppy(config.floppy_b,1);
@@ -66,34 +67,40 @@ void * thread_floppy(void * arg) {
 
   struct pollfd pfd = { .fd=parmfd, .events=POLLIN };
 
-  for(;;) {
-    // unmask interrupt
-    uint32_t unmask = 1;
-    ssize_t rv = write(parmfd, &unmask, sizeof(unmask));
-    if (rv != (ssize_t)sizeof(unmask)) {
-      perror("unmask interrupt");
-      break;
+  while(thr_end==0) {
+    uint32_t in = parmreg[0];
+
+    while ((in>>21&0x1ff) == addr) {
+      // still at previous address: wait for next interrupt
+      // unmask interrupt
+      uint32_t unmask = 1;
+      ssize_t rv = write(parmfd, &unmask, sizeof(unmask));
+      if (rv != (ssize_t)sizeof(unmask)) {
+        perror("unmask interrupt");
+        break;
+      }
+      int status = poll(&pfd,1,5);
+      if (thr_end) break;
+      if (status==-1) {
+        perror("UIO interrupts");
+        break;
+      } else if (status==0) {
+        continue;
+      }
+      if (read(parmfd,&n,4)==0) {
+        printf("nok\n");
+        break;
+      }
+      in = parmreg[0];
     }
-    int status = poll(&pfd,1,5);
     if (thr_end) break;
-    if (status==-1) {
-      perror("UIO interrupts");
-      break;
-    } else if (status==0) {
-      continue;
-    }
-    if (read(parmfd,&n,4)==0) {
-      printf("nok\n");
-      break;
-    }
 
     // read host values
-    uint32_t in = parmreg[0];
-    unsigned int r = in>>31;
-    unsigned int w = in>>30&1;
-    unsigned int addr = in>>21&0x1ff;
-    unsigned int track = in>>13&0xff;
-    unsigned int drive = in>>12&1;
+    r = in>>31;
+    w = in>>30&1;
+    addr = in>>21&0x1ff;
+    track = in>>13&0xff;
+    drive = in>>12&1;
     if (oldn!=0 && n!=oldn+1) {
       printf("it=%u r=%u w=%u track=%u addr=%u\n",(unsigned)n,r,w,track,addr);
       fflush(stdout);
