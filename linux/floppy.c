@@ -103,7 +103,7 @@ void * thread_floppy(void * arg) {
     drive = in>>12&1;
     unsigned int newaddr = oldaddr==390?0:(oldaddr+1);
     if (oldaddr<=390 && addr!=newaddr) {
-      printf("missed addr=%u\n",newaddr);
+      printf("missed addr, expected=%u, got %u\n",newaddr,addr);
       fflush(stdout);
     }
     oldaddr = addr;
