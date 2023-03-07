@@ -56,7 +56,7 @@ void change_floppy(const char *filename, int drive) {
 }
 
 void * thread_floppy(void * arg) {
-  uint32_t n,oldn=0;
+  uint32_t n;
   unsigned int oldaddr=2000;
   unsigned int r,w,addr=2000,track,drive;
 
@@ -101,11 +101,6 @@ void * thread_floppy(void * arg) {
     addr = in>>21&0x1ff;
     track = in>>13&0xff;
     drive = in>>12&1;
-    if (oldn!=0 && n!=oldn+1) {
-      printf("it=%u r=%u w=%u track=%u addr=%u\n",(unsigned)n,r,w,track,addr);
-      fflush(stdout);
-    }
-    oldn = n;
     unsigned int newaddr = oldaddr==390?0:(oldaddr+1);
     if (oldaddr<=390 && addr!=newaddr) {
       printf("missed addr=%u\n",newaddr);
