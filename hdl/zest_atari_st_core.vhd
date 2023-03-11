@@ -113,6 +113,11 @@ architecture structure of zest_atari_st_core is
 	signal fdd_write_gate	: std_logic;
 	signal fdd_track0n		: std_logic;
 	signal fdd_write_protn	: std_logic;
+	signal host_r			: std_logic;
+	signal host_w			: std_logic;
+	signal host_drv			: std_logic;
+	signal host_addr		: std_logic_vector(8 downto 0);
+	signal host_track		: std_logic_vector(7 downto 0);
 
 	signal ram_A_23		: std_logic_vector(23 downto 1);
 
@@ -167,6 +172,11 @@ begin
 	sound_vol <= out_reg0(14 downto 10);
 	wp0 <= out_reg0(15);
 	wp1 <= out_reg0(16);
+	in_reg0(31) <= host_r;
+	in_reg0(30) <= host_w;
+	in_reg0(29 downto 21) <= host_addr;
+	in_reg0(20 downto 13) <= host_track;
+	in_reg0(12) <= host_drv;
 	in_reg0(11 downto 0) <= (others => '0');
 
 	dispatch: entity bridge_dispatcher port map (
@@ -293,11 +303,11 @@ begin
 		host_intr => irq,
 		host_din => in_reg8_11,
 		host_dout => out_reg8_11,
-		host_r => in_reg0(31),
-		host_w => in_reg0(30),
-		host_drv => in_reg0(12),
-		host_addr => in_reg0(29 downto 21),
-		host_track => in_reg0(20 downto 13)
+		host_r => host_r,
+		host_w => host_w,
+		host_drv => host_drv,
+		host_addr => host_addr,
+		host_track => host_track
 	);
 
 	ikbd_clk <= clk;
