@@ -73,7 +73,11 @@ void * thread_floppy(void * arg) {
   change_floppy(config.floppy_a,0);
   change_floppy(config.floppy_b,1);
 
-  unsigned int pos=0,pos1=0,posw=0;
+  struct {
+    uint8_t *p;
+    int count;
+    int drive;
+  } pos_fifo[3] = {0};
 
   struct pollfd pfd = { .fd=parmfd, .events=POLLIN };
 
@@ -119,24 +123,22 @@ void * thread_floppy(void * arg) {
     // start a critical section so the image is not changed during access
     pthread_mutex_lock(&mutex);
     if (img[drive] && r) {
-      uint8_t *trkp = flopimg_trackpos(img[drive],track>>1,track&1);
+      pos_fifo[2] = pos_fifo[1];
+      pos_fifo[1] = pos_fifo[0];
 
-      posw = pos1;
-      pos1 = pos;
-      pos = addr*16+16;
+      uint8_t *trkp = flopimg_trackpos(img[drive],track>>1,track&1);
+      unsigned int pos = addr*16+16;
       if (pos>=6250) {
         pos = 0;
       }
-      uint8_t *p = trkp+pos;
-      int count = pos<6240?16:10;
-      memcpy((void*)&parmreg[8],p,count);
+      pos_fifo[0].p = trkp+pos;
+      pos_fifo[0].count = pos<6240?16:10;
+      pos_fifo[0].drive = drive;
+      memcpy((void*)&parmreg[8],pos_fifo[0].p,pos_fifo[0].count);
 
       if (w) {
-        p = trkp+posw;
-        int count = posw<6240?16:10;
-        memcpy(p,(void*)&parmreg[8],count);
-
-        flopimg_writeback(img[drive]);
+        memcpy(pos_fifo[2].p,(void*)&parmreg[8],pos_fifo[2].count);
+        flopimg_writeback(img[pos_fifo[2].drive]);
       }
     }
     pthread_mutex_unlock(&mutex);
