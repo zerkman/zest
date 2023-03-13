@@ -62,42 +62,45 @@ static const uint8_t *findam(const uint8_t *p, const uint8_t *buf_end) {
 
 static const uint8_t *find_sector(const uint8_t *p, int track, int side, int sector) {
   const uint8_t *p_end = p + 6250;
+  int cur_sector = -1;
   int ok = 0;
-  while (!ok) {
+  int size = 0;
+  while (ok<2) {
     p = findam(p,p_end);
-    if (p==NULL || p[6]!=0xfe || p[7]!=track || p[8]!=side) {
-      printf("wrong ID address mark\n");
+    if (p==NULL) {
+      printf("sector not found\n");
       ok = 2;
       break;
     }
-    else {
-      ok = p[9]==sector?1:0;
+    if (p[6]==0xfe) {
+      // ID address mark
+      if (p[7]!=track || p[8]!=side) {
+        printf("wrong ID address mark\n");
+        ok = 2;
+        break;
+      }
+      cur_sector = p[9];
+      ok = cur_sector==sector?1:0;
+      unsigned int crc = p[11]<<8|p[12];
+      unsigned int crc2 = crc16(p+6,5);
+      if (crc!=crc2) {
+        printf("warning: bad IDAM CRC on track:%d side:%d sector:%d\n",track,side,cur_sector);
+      }
+      size = 128<<p[10];
+      p += 11;
+    } else if (p[6]==0xfb) {
+      // data addres mark
+      p += 7;
+      unsigned int crc = p[size]<<8|p[size+1];
+      unsigned int crc2 = crc16(p-1,size+1);
+      if (crc!=crc2) {
+        printf("warning: bad DAM CRC on track:%d side:%d sector:%d\n",track,side,cur_sector);
+      }
+      if (ok==1) ok = 3;
+      else p += size+2;
     }
-    int size = 128<<p[10];
-
-    unsigned int crc = p[11]<<8|p[12];
-    unsigned int crc2 = crc16(p+6,5);
-    if (crc!=crc2) {
-      printf("warning: bad IDAM CRC on track:%d side:%d sector:%d\n",track,side,sector);
-    }
-
-    p += 11;
-    p = findam(p,p_end);
-    if (p==NULL || p[6]!=0xfb) {
-      printf("wrong data address mark\n");
-      ok = 2;
-      break;
-    }
-    p += 7;
-    crc = p[size]<<8|p[size+1];
-    crc2 = crc16(p-1,size+1);
-    if (crc!=crc2) {
-      printf("warning: bad DAM CRC on track:%d side:%d sector:%d\n",track,side,sector);
-    }
-
-    if (!ok) p += size+2;
   }
-  if (ok==1) {
+  if (ok==3) {
     return p;
   }
   return NULL;
