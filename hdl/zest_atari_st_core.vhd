@@ -161,8 +161,8 @@ architecture structure of zest_atari_st_core is
 
 begin
 	soft_resetn <= out_reg0(0);
-	led <= not clken_err & (fdd_drv0_select or not soft_resetn);
-	-- rgb <= opix(23 downto 19) & opix(15 downto 10) & opix(7 downto 3);
+	led(1) <= (fdd_drv1_select or not soft_resetn) and not clken_err;
+	led(0) <= fdd_drv0_select or not soft_resetn;
 
 	dblpix24 <= dblpix(15 downto 11) & "000" & dblpix(10 downto 5) & "00" & dblpix(4 downto 0) & "000";
 	ram_a <= x"00" & ram_a_23 & '0';
