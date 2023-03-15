@@ -93,6 +93,7 @@ end process;
 
 -- position
 process(clk)
+	variable wrq0 : std_logic;
 begin
 	if rising_edge(clk) then
 		if resetn = '0' then
@@ -145,8 +146,10 @@ begin
 				end if;
 				if ccnt(4 downto 0) = "11111" then
 					-- new data bit
+					wrq0 := wrq;
 					if write_gate = '1' and (drv0_select = '0' or drv1_select = '0') then
 						wrq <= '1';
+						wrq0 := '1';
 					end if;
 					data_sr <= nextdata;
 					if ccnt(LOGNBITS+4 downto 5) = (LOGNBITS-1 downto 0 => '1') or ccnt = 1599999 then
@@ -163,7 +166,7 @@ begin
 								host_din(i*8+7 downto i*8) <= nextdata(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
 							end loop;
 						end if;
-						host_w <= wrq;
+						host_w <= wrq0;
 						host_r <= '1';
 						host_drv <= drv0_select;
 						host_intr <= '1';
