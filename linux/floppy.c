@@ -77,7 +77,6 @@ void * thread_floppy(void * arg) {
     uint8_t *p;
     int count;
     int drive;
-    int w;
   } pos_fifo[3] = {0};
 
   struct pollfd pfd = { .fd=parmfd, .events=POLLIN };
@@ -141,9 +140,8 @@ void * thread_floppy(void * arg) {
         pos_fifo[0].count = 0;
       }
       pos_fifo[0].drive = drive;
-      pos_fifo[0].w = w;
 
-      if (pos_fifo[2].w) {
+      if (w) {
         memcpy(pos_fifo[2].p,(void*)&parmreg[8],pos_fifo[2].count);
         flopimg_writeback(img[pos_fifo[2].drive]);
       }
