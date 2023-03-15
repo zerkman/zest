@@ -5,7 +5,7 @@ SRCDIR=`dirname $0`/..
 
 if test ! -d $TARGET/sdcard ; then
   mkdir $TARGET/sdcard
-  echo "/dev/mmcblk0p1 /sdcard vfat flush,dirsync,noatime,noexec,nodev 0 0" >> $TARGET/etc/fstab
+  echo "/dev/mmcblk0p1 /sdcard vfat flush,dirsync,noatime,noexec,nodev,fmask=0133,dmask=0022 0 0" >> $TARGET/etc/fstab
 fi
 
 if test ! -f $TARGET/root/zestboot ; then
