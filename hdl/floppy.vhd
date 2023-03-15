@@ -92,25 +92,25 @@ begin
 end process;
 
 -- position
-process(clk)
+process(clk,resetn)
 	variable wrq0 : std_logic;
 begin
-	if rising_edge(clk) then
-		if resetn = '0' then
-			ccnt <= (others => '0');
-			track0 <= (others => '0');
-			track1 <= (others => '0');
-			data_sr <= (others => '0');
-			wrq <= '0';
-			step_ff <= '1';
-			host_intr <= '0';
-			host_din <= (others => '0');
-			host_r <= '0';
-			host_w <= '0';
-			host_drv <= '0';
-			host_addr <= (others => '0');
-			s_indexn <= '0';
-		elsif clken = '1' then
+	if resetn = '0' then
+		ccnt <= (others => '0');
+		track0 <= (others => '0');
+		track1 <= (others => '0');
+		data_sr <= (others => '0');
+		wrq <= '0';
+		step_ff <= '1';
+		host_intr <= '0';
+		host_din <= (others => '0');
+		host_r <= '0';
+		host_w <= '0';
+		host_drv <= '0';
+		host_addr <= (others => '0');
+		s_indexn <= '0';
+	elsif rising_edge(clk) then
+		if clken = '1' then
 			if drv0_select = '0' then
 				step_ff <= step;
 				if step = '1' and step_ff = '0' then
