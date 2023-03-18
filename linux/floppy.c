@@ -69,6 +69,7 @@ static int unmask_interrupt(void) {
 void * thread_floppy(void * arg) {
   uint32_t n,oldn=0;
   unsigned int oldaddr=2000;
+  uint32_t oldin=0;
 
   change_floppy(config.floppy_a,0);
   change_floppy(config.floppy_b,1);
@@ -114,8 +115,12 @@ void * thread_floppy(void * arg) {
     }
     oldn = n;
     unsigned int newaddr = oldaddr==390?0:(oldaddr+1);
+    if ((in&0xfff)!=0) {
+      printf("parmreg read error: in=%08x oldin=%08x\n",in,oldin);
+      fflush(stdout);
+    }
     if (oldaddr<=390 && addr!=newaddr) {
-      printf("missed addr, expected=%u, got %u\n",newaddr,addr);
+      printf("missed addr, expected=%u, got=%u, oldin=%08x in=%08x\n",newaddr,addr,oldin,in);
       fflush(stdout);
     }
     oldaddr = addr;
@@ -147,6 +152,7 @@ void * thread_floppy(void * arg) {
       }
     }
     pthread_mutex_unlock(&mutex);
+    oldin = in;
   }
 
   change_floppy(NULL,0);
