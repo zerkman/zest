@@ -71,6 +71,10 @@ void * thread_floppy(void * arg) {
   unsigned int oldaddr=2000;
   uint32_t oldin=0;
 
+  // thread scheduling: non-preemptable, takes priority on other threads
+  struct sched_param param = { .sched_priority = 1 };
+  pthread_setschedparam(pthread_self(),SCHED_FIFO,&param);
+
   change_floppy(config.floppy_a,0);
   change_floppy(config.floppy_b,1);
 
