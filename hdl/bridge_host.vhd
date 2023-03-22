@@ -155,9 +155,11 @@ begin
 		elsif rising_edge(s_axi_aclk) then
 			case axi_st is
 				when IDLE =>
-					if s_axi_awvalid = '1' and s_axi_wvalid = '1' and s_axi_bready = '0' then
-						-- maintain bvalid as long as bready is not set
-						axi_st <= WR;
+					if s_axi_awvalid = '1' and s_axi_wvalid = '1' then
+						if s_axi_bready = '0' then
+							-- maintain bvalid as long as bready is not set
+							axi_st <= WR;
+						end if;
 					elsif s_axi_arvalid = '1' then
 						r_delay_cnt <= r_delay-1;
 						axi_st <= RD;
