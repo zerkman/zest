@@ -40,6 +40,9 @@ entity floppy_drive is
 		host_wp0	: in std_logic;
 		host_wp1	: in std_logic;
 		host_intr	: out std_logic;
+		host_drq	: out std_logic;
+		host_ack	: in std_logic;
+		host_derr	: out std_logic;
 		host_din	: out std_logic_vector(127 downto 0);
 		host_dout	: in std_logic_vector(127 downto 0);
 		host_r		: out std_logic;
@@ -62,6 +65,7 @@ architecture behavioral of floppy_drive is
 	signal wrq			: std_logic;
 	signal step_ff		: std_logic;
 	signal s_indexn		: std_logic;
+	signal drq			: std_logic;
 
 begin
 
@@ -91,6 +95,8 @@ begin
 	end if;
 end process;
 
+host_drq <= drq;
+
 -- position
 process(clk,resetn)
 	variable wrq0 : std_logic;
@@ -109,7 +115,12 @@ begin
 		host_drv <= '0';
 		host_addr <= (others => '0');
 		s_indexn <= '0';
+		drq <= '0';
+		host_derr <= '0';
 	elsif rising_edge(clk) then
+		if host_ack = '1' then
+			drq <= '0';
+		end if;
 		if clken = '1' then
 			if drv0_select = '0' then
 				step_ff <= step;
@@ -160,6 +171,7 @@ begin
 								host_din(i*8+7 downto i*8) <= nextdata(((LASTNB-1)-i)*8+7 downto ((LASTNB-1)-i)*8);
 							end loop;
 							host_din(NBITS-1 downto LASTNB*8) <= (others => '0');
+							host_derr <= '0';
 						else
 							host_addr <= std_logic_vector(ccnt(20 downto LOGNBITS+5)+1);
 							for i in 0 to NBITS/8-1 loop
@@ -170,6 +182,10 @@ begin
 						host_r <= '1';
 						host_drv <= drv0_select;
 						host_intr <= '1';
+						drq <= '1';
+						if drq = '1' then
+							host_derr <= '1';
+						end if;
 						for i in 0 to NBITS/8-1 loop
 							data_sr(i*8+7 downto i*8) <= host_dout(((NBITS/8-1)-i)*8+7 downto ((NBITS/8-1)-i)*8);
 						end loop;

@@ -34,6 +34,8 @@ entity configurator is
 		bridge_w_data	: in std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
 		bridge_w_strb	: in std_logic_vector(2**(DATA_WIDTH_BITS-3)-1 downto 0);
 
+		fdd_ack		: out std_logic;
+
 		out_reg0	: out std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
 		out_reg1	: out std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
 		out_reg2	: out std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
@@ -100,8 +102,12 @@ begin
 	process(clk)
 	begin
 		if rising_edge(clk) then
+			fdd_ack <= '0';
 			if bridge_w = '1' then
 				out_reg(to_integer(unsigned(bridge_addr))) <= bridge_w_data;
+				if unsigned(bridge_addr) = 8 then
+					fdd_ack <= '1';
+				end if;
 			end if;
 			if bridge_r = '1' then
 				bridge_r_data <= in_reg(to_integer(unsigned(bridge_addr)));
