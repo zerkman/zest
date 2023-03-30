@@ -35,6 +35,7 @@ entity dma_controller is
 
 		HDCSn	: out std_logic;
 		HDRQ	: in std_logic;
+		ACKn	: out std_logic;
 
 		FDCSn	: out std_logic;
 		FDRQ	: in std_logic;
@@ -54,9 +55,9 @@ architecture behavioral of dma_controller is
 	signal sec_cnt	: unsigned(16 downto 0);	-- 8 high bits: sector count, 9 low: byte count
 	signal sca		: std_logic_vector(1 downto 0);	-- user selected FDC register
 	signal seccnt0	: std_logic;
-	signal hdc_fdcn	: std_logic;
+	signal hdc_fdcn	: std_logic;				-- redirect FCSn to 0:floppy, 1:DMA port
 	signal reg_sel	: std_logic;
-	signal dma_fdc	: std_logic;
+	signal dma_fdc	: std_logic;				-- DRQ/ACK on 0:ACSI, 1:floppy
 	signal dma_w	: std_logic;
 	signal dma_err	: std_logic;
 	signal dma_on	: std_logic;
@@ -134,6 +135,9 @@ begin
 			scrwn <= '1';
 			sfdcsn <= '1';
 			rdreg_ff <= '0';
+			ACKn <= '1';
+			dma_fdc <= '0';
+			hdc_fdcn <= '0';
 		elsif cken = '1' then
 			socd <= x"ff";
 			scrwn <= '1';
@@ -243,11 +247,12 @@ begin
 						dc_st <= running;
 					end if;
 				when running =>
-					if FDRQ = '1' then
+					if (FDRQ = '1' and dma_fdc = '1') or (HDRQ = '1' and dma_fdc = '0') then
 						if seccnt0 = '0' then
 							dma_err <= '1';
 						else
-							sfdcsn <= '0';
+							sfdcsn <= not dma_fdc;
+							ACKn <= dma_fdc;
 							if dma_w = '1' then
 								-- write to fdc
 								scrwn <= '0';
@@ -258,9 +263,19 @@ begin
 								end if;
 								dc_st <= run_inc;
 							else
-								-- read from fdc
 								scrwn <= '1';
-								dc_st <= run_read;
+								if HDRQ = '1' then
+									-- read from acsi
+									if buf_di(0) = '0' then
+										buf(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
+									else
+										buf(to_integer(buf_wl & buf_di(3 downto 1)))(7 downto 0) <= iCD;
+									end if;
+									dc_st <= run_inc;
+								else
+									-- read from fdc
+									dc_st <= run_read;
+								end if;
 							end if;
 						end if;
 					end if;
@@ -275,6 +290,7 @@ begin
 					end if;
 					dc_st <= run_inc;
 				when run_inc =>
+					ACKn <= '1';
 					sec_cnt <= sec_cnt - 1;
 					buf_di <= buf_di + 1;
 					if buf_di + 1 = 0 then
