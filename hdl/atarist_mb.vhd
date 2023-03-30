@@ -60,6 +60,16 @@ entity atarist_mb is
 		fdd_track0n : in std_logic;
 		fdd_write_protn : in std_logic;
 
+		dma_resetn : out std_logic;
+		dma_rwn : out std_logic;
+		dma_csn : out std_logic;
+		dma_a1 : out std_logic;
+		dma_intn : in std_logic;
+		dma_drq : in std_logic;
+		dma_ackn : out std_logic;
+		dma_rd : in std_logic_vector(7 downto 0);
+		dma_wd : out std_logic_vector(7 downto 0);
+
 		a : out std_logic_vector(23 downto 1);
 		ds : out std_logic_vector(1 downto 0);
 		r : out std_logic;
@@ -252,8 +262,6 @@ architecture structure of atarist_mb is
 	signal dma_oD			: std_logic_vector(15 downto 0);
 	signal dma_iRDY			: std_logic;
 	signal dma_oRDY			: std_logic;
-	signal dma_HDCSn		: std_logic;
-	signal dma_HDRQ			: std_logic;
 	signal dma_FDCSn		: std_logic;
 	signal dma_FDRQ			: std_logic;
 	signal dma_CRWn			: std_logic;
@@ -262,6 +270,7 @@ architecture structure of atarist_mb is
 	signal dma_iCD			: std_logic_vector(7 downto 0);
 
 	signal fdc_INTRQ		: std_logic;
+	signal fdc_oDAL			: std_logic_vector(7 downto 0);
 
 	signal psg_csn			: std_logic;
 	signal psg_bdir			: std_logic;
@@ -551,7 +560,7 @@ begin
 		trn => mfp_trn
 	);
 	mfp_iein <= '0';
-	mfp_ii <= not monomon & '1' & not fdc_INTRQ & acia_irq & "1111";
+	mfp_ii <= not monomon & '1' & dma_intn and not fdc_INTRQ & acia_irq & "1111";
 	mfp_tai <= '1';
 	mfp_tbi <= sde;
 	mfp_si <= '0';
@@ -615,8 +624,9 @@ begin
 		A1 => bus_A(1),
 		iD => dma_iD,
 		oD => dma_oD,
-		HDCSn => dma_HDCSn,
-		HDRQ => dma_HDRQ,
+		HDCSn => dma_csn,
+		HDRQ => dma_drq,
+		ACKn => dma_ackn,
 		FDCSn => dma_FDCSn,
 		FDRQ => dma_FDRQ,
 		CRWn => dma_CRWn,
@@ -625,7 +635,12 @@ begin
 		iCD => dma_iCD
 	);
 	dma_iD <= bus_D;
-	dma_HDRQ <= '0';
+	dma_iCD <= fdc_oDAL and dma_rd;
+
+	dma_rwn <= dma_CRWn;
+	dma_resetn <= resetn;
+	dma_a1 <= dma_CA(0);
+	dma_wd <= dma_oCD;
 
 	fdc:entity wd1772 port map (
 		clk => clk,
@@ -635,7 +650,7 @@ begin
 		RWn => dma_CRWn,
 		A => dma_CA,
 		iDAL => dma_oCD,
-		oDAL => dma_iCD,
+		oDAL => fdc_oDAL,
 		INTRQ => fdc_INTRQ,
 		DRQ => dma_FDRQ,
 		DDENn => '0',
