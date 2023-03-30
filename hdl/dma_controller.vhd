@@ -69,7 +69,7 @@ architecture behavioral of dma_controller is
 	signal rdreg_ff	: std_logic;
 	type bus_st_t is ( idle, start, running, running_w, running_r, done );
 	signal bus_st	: bus_st_t;
-	type dc_st_t is ( idle, warmup, running, run_read, run_read2, run_inc, done );
+	type dc_st_t is ( idle, warmup, running, run_read, run_inc, done );
 	signal dc_st	: dc_st_t;
 
 begin
@@ -280,9 +280,6 @@ begin
 						end if;
 					end if;
 				when run_read =>
-					-- wait one additional cycle so that the data is available from fdc
-					dc_st <= run_read2;
-				when run_read2 =>
 					if buf_di(0) = '0' then
 						buf(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
 					else
