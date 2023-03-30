@@ -51,6 +51,7 @@ architecture behavioral of wd1772 is
 	signal SR		: std_logic_vector(7 downto 0);
 	signal DR		: std_logic_vector(7 downto 0);
 	signal DSR		: std_logic_vector(7 downto 0);
+	signal sod		: std_logic_vector(7 downto 0);
 	signal crc		: std_logic_vector(15 downto 0);
 	signal ipcnt	: std_logic_vector(3 downto 0);
 	signal delaycnt : unsigned(16 downto 0);
@@ -88,6 +89,7 @@ begin
 	status(7) <= motor_on;
 	WG <= wgs;
 	DIRC <= DIR;
+	oDAL <= sod when CSn = '0' and RWn = '1' else x"ff";
 
 process(clk)
 begin
@@ -99,6 +101,7 @@ begin
 			SR <= (others => '0');
 			DR <= (others => '0');
 			DSR <= (others => '0');
+			sod <= x"00";
 			crc <= (others => '0');
 			ds_cnt <= x"00";
 			ds_full <= '0';
@@ -201,14 +204,14 @@ begin
 			if CSn = '0' and RWn = '1' then
 				case A is
 					when "00" =>
-						oDAL <= status;
+						sod <= status;
 						INTRQ <= '0';
-					when "01" => oDAL <= TR;
-					when "10" => oDAL <= SR;
+					when "01" => sod <= TR;
+					when "10" => sod <= SR;
 					when "11" =>
 						status(1) <= '0';	-- DRQ (S1)
 						DRQ <= '0';
-						oDAL <= DR;
+						sod <= DR;
 					when others =>
 				end case;
 			elsif CSn = '0' and RWn = '0' then
