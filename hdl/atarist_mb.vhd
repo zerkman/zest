@@ -560,7 +560,7 @@ begin
 		trn => mfp_trn
 	);
 	mfp_iein <= '0';
-	mfp_ii <= not monomon & '1' & dma_intn and not fdc_INTRQ & acia_irq & "1111";
+	mfp_ii <= not monomon & '1' & (dma_intn and not fdc_INTRQ) & acia_irq & "1111";
 	mfp_tai <= '1';
 	mfp_tbi <= sde;
 	mfp_si <= '0';

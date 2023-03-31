@@ -113,6 +113,15 @@ architecture structure of zest_atari_st_core is
 	signal fdd_write_gate	: std_logic;
 	signal fdd_track0n		: std_logic;
 	signal fdd_write_protn	: std_logic;
+	signal dma_resetn		: std_logic;
+	signal dma_rwn			: std_logic;
+	signal dma_csn			: std_logic;
+	signal dma_a1			: std_logic;
+	signal dma_intn			: std_logic;
+	signal dma_drq			: std_logic;
+	signal dma_ackn			: std_logic;
+	signal dma_rd			: std_logic_vector(7 downto 0);
+	signal dma_wd			: std_logic_vector(7 downto 0);
 	signal host_r			: std_logic;
 	signal host_w			: std_logic;
 	signal host_drv			: std_logic;
@@ -274,6 +283,15 @@ begin
 		fdd_write_gate => fdd_write_gate,
 		fdd_track0n => fdd_track0n,
 		fdd_write_protn => fdd_write_protn,
+		dma_resetn => dma_resetn,
+		dma_rwn => dma_rwn,
+		dma_csn => dma_csn,
+		dma_a1 => dma_a1,
+		dma_intn => dma_intn,
+		dma_drq => dma_drq,
+		dma_ackn => dma_ackn,
+		dma_rd => dma_rd,
+		dma_wd => dma_wd,
 		a => ram_a_23,
 		ds => ram_ds,
 		r => ram_r,
@@ -283,6 +301,9 @@ begin
 		od => ram_r_d,
 		id => ram_w_d
 	);
+	dma_intn <= '1';
+	dma_drq <= '0';
+	dma_rd <= x"ff";
 
 	fdd:entity floppy_drive port map (
 		clk => clk,
