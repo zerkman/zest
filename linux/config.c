@@ -88,6 +88,8 @@ static int handler(void* user, const char* section, const char* name, const char
     if (value) pconfig->floppy_b = strdup(value);
   } else if (MATCH("floppy","floppy_b_write_protect")) {
     if (value) pconfig->floppy_b_write_protect = truefalse(value);
+  } else if (MATCH("hdd","image")) {
+    if (value) pconfig->hdd_image = strdup(value);
   }
   else {
     return 0;  /* unknown section/name, error */
@@ -105,6 +107,7 @@ void config_load(const char *filename) {
   config.floppy_a_write_protect = 0;
   config.floppy_b = NULL;
   config.floppy_b_write_protect = 0;
+  config.hdd_image = NULL;
 
   if (ini_parse(filename,handler,&config) < 0) {
     printf("Can't load `%s`\n",filename);

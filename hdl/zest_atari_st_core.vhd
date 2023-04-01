@@ -317,9 +317,6 @@ begin
 		od => ram_r_d,
 		id => ram_w_d
 	);
-	dma_intn <= '1';
-	dma_drq <= '0';
-	dma_rd <= x"ff";
 
 	fdd:entity floppy_drive port map (
 		clk => clk,

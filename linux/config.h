@@ -43,6 +43,9 @@ typedef struct {
   int floppy_a_write_protect;       // A: write protect (1:on, 0:off)
   const char *floppy_b;             // B: floppy image file, full path
   int floppy_b_write_protect;       // B: write protect (1:on, 0:off)
+
+  // hard disk
+  const char *hdd_image;            // Hard disk image
 } ZestConfig;
 
 extern ZestConfig config;

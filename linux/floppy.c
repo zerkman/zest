@@ -30,6 +30,7 @@
 
 #include "config.h"
 #include "floppy_img.h"
+#include "hdd.h"
 
 extern volatile uint32_t *parmreg;
 extern int parmfd;
@@ -75,6 +76,8 @@ void * thread_floppy(void * arg) {
   struct sched_param param = { .sched_priority = 1 };
   pthread_setschedparam(pthread_self(),SCHED_FIFO,&param);
 
+  hdd_init(parmreg);
+
   change_floppy(config.floppy_a,0);
   change_floppy(config.floppy_b,1);
 
@@ -108,6 +111,17 @@ void * thread_floppy(void * arg) {
 
     // read host values
     uint32_t in = parmreg[0];
+    if ((in&0xffc)!=0) {
+      printf("parmreg read error: in=%08x oldin=%08x\n",in,oldin);
+      fflush(stdout);
+    }
+    if ((in&2)!=0) {
+      hdd_interrupt();
+    }
+    if ((in&1)==0) {
+      continue;
+    }
+
     unsigned int r = in>>31;
     unsigned int w = in>>30&1;
     unsigned int addr = in>>21&0x1ff;
@@ -119,10 +133,6 @@ void * thread_floppy(void * arg) {
     }
     oldn = n;
     unsigned int newaddr = oldaddr==390?0:(oldaddr+1);
-    if ((in&0xfff)!=0) {
-      printf("parmreg read error: in=%08x oldin=%08x\n",in,oldin);
-      fflush(stdout);
-    }
     if (oldaddr<=390 && addr!=newaddr) {
       printf("missed addr, expected=%u, got=%u, oldin=%08x in=%08x\n",newaddr,addr,oldin,in);
       fflush(stdout);
