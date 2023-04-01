@@ -28,7 +28,7 @@ entity zest_atari_st_core is
 		ADDR_WIDTH		: integer := 16;
 		SUBADDR_WIDTH	: integer := 13;
 		CFG_ADDR_WIDTH	: integer := 6;
-		N_OUTPUTS		: integer := 2
+		N_OUTPUTS		: integer := 3
 	);
 	port (
 		clk				: in std_logic;
@@ -79,10 +79,12 @@ architecture structure of zest_atari_st_core is
 
 	signal dev_addr		: std_logic_vector(SUBADDR_WIDTH-1 downto DATA_WIDTH_BITS-3);
 	signal dev_r		: std_logic_vector(N_OUTPUTS-1 downto 0);
-	signal dev_r_data	: std_logic_vector((2**DATA_WIDTH_BITS)*N_OUTPUTS-1 downto 0);
+	signal dev_r_datax	: std_logic_vector((2**DATA_WIDTH_BITS)*N_OUTPUTS-1 downto 0);
 	signal dev_w		: std_logic_vector(N_OUTPUTS-1 downto 0);
 	signal dev_w_data	: std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
 	signal dev_w_strb	: std_logic_vector(2**(DATA_WIDTH_BITS-3)-1 downto 0);
+	type r_data_t is array (0 to N_OUTPUTS-1) of std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+	signal dev_r_data	: r_data_t;
 
 	signal clken_err	: std_logic;
 	signal st_rgb 		: std_logic_vector(8 downto 0);
@@ -132,6 +134,8 @@ architecture structure of zest_atari_st_core is
 	signal fdd_drq		: std_logic;
 	signal fdd_ack		: std_logic;
 	signal fdd_derr		: std_logic;
+	signal fdd_intr		: std_logic;
+	signal acsi_intr	: std_logic;
 
 	signal in_reg0		: std_logic_vector(31 downto 0);
 	signal in_reg1		: std_logic_vector(31 downto 0);
@@ -189,9 +193,21 @@ begin
 	in_reg0(29 downto 21) <= host_addr;
 	in_reg0(20 downto 13) <= host_track;
 	in_reg0(12) <= host_drv;
-	in_reg0(11 downto 0) <= (others => '0');
+	in_reg0(11 downto 2) <= (others => '0');
+	in_reg0(1) <= acsi_intr;
+	in_reg0(0) <= fdd_drq;
 
-	dispatch: entity bridge_dispatcher port map (
+	datax: for i in 0 to N_OUTPUTS-1 generate
+		dev_r_datax((2**DATA_WIDTH_BITS)*(i+1)-1 downto (2**DATA_WIDTH_BITS)*i) <= dev_r_data(i);
+	end generate;
+
+	dispatch: entity bridge_dispatcher generic map (
+		DATA_WIDTH_BITS => DATA_WIDTH_BITS,
+		ADDR_WIDTH => ADDR_WIDTH,
+		SUBADDR_WIDTH => SUBADDR_WIDTH,
+		N_OUTPUTS => N_OUTPUTS
+	)
+	port map (
 		host_addr => bridge_addr,
 		host_r => bridge_r,
 		host_r_data => bridge_r_data,
@@ -200,7 +216,7 @@ begin
 		host_w_strb => bridge_w_strb,
 		dev_addr => dev_addr,
 		dev_r => dev_r,
-		dev_r_data => dev_r_data,
+		dev_r_data => dev_r_datax,
 		dev_w => dev_w,
 		dev_w_data => dev_w_data,
 		dev_w_strb => dev_w_strb
@@ -211,7 +227,7 @@ begin
 		resetn => resetn,
 		bridge_addr => dev_addr(CFG_ADDR_WIDTH-1 downto DATA_WIDTH_BITS-3),
 		bridge_r => dev_r(0),
-		bridge_r_data => dev_r_data((2**DATA_WIDTH_BITS)*1-1 downto (2**DATA_WIDTH_BITS)*0),
+		bridge_r_data => dev_r_data(0),
 		bridge_w => dev_w(0),
 		bridge_w_data => dev_w_data,
 		bridge_w_strb => dev_w_strb,
@@ -235,7 +251,7 @@ begin
 		resetn => resetn,
 		bridge_addr => dev_addr,
 		bridge_r => dev_r(1),
-		bridge_r_data => dev_r_data((2**DATA_WIDTH_BITS)*2-1 downto (2**DATA_WIDTH_BITS)*1),
+		bridge_r_data => dev_r_data(1),
 		bridge_w => dev_w(1),
 		bridge_w_data => dev_w_data,
 		bridge_w_strb => dev_w_strb,
@@ -325,7 +341,7 @@ begin
 
 		host_wp0 => wp0,
 		host_wp1 => wp1,
-		host_intr => irq,
+		host_intr => fdd_intr,
 		host_drq => fdd_drq,
 		host_ack => fdd_ack,
 		host_derr => fdd_derr,
@@ -336,6 +352,27 @@ begin
 		host_drv => host_drv,
 		host_addr => host_addr,
 		host_track => host_track
+	);
+	irq <= fdd_intr or acsi_intr;
+
+	acsi:entity acsi_drive port map (
+		clk => clk,
+		resetn => resetn,
+		bridge_addr => dev_addr(11 downto 2),
+		bridge_r => dev_r(2),
+		bridge_r_data => dev_r_data(2),
+		bridge_w => dev_w(2),
+		bridge_w_data => dev_w_data,
+		bridge_w_strb => dev_w_strb,
+		host_intr => acsi_intr,
+		csn => dma_csn,
+		rwn => dma_rwn,
+		a1 => dma_a1,
+		intn => dma_intn,
+		drq => dma_drq,
+		ackn => dma_ackn,
+		w_d => dma_wd,
+		r_d => dma_rd
 	);
 
 	ikbd_clk <= clk;
