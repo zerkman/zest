@@ -84,6 +84,9 @@ architecture rtl of acsi_drive is
 	type dma_st_t is (IDLE,READ,READ1,READ2,READ3,READ4,WRITE,WRITE1);
 	signal dma_st		: dma_st_t;
 	signal dma_cnt		: integer range 0 to 511;
+	signal sdrq			: std_logic;
+	signal sintn		: std_logic;
+	signal srd			: std_logic_vector(7 downto 0);
 	signal rddma		: std_logic_vector(7 downto 0);
 	signal rdreg		: std_logic_vector(23 downto 0);
 	signal dma_hostintr	: std_logic;
@@ -137,7 +140,10 @@ begin
 	ram_addr1 <= bridge_addr(ADDR_MSB downto ADDR_LSB);
 	ram_din1 <= bridge_w_data;
 	ram_wsb1 <= bridge_w_strb;
-	r_d <= rdhs when dma_st = IDLE else rddma;
+	drq <= sdrq;
+	intn <= sintn;
+	srd <= rdhs when dma_st = IDLE else rddma;
+	r_d <= srd when (sdrq = '1' or sintn = '0') else x"ff";
 	host_intr <= hs_hostintr or dma_hostintr;
 
 	-- Handshake register, Status register, DMA interrupt
@@ -148,7 +154,7 @@ begin
 			csn1 <= '1';
 			reg <= (others => '1');
 			status <= x"00";
-			intn <= '1';
+			sintn <= '1';
 			rdhs <= x"00";
 			hs_hostintr <= '0';
 			init_dma_rd <= '0';
@@ -166,7 +172,7 @@ begin
 				else
 					rdhs <= status;
 				end if;
-				intn <= '1';
+				sintn <= '1';
 			end if;
 			if bridge_addr(ADDR_MSB+1) = '0' and (bridge_r = '1' or bridge_w = '1') then
 				-- register access from PL
@@ -178,7 +184,7 @@ begin
 							when "00" =>
 								-- write status register
 								status <= bridge_w_data(7 downto 0);
-								intn <= '0';
+								sintn <= '0';
 							when "01" =>
 								-- initiate DMA read transfer (send to DMA)
 								init_dma_rd <= '1';
@@ -210,7 +216,7 @@ begin
 			ram_we2 <= '0';
 			rddma <= x"00";
 			rdreg <= x"000000";
-			drq <= '0';
+			sdrq <= '0';
 			dma_hostintr <= '0';
 			wrreg <= x"000000";
 		elsif rising_edge(clk) then
@@ -249,11 +255,11 @@ begin
 						rddma <= rdreg(7 downto 0);
 						rdreg <= x"00" & rdreg(23 downto 8);
 					end if;
-					drq <= '1';
+					sdrq <= '1';
 					dma_st <= READ3;
 				when READ3 =>
 					if ackn = '0' then
-						drq <= '0';
+						sdrq <= '0';
 						dma_st <= READ4;
 					end if;
 				when READ4 =>
@@ -269,9 +275,9 @@ begin
 					end if;
 
 				when WRITE =>
-					drq <= '1';
+					sdrq <= '1';
 					if ackn = '0' then
-						drq <= '0';
+						sdrq <= '0';
 						if dma_cnt rem 4 = 3 then
 							ram_addr2 <= '0' & dma_buf_id & std_logic_vector(to_unsigned(dma_cnt/4,7));
 							ram_din2 <= w_d & wrreg;
