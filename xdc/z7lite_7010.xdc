@@ -43,7 +43,7 @@ set_property PACKAGE_PIN J15 [get_ports mdio_rtl_0_mdio_io]
 set_property PACKAGE_PIN H20 [get_ports reset_rtl_0]
 set_property SLEW FAST [get_ports mdio_rtl_0_mdc]
 set_property SLEW FAST [get_ports mdio_rtl_0_mdio_io]
-set_property SLEW SLOW [get_ports {reset_rtl_0[0]}]
+set_property SLEW SLOW [get_ports reset_rtl_0]
 set_property SLEW FAST [get_ports mii_tx_en_0]
 set_property SLEW FAST [get_ports {mii_txd_0[*]}]
 
