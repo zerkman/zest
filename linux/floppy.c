@@ -115,10 +115,13 @@ void * thread_floppy(void * arg) {
       printf("parmreg read error: in=%08x oldin=%08x\n",in,oldin);
       fflush(stdout);
     }
-    if ((in&2)!=0) {
+    int hdd_drq = in>>1&1;
+    int floppy_intr = in&1;
+    if (hdd_drq) {
       hdd_interrupt();
     }
-    if ((in&1)==0) {
+    if (!floppy_intr) {
+      ++oldn;
       continue;
     }
 

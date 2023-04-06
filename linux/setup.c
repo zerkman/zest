@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
 
   pl_reset();
 
-  parmreg = uio_map("/dev/uio0",0x4000,&parmfd);
+  parmreg = uio_map("/dev/uio0",0x8000,&parmfd);
   if (parmreg == NULL) {
     return 1;
   }
