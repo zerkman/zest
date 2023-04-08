@@ -63,6 +63,7 @@ architecture behavioral of dma_controller is
 	signal dma_on	: std_logic;
 	signal dma_rst	: std_logic;
 	signal dma_d	: std_logic_vector(15 downto 0);
+	signal sicd		: std_logic_vector(7 downto 0);
 	signal socd		: std_logic_vector(7 downto 0);
 	signal sfdcsn	: std_logic;
 	signal scrwn	: std_logic;
@@ -106,7 +107,7 @@ begin
 						CA <= sca;
 						FDCSn <= hdc_fdcn;
 						if rdreg_ff = '1' then
-							oD <= x"00" & iCD;
+							oD <= x"00" & sicd;
 						end if;
 					end if;
 				else
@@ -143,6 +144,7 @@ begin
 			scrwn <= '1';
 			sfdcsn <= '1';
 			rdreg_ff <= '0';
+			sicd <= iCD;
 			if FCSn = '0' then
 				-- register access
 				if RWn = '0' then
