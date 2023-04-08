@@ -207,6 +207,7 @@ architecture structure of atarist_mb is
 	signal ram_DS		: std_logic_vector(1 downto 0);
 	signal ram_W_DONE	: std_logic;
 	signal ram_R_DONE	: std_logic;
+	signal ram_ws		: std_logic;
 
 	signal shifter_CSn	: std_logic;
 	signal shifter_RWn	: std_logic;
@@ -391,9 +392,17 @@ begin
 		);
 	enNC1 <= clken_video;
 	enNC2 <= clken_bus and clken_dma;
-	clken_bus <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or bus_DTACKn or clken_bus2;
+	clken_bus <= ((not ram_R or ram_R_DONE) and (not ram_ws or ram_W_DONE)) or bus_DTACKn or clken_bus2;
 	clken_video <= load or not ram_R or ram_R_DONE;
-	clken_dma <= ((not ram_R or ram_R_DONE) and (not ram_W or ram_W_DONE)) or mmu_DMAn;
+	clken_dma <= ((not ram_R or ram_R_DONE) and (not ram_ws or ram_W_DONE)) or mmu_DMAn;
+
+	process(clk)
+	begin
+		if rising_edge(clk) then
+			ram_ws <= ram_W;
+		end if;
+	end process;
+
 	process(cpu_A)
 	begin
 		if cpu_A(23 downto 15) = "111111111" then
