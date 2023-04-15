@@ -56,6 +56,60 @@ void change_floppy(const char *filename, int drive) {
   pthread_mutex_unlock(&mutex);
 }
 
+void floppy_interrupt(uint32_t in) {
+  static unsigned int oldaddr=2000;
+  static uint32_t oldin=0;
+
+  static struct {
+    uint8_t *p;
+    int count;
+    int drive;
+  } pos_fifo[3] = {0};
+
+  unsigned int r = in>>31;
+  unsigned int w = in>>30&1;
+  unsigned int addr = in>>21&0x1ff;
+  unsigned int track = in>>13&0xff;
+  unsigned int drive = in>>12&1;
+
+  unsigned int newaddr = oldaddr==390?0:(oldaddr+1);
+  if (oldaddr<=390 && addr!=newaddr) {
+    printf("missed addr, expected=%u, got=%u, oldin=%08x in=%08x\n",newaddr,addr,oldin,in);
+    fflush(stdout);
+  }
+  oldin = in;
+  oldaddr = addr;
+
+  // start a critical section so the image is not changed during access
+  pthread_mutex_lock(&mutex);
+  if (r) {
+    pos_fifo[2] = pos_fifo[1];
+    pos_fifo[1] = pos_fifo[0];
+
+    unsigned int pos = addr*16+16;
+    if (img[drive]) {
+      uint8_t *trkp = flopimg_trackpos(img[drive],track>>1,track&1);
+      if (pos>=6250) {
+        pos = 0;
+      }
+      pos_fifo[0].p = trkp+pos;
+      pos_fifo[0].count = pos<6240?16:10;
+      memcpy((void*)&parmreg[8],pos_fifo[0].p,pos_fifo[0].count);
+    } else {
+      pos_fifo[0].p = NULL;
+      pos_fifo[0].count = 0;
+    }
+    pos_fifo[0].drive = drive;
+
+    if (w) {
+      memcpy(pos_fifo[2].p,(void*)&parmreg[8],pos_fifo[2].count);
+      flopimg_writeback(img[pos_fifo[2].drive]);
+    }
+  }
+  pthread_mutex_unlock(&mutex);
+  oldin = in;
+}
+
 // unmask interrupt
 static int unmask_interrupt(void) {
   uint32_t unmask = 1;
@@ -68,9 +122,7 @@ static int unmask_interrupt(void) {
 }
 
 void * thread_floppy(void * arg) {
-  uint32_t n,oldn=0;
-  unsigned int oldaddr=2000;
-  uint32_t oldin=0;
+  uint32_t n;
 
   // thread scheduling: non-preemptable, takes priority on other threads
   struct sched_param param = { .sched_priority = 1 };
@@ -80,12 +132,6 @@ void * thread_floppy(void * arg) {
 
   change_floppy(config.floppy_a,0);
   change_floppy(config.floppy_b,1);
-
-  struct {
-    uint8_t *p;
-    int count;
-    int drive;
-  } pos_fifo[3] = {0};
 
   struct pollfd pfd = { .fd=parmfd, .events=POLLIN };
 
@@ -112,7 +158,7 @@ void * thread_floppy(void * arg) {
     // read host values
     uint32_t in = parmreg[0];
     if ((in&0xffc)!=0) {
-      printf("parmreg read error: in=%08x oldin=%08x\n",in,oldin);
+      printf("parmreg read error: in=%08x\n",in);
       fflush(stdout);
     }
     int hdd_drq = in>>1&1;
@@ -120,56 +166,9 @@ void * thread_floppy(void * arg) {
     if (hdd_drq) {
       hdd_interrupt();
     }
-    if (!floppy_intr) {
-      ++oldn;
-      continue;
+    if (floppy_intr) {
+      floppy_interrupt(in);
     }
-
-    unsigned int r = in>>31;
-    unsigned int w = in>>30&1;
-    unsigned int addr = in>>21&0x1ff;
-    unsigned int track = in>>13&0xff;
-    unsigned int drive = in>>12&1;
-    if (oldn!=0 && n!=oldn+1) {
-      printf("it=%u r=%u w=%u track=%u addr=%u\n",(unsigned)n,r,w,track,addr);
-      fflush(stdout);
-    }
-    oldn = n;
-    unsigned int newaddr = oldaddr==390?0:(oldaddr+1);
-    if (oldaddr<=390 && addr!=newaddr) {
-      printf("missed addr, expected=%u, got=%u, oldin=%08x in=%08x\n",newaddr,addr,oldin,in);
-      fflush(stdout);
-    }
-    oldaddr = addr;
-
-    // start a critical section so the image is not changed during access
-    pthread_mutex_lock(&mutex);
-    if (r) {
-      pos_fifo[2] = pos_fifo[1];
-      pos_fifo[1] = pos_fifo[0];
-
-      unsigned int pos = addr*16+16;
-      if (img[drive]) {
-        uint8_t *trkp = flopimg_trackpos(img[drive],track>>1,track&1);
-        if (pos>=6250) {
-          pos = 0;
-        }
-        pos_fifo[0].p = trkp+pos;
-        pos_fifo[0].count = pos<6240?16:10;
-        memcpy((void*)&parmreg[8],pos_fifo[0].p,pos_fifo[0].count);
-      } else {
-        pos_fifo[0].p = NULL;
-        pos_fifo[0].count = 0;
-      }
-      pos_fifo[0].drive = drive;
-
-      if (w) {
-        memcpy(pos_fifo[2].p,(void*)&parmreg[8],pos_fifo[2].count);
-        flopimg_writeback(img[pos_fifo[2].drive]);
-      }
-    }
-    pthread_mutex_unlock(&mutex);
-    oldin = in;
   }
 
   change_floppy(NULL,0);
