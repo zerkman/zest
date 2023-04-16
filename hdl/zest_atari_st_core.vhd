@@ -350,7 +350,7 @@ begin
 		host_addr => host_addr,
 		host_track => host_track
 	);
-	irq <= fdd_intr or acsi_intr;
+	irq <= fdd_drq or acsi_intr;
 
 	acsi:entity acsi_drive port map (
 		clk => clk,
