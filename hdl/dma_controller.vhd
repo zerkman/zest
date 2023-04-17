@@ -162,10 +162,7 @@ begin
 							end if;
 						end if;
 					else
-						if iD(3) = '0' and iD(4) = '0' then
-							-- FDC register select
-							sca <= iD(2 downto 1);
-						end if;
+						sca <= iD(2 downto 1);
 						hdc_fdcn <= iD(3);
 						reg_sel <= iD(4);
 						dma_on <= not iD(6);
