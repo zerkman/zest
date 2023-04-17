@@ -72,7 +72,7 @@ architecture rtl of acsi_drive is
 	signal r_data		: r_data_t;
 	signal r_data_idx	: integer range 0 to 1;
 
-	signal reg			: std_logic_vector(31 downto 0);
+	signal reg			: std_logic_vector(8 downto 0);
 	signal status		: std_logic_vector(7 downto 0);
 	signal csn1			: std_logic;
 	signal init_dma_rd	: std_logic;
@@ -114,29 +114,21 @@ begin
 			re2 => ram_re2
 		);
 
-	-- Bridge bus access to the internal registers or memory buffer
-	process(bridge_addr,bridge_r,bridge_w,bridge_w_data)
+	-- Bridge bus access to memory buffer
+	process(bridge_addr,bridge_r,bridge_w)
 	begin
 		ram_re1 <= '0';
 		ram_we1 <= '0';
 		-- test address top bit
-		if bridge_addr(ADDR_MSB+1) = '0' then
-			-- register access
-			if bridge_r = '1' or bridge_w = '1' then
-				r_data_idx <= 0;
-			end if;
-		else
+		if bridge_addr(ADDR_MSB+1) = '1' then
 			-- ram access
 			ram_re1 <= bridge_r;
 			ram_we1 <= bridge_w;
-			if bridge_r = '1' or bridge_w = '1' then
-				r_data_idx <= 1;
-			end if;
 		end if;
 	end process;
 	bridge_r_data <= r_data(r_data_idx);
 	r_data(1) <= ram_dout1;
-	r_data(0) <= reg;
+	r_data(0) <= (31 downto 9 => '0') & reg;
 	ram_addr1 <= bridge_addr(ADDR_MSB downto ADDR_LSB);
 	ram_din1 <= bridge_w_data;
 	ram_wsb1 <= bridge_w_strb;
@@ -160,6 +152,7 @@ begin
 			init_dma_rd <= '0';
 			init_dma_wr <= '0';
 			dma_buf_id <= '0';
+			r_data_idx <= 0;
 		elsif rising_edge(clk) then
 			csn1 <= csn;
 			init_dma_rd <= '0';
@@ -167,12 +160,19 @@ begin
 			if csn = '0' and csn1 = '1' then
 				if rwn = '0' then
 					-- we received a byte from the DMA host
-					reg <= (31 downto 9 => '0') & a1 & w_d;
+					reg <= a1 & w_d;
 					hs_hostintr <= '1';
 				else
 					rdhs <= status;
 				end if;
 				sintn <= '1';
+			end if;
+			if bridge_r = '1' then
+				if bridge_addr(ADDR_MSB+1) = '0' then
+					r_data_idx <= 0;
+				else
+					r_data_idx <= 1;
+				end if;
 			end if;
 			if bridge_addr(ADDR_MSB+1) = '0' and (bridge_r = '1' or bridge_w = '1') then
 				-- register access from PL
