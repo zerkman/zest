@@ -37,10 +37,39 @@ void hdd_init(volatile uint32_t *parmreg) {
   openimg(config.hdd_image);
 }
 
+static unsigned char command[6];
+static int cmd_rd_idx = 0;
+
 void hdd_interrupt(void) {
   unsigned int reg = *acsireg;
   int d = reg&0xff;
   int a1 = (reg>>8)&1;
-  printf("received: d=%d, a1=%d\n",d,a1);
+  //printf("received: d=%d, a1=%d\n",d,a1);
+
+  if ((cmd_rd_idx==0)!=(a1==0)) {
+    printf("ACSI error: cmd byte #%d, A1=%d\n",cmd_rd_idx,a1);
+    cmd_rd_idx = 0;
+    return;
+  }
+
+  if (cmd_rd_idx==0) {
+    // get command byte
+    int ctrl_num = d>>5;
+    // only controller ID 0 is supported
+    if (ctrl_num!=0) return;
+    int cmd = d&0x1f;
+    if (cmd!=8) return;
+  }
+  command[cmd_rd_idx++] = d;
+  if (cmd_rd_idx==6) {
+    int i;
+    cmd_rd_idx = 0;
+    printf("cmd:");
+    for (i=0;i<6;++i) printf(" %02x",command[i]);
+    printf("\n");
+  }
+  *acsireg = 0;
+
+
 
 }
