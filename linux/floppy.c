@@ -72,6 +72,7 @@ void floppy_interrupt(uint32_t in) {
   unsigned int track = in>>13&0xff;
   unsigned int drive = in>>12&1;
 
+  if (addr==oldaddr) return;
   unsigned int newaddr = oldaddr==390?0:(oldaddr+1);
   if (oldaddr<=390 && addr!=newaddr) {
     printf("missed addr, expected=%u, got=%u, oldin=%08x in=%08x\n",newaddr,addr,oldin,in);
