@@ -294,7 +294,7 @@ begin
 	axi_awaddr(31 downto 2) <= a(31 downto 2);
 	axi_awaddr(1 downto 0) <= "00";
 	axi_awvalid <= M_AXI_ARESETN and (init_write or axi_awvalid_ff) and not axi_wvalid;
-	wdone <= (axi_bready and M_AXI_BVALID) or (w and wdone_ff);
+	wdone <= (axi_bready and M_AXI_BVALID) or (init_write_ff and wdone_ff);
 
 	process(M_AXI_ACLK)
 	begin
