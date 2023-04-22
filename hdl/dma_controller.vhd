@@ -287,17 +287,19 @@ begin
 					dc_st <= run_inc;
 				when run_inc =>
 					ACKn <= '1';
-					sec_cnt <= sec_cnt - 1;
-					buf_di <= buf_di + 1;
-					if buf_di + 1 = 0 then
-						buf_wl <= not buf_wl;
-						if dma_w = '0' or sec_cnt - 1 >= 32 then
-							-- read: always flush buffer to memory
-							-- write: need to fetch at least 16 more bytes apart from the 16 already in buffer
-							bus_st <= start;
+					if buf_di + 1 /= 0 or bus_st = done or bus_st = idle then
+						sec_cnt <= sec_cnt - 1;
+						buf_di <= buf_di + 1;
+						if buf_di + 1 = 0 then
+							buf_wl <= not buf_wl;
+							if dma_w = '0' or sec_cnt - 1 >= 32 then
+								-- read: always flush buffer to memory
+								-- write: need to fetch at least 16 more bytes apart from the 16 already in buffer
+								bus_st <= start;
+							end if;
 						end if;
+						dc_st <= running;
 					end if;
-					dc_st <= running;
 				when done =>
 					null;
 				end case;
