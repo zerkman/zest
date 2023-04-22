@@ -78,6 +78,7 @@ architecture rtl of acsi_drive is
 	signal init_dma_rd	: std_logic;
 	signal init_dma_wr	: std_logic;
 	signal dma_buf_id	: std_logic;
+	signal dma_maxblk	: unsigned(4 downto 0);
 	signal rdhs			: std_logic_vector(7 downto 0);
 	signal hs_hostintr	: std_logic;
 
@@ -152,6 +153,7 @@ begin
 			init_dma_rd <= '0';
 			init_dma_wr <= '0';
 			dma_buf_id <= '0';
+			dma_maxblk <= (others => '0');
 			r_data_idx <= 0;
 		elsif rising_edge(clk) then
 			csn1 <= csn;
@@ -189,10 +191,12 @@ begin
 								-- initiate DMA read transfer (send to DMA)
 								init_dma_rd <= '1';
 								dma_buf_id <= bridge_w_data(0);
+								dma_maxblk <= unsigned(bridge_w_data(7 downto 3));
 							when "10" =>
 								-- initiate DMA write transfer (read from DMA)
 								init_dma_wr <= '1';
 								dma_buf_id <= bridge_w_data(0);
+								dma_maxblk <= unsigned(bridge_w_data(7 downto 3));
 							when others =>
 								null;
 						end case;
@@ -264,7 +268,7 @@ begin
 					end if;
 				when READ4 =>
 					if ackn = '1' then
-						if dma_cnt < 511 then
+						if (dma_cnt+1)/16 <= dma_maxblk then
 							dma_cnt <= dma_cnt + 1;
 							dma_st <= READ;
 						else
@@ -294,7 +298,7 @@ begin
 					ram_wsb2 <= "0000";
 					ram_we2 <= '0';
 					if ackn = '1' then
-						if dma_cnt < 511 then
+						if (dma_cnt+1)/16 <= dma_maxblk then
 							dma_cnt <= dma_cnt + 1;
 							dma_st <= WRITE;
 						else
