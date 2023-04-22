@@ -21,6 +21,8 @@
 
 void hdd_init(volatile uint32_t *parmreg);
 
+void hdd_exit(void);
+
 void hdd_interrupt(void);
 
 #endif

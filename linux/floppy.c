@@ -164,16 +164,17 @@ void * thread_floppy(void * arg) {
     }
     int hdd_drq = in>>1&1;
     int floppy_intr = in&1;
-    if (hdd_drq) {
-      hdd_interrupt();
-    }
     if (floppy_intr) {
       floppy_interrupt(in);
+    }
+    if (hdd_drq) {
+      hdd_interrupt();
     }
   }
 
   change_floppy(NULL,0);
   change_floppy(NULL,1);
+  hdd_exit();
 
   return NULL;
 }
