@@ -105,12 +105,12 @@ begin
 			fdd_ack <= '0';
 			if bridge_w = '1' then
 				out_reg(to_integer(unsigned(bridge_addr))) <= bridge_w_data;
-				if unsigned(bridge_addr) = 8 then
-					fdd_ack <= '1';
-				end if;
 			end if;
 			if bridge_r = '1' then
 				bridge_r_data <= in_reg(to_integer(unsigned(bridge_addr)));
+				if unsigned(bridge_addr) = 0 then
+					fdd_ack <= '1';
+				end if;
 			end if;
 		end if;
 	end process;
