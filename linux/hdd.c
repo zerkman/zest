@@ -82,6 +82,27 @@ static void read_next(int bsize) {
   }
 }
 
+static void write_first(void) {
+  // initiate initial DMA write
+  int nbs = 31;
+  *acsireg = 0x200 | nbs<<3 | dma_buf_id;
+}
+
+static void write_next(void) {
+  // initiate next DMA write
+  int nbs = 31;
+  if (--dma_rem_sectors>0) {
+    *acsireg = 0x200 | nbs<<3 | (1-dma_buf_id);
+  }
+  write(img_fd,((char*)iobuf)+dma_buf_id*512,512);
+  dma_buf_id ^= 1;
+  if (dma_rem_sectors==0) {
+    // finish command
+    *acsireg = 0;
+    dma_on = 0;
+  }
+}
+
 void hdd_interrupt(void) {
   unsigned int reg = *acsireg;
 
@@ -93,6 +114,10 @@ void hdd_interrupt(void) {
     if (command[0]==8 || command[0]==0x12) {
       // read or inquiry
       read_next(512);
+    }
+    else if (command[0]==0x0a) {
+      // write
+      write_next();
     }
     return;
   }
@@ -136,6 +161,16 @@ void hdd_interrupt(void) {
       lseek(img_fd,sector*512,SEEK_SET);
       read(img_fd,(void*)iobuf,512);
       read_next(512);
+      return;
+    }
+    else if (command[0]==0x0a) {
+      // write
+      dma_on = 1;
+      dma_buf_id = 0;
+      int sector = (command[1]<<8|command[2])<<8|command[3];
+      dma_rem_sectors = command[4];
+      lseek(img_fd,sector*512,SEEK_SET);
+      write_first();
       return;
     }
     else if (command[0]==0x12) {
