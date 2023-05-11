@@ -95,7 +95,7 @@ begin
 	end if;
 end process;
 
-host_drq <= drq;
+host_drq <= drq and (drv0_select nand drv1_select);
 
 -- position
 process(clk,resetn)
