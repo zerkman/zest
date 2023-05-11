@@ -134,7 +134,6 @@ architecture structure of zest_atari_st_core is
 	signal fdd_drq		: std_logic;
 	signal fdd_ack		: std_logic;
 	signal fdd_derr		: std_logic;
-	signal fdd_intr		: std_logic;
 	signal acsi_intr	: std_logic;
 
 	signal in_reg0		: std_logic_vector(31 downto 0);
@@ -338,7 +337,7 @@ begin
 
 		host_wp0 => wp0,
 		host_wp1 => wp1,
-		host_intr => fdd_intr,
+		host_intr => open,
 		host_drq => fdd_drq,
 		host_ack => fdd_ack,
 		host_derr => fdd_derr,
