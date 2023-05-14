@@ -371,9 +371,9 @@ begin
 end process;
 
 -- dma registers access
-process(iA,iASn)
+process(iA,iASn,iLDSn,iUDSn)
 begin
-	if iASn = '0' and iA(23 downto 2)&"00" = x"ff8604" then
+	if iASn = '0' and iLDSn = '0' and iUDSn = '0' and iA(23 downto 2)&"00" = x"ff8604" then
 		FCSn <= '0';
 	else
 		FCSn <= '1';
