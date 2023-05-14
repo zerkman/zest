@@ -120,9 +120,8 @@ begin
 		end if;
 	end process;
 
-	process(clk)
+	process(resetn,clk)
 	begin
-		if rising_edge(clk) then
 		if resetn = '0' then
 			oRDY <= '0';
 			dma_w <= '0';
@@ -139,7 +138,8 @@ begin
 			ACKn <= '1';
 			dma_fdc <= '0';
 			hdc_fdcn <= '0';
-		elsif cken = '1' then
+		elsif rising_edge(clk) then
+		if cken = '1' then
 			socd <= x"ff";
 			scrwn <= '1';
 			sfdcsn <= '1';
