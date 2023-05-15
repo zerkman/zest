@@ -136,7 +136,7 @@ begin
 	drq <= sdrq;
 	intn <= sintn;
 	srd <= rdhs when dma_st = IDLE else rddma;
-	r_d <= srd when (sdrq = '1' or sintn = '0') else x"ff";
+	r_d <= srd when (sdrq = '1' or csn = '0') else x"ff";
 	host_intr <= hs_hostintr or dma_hostintr;
 
 	-- Handshake register, Status register, DMA interrupt

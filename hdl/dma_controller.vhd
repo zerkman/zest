@@ -102,9 +102,10 @@ begin
 			else
 				if A1 = '0' then
 					if reg_sel = '0' then
-						-- read register from FDC
+						-- read register from FDC/HDC
 						CRWn <= '1';
 						CA <= sca;
+						HDCSn <= not hdc_fdcn;
 						FDCSn <= hdc_fdcn;
 						if rdreg_ff = '1' then
 							oD <= x"00" & sicd;
