@@ -138,7 +138,7 @@ void hdd_interrupt(void) {
     // only controller ID 0 is supported
     if (ctrl_num!=0) return;
     int cmd = d&0x1f;
-    if (cmd!=0 && cmd!=8 && cmd!=0x12) return;
+    if (cmd!=0 && cmd!=8 && cmd!=0x0a && cmd!=0x12) return;
   }
   command[cmd_rd_idx++] = d;
   if (cmd_rd_idx==6) {
