@@ -142,11 +142,7 @@ void hdd_interrupt(void) {
   }
   command[cmd_rd_idx++] = d;
   if (cmd_rd_idx==6) {
-    int i;
     cmd_rd_idx = 0;
-    printf("cmd:");
-    for (i=0;i<6;++i) printf(" %02x",command[i]);
-    printf("\n");
     if (command[0]==0) {
       // send response, no error
       *acsireg = 0;
