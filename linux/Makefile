@@ -27,6 +27,7 @@ AR=$(TOOLCHAIN)ar
 TARGETS=zeST
 CFLAGS=-g -Wall -Os
 LDLIBS=`pkg-config --libs inih`
+LDFLAGS=-s
 
 all: $(TARGETS)
 
