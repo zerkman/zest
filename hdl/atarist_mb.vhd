@@ -272,6 +272,7 @@ architecture structure of atarist_mb is
 
 	signal fdc_INTRQ		: std_logic;
 	signal fdc_oDAL			: std_logic_vector(7 downto 0);
+	signal fdcdma_intn		: std_logic;
 
 	signal psg_csn			: std_logic;
 	signal psg_bdir			: std_logic;
@@ -568,8 +569,9 @@ begin
 		rrn => mfp_rrn,
 		trn => mfp_trn
 	);
+	fdcdma_intn <= dma_intn and not fdc_INTRQ;
 	mfp_iein <= '0';
-	mfp_ii <= not monomon & '1' & (dma_intn and not fdc_INTRQ) & acia_irq & "1111";
+	mfp_ii <= not monomon & '1' & fdcdma_intn & acia_irq & "1111";
 	mfp_tai <= '1';
 	mfp_tbi <= sde;
 	mfp_si <= '0';
