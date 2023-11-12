@@ -29,6 +29,9 @@ entity bridge_dispatcher is
 		N_OUTPUTS		: integer := 2		-- number of outputs
 	);
 	port (
+		clk				: in std_logic;
+		resetn			: in std_logic;
+
 		-- bridge host signals
 		host_addr		: in std_logic_vector(ADDR_WIDTH-1 downto DATA_WIDTH_BITS-3);
 		host_r			: in std_logic;
@@ -51,33 +54,43 @@ architecture arch_imp of bridge_dispatcher is
 	signal rdst			: integer range 0 to N_OUTPUTS-1;
 
 begin
-	dev_addr <= host_addr(SUBADDR_WIDTH-1 downto DATA_WIDTH_BITS-3);
-	dev_w_data <= host_w_data;
-	dev_w_strb <= host_w_strb;
-
 	host_r_data <= dev_r_data((2**DATA_WIDTH_BITS)*(rdst+1)-1 downto (2**DATA_WIDTH_BITS)*rdst);
 
-	process(host_r,host_addr,host_w)
+	process(clk,resetn)
 	begin
-		dev_w <= (others => '0');
-		dev_r <= (others => '0');
-		if host_w = '1' then
-			for i in 0 to N_OUTPUTS-1 loop
-				if i = unsigned(host_addr(ADDR_WIDTH-1 downto SUBADDR_WIDTH)) then
-					dev_w(i) <= '1';
-				else
-					dev_w(i) <= '0';
-				end if;
-			end loop;
-		elsif host_r = '1' then
-			for i in 0 to N_OUTPUTS-1 loop
-				if i = unsigned(host_addr(ADDR_WIDTH-1 downto SUBADDR_WIDTH)) then
-					dev_r(i) <= '1';
-					rdst <= i;
-				else
-					dev_r(i) <= '0';
-				end if;
-			end loop;
+		if resetn = '0' then
+			dev_addr <= (others => '1');
+			rdst <= 0;
+			dev_r <= (others => '0');
+			dev_w_data <= (others => '0');
+			dev_w_strb <= (others => '0');
+			dev_w <= (others => '0');
+		elsif rising_edge(clk) then
+			dev_addr <= (others => '1');
+			if host_r = '1' or host_w = '1' then
+				dev_addr <= host_addr(SUBADDR_WIDTH-1 downto DATA_WIDTH_BITS-3);
+			end if;
+			dev_r <= (others => '0');
+			if host_r = '1' then
+				for i in 0 to N_OUTPUTS-1 loop
+					if i = unsigned(host_addr(ADDR_WIDTH-1 downto SUBADDR_WIDTH)) then
+						dev_r(i) <= '1';
+						rdst <= i;
+					end if;
+				end loop;
+			end if;
+			dev_w_data <= (others => '0');
+			dev_w_strb <= (others => '0');
+			dev_w <= (others => '0');
+			if host_w = '1' then
+				dev_w_data <= host_w_data;
+				dev_w_strb <= host_w_strb;
+				for i in 0 to N_OUTPUTS-1 loop
+					if i = unsigned(host_addr(ADDR_WIDTH-1 downto SUBADDR_WIDTH)) then
+						dev_w(i) <= '1';
+					end if;
+				end loop;
+			end if;
 		end if;
 	end process;
 

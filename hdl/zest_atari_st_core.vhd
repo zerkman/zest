@@ -207,6 +207,8 @@ begin
 		N_OUTPUTS => N_OUTPUTS
 	)
 	port map (
+		clk => clk,
+		resetn => resetn,
 		host_addr => bridge_addr,
 		host_r => bridge_r,
 		host_r_data => bridge_r_data,

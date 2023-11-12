@@ -100,7 +100,7 @@ end bridge_host;
 
 architecture arch_imp of bridge_host is
 
-	constant r_delay	: integer := 2;
+	constant r_delay	: integer := 2+1;		-- +1 for additional delay of downstream dispatcher
 	signal r_delay_cnt	: integer range 0 to r_delay-1;
 	signal rvalid		: std_logic;
 
