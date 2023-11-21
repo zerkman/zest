@@ -157,15 +157,25 @@ architecture behavioral of glue is
 		vid_vde_on			=> 36,
 		vid_vde_off			=> 436);
 
-	type mode_array_t is array (0 to 2) of videomode_t;
-	constant mode       : mode_array_t := (mode_60,mode_50,mode_hi);
+	function mode_select(mono: in std_logic; hz50: in std_logic) return videomode_t is
+	begin
+		if mono = '1' then
+			return mode_hi;
+		elsif hz50 = '1' then
+			return mode_50;
+		else
+			return mode_60;
+		end if;
+	end function;
 
 	-- resolution
-	signal mono		: std_logic;
-	signal mono_0	: std_logic;
+	signal mono		: std_logic;	-- mono mode, synced to en2rck
+	signal mono_0	: std_logic;	-- mono mode, synced to en8rck
+	signal mono_vs	: std_logic;	-- mono mode, saved on vsync
 	-- 0 -> 60 Hz, 1 -> 50 Hz
-	signal hz50		: std_logic;
-	signal hz50_0	: std_logic;
+	signal hz50		: std_logic;	-- PAL mode, synchronised to en2rck
+	signal hz50_0	: std_logic;	-- PAL mode, synchronised to en8rck
+	signal hz50_vs	: std_logic;	-- PAL mode, saved on vsync
 
 	signal hcnt		: unsigned(6 downto 0);
 	signal nexthcnt	: unsigned(6 downto 0);
@@ -182,10 +192,10 @@ architecture behavioral of glue is
 	signal vid_vde   : std_logic;
 	signal vid_hde   : std_logic;
 
-	signal mode_id	: integer range 0 to 2;
-	signal dmode_id	: integer range 0 to 2;
-	signal smode_id	: integer range 0 to 2;
-	signal vmode_id	: integer range 0 to 2;
+	signal mode		: videomode_t;		-- current video mode, synced to 2 mhz clock
+	signal dmode	: videomode_t;		-- mode, synced to 8 mhz clock
+	signal smode	: videomode_t;		-- mode, wrt. line-buffered hz50 (line_pal)
+	signal vsmode	: videomode_t;		-- mode stored at last VSYNC
 
 	signal irq_vbl	: std_logic;
 	signal irq_hbl	: std_logic;
@@ -222,9 +232,10 @@ oRDY <= sdma;
 DMAn <= sdma;
 RAMn <= sram;
 
-mode_id <= to_integer(unsigned(std_logic_vector'(mono & (hz50 and not mono))));
-dmode_id <= to_integer(unsigned(std_logic_vector'(mono & (hz50_0 and not mono))));
-smode_id <= to_integer(unsigned(std_logic_vector'(mono & (line_pal and not mono))));
+mode <= mode_select(mono,hz50);
+dmode <= mode_select(mono,hz50_0);
+smode <= mode_select(mono,line_pal);
+vsmode <= mode_select(mono_vs,hz50_vs);
 
 -- 8-bit bus (ACIA) signal management
 process(iA,iASn,VMAn)
@@ -478,7 +489,7 @@ begin
 			irq_hbl <= '0';
 			irq_vbl <= '0';
 		elsif en2fck = '1' then
-			if vcnt = 0 and nexthcnt = mode(mode_id).hvsync_on then
+			if vcnt = 0 and nexthcnt = mode.hvsync_on then
 				irq_vbl <= '1';
 			end if;
 			if nexthcnt = 0 then
@@ -521,9 +532,9 @@ end process;
 IACKn <= not ack_mfp;
 
 -- video sync
-process(hcnt,mono,smode_id)
+process(hcnt,smode)
 begin
-	if hcnt+1 = mode(smode_id).cycles_per_line then
+	if hcnt+1 = smode.cycles_per_line then
 		nexthcnt <= (others => '0');
 	else
 		nexthcnt <= hcnt+1;
@@ -544,7 +555,8 @@ begin
 			hcnt <= (others => '1');
 			vcnt <= (others => '0');
 			line_pal <= '0';
-			vmode_id <= 0;
+			hz50_vs <= '0';
+			mono_vs <= '0';
 			vid_vsync <= '0';
 			vid_hsync <= '0';
 			vid_vde <= '0';
@@ -564,56 +576,57 @@ begin
 				hde <= '0';
 				hblank <= '1';
 			end if;
-			if nexthcnt = mode(smode_id).hsync_off then
+			if nexthcnt = smode.hsync_off then
 				shsync <= '0';
 				hsdly <= '1';
 			end if;
-			if nexthcnt = mode(mode_id).hde_on then
+			if nexthcnt = mode.hde_on then
 				hde <= '1';
 			end if;
-			if nexthcnt = mode(mode_id).hde_off then
+			if nexthcnt = mode.hde_off then
 				hde <= '0';
 			end if;
-			if nexthcnt = mode(mode_id).hblank_on then
+			if nexthcnt = mode.hblank_on then
 				hblank <= '1';
 			end if;
-			if nexthcnt = mode(mode_id).hblank_off then
+			if nexthcnt = mode.hblank_off then
 				hblank <= '0';
 			end if;
 
 			-- update V signals
 			nextvcnt := vcnt;
 			if nexthcnt = 0 then
-				if vcnt+1 = mode(vmode_id).n_lines then
+				if vcnt+1 = vsmode.n_lines then
 					nextvcnt := (others => '0');
-					vmode_id <= mode_id;
+					hz50_vs <= hz50;
+					mono_vs <= mono;
 				else
 					nextvcnt := vcnt + 1;
 				end if;
 				vcnt <= nextvcnt;
-				if nextvcnt = mode(dmode_id).vblank_on then
+				if nextvcnt = dmode.vblank_on then
 					vblank <= '1';
 				end if;
-				if nextvcnt = mode(dmode_id).vblank_off then
+				if nextvcnt = dmode.vblank_off then
 					vblank <= '0';
 				end if;
-				if nextvcnt = mode(dmode_id).vde_on then
+				if nextvcnt = dmode.vde_on then
 					vde <= '1';
 				end if;
-				if nextvcnt = mode(dmode_id).vde_off then
+				if nextvcnt = dmode.vde_off then
 					vde <= '0';
 				end if;
 			end if;
-			if nexthcnt = mode(mode_id).hvsync_on then
+			if nexthcnt = mode.hvsync_on then
 				if nextvcnt = 0 then
 					svsync <= '1';
-				elsif nextvcnt = mode(mode_id).vvsync_on then
+				elsif nextvcnt = mode.vvsync_on then
 					svsync <= '0';
 					vde <= '0';
 				end if;
 			end if;
 
-			if nexthcnt = mode(vmode_id).vid_hsync_on then
+			if nexthcnt = vsmode.vid_hsync_on then
 				vid_hsync <= '1';
 				vsync1 <= svsync;
 				if svsync = '1' and vsync1 = '0' then
@@ -625,20 +638,20 @@ begin
 						vid_vsync <= '0';
 					end if;
 				end if;
-				if nextvcnt = mode(vmode_id).vid_vde_on-1 then
+				if nextvcnt = vsmode.vid_vde_on-1 then
 					vid_vde <= '1';
 				end if;
-				if nextvcnt = mode(vmode_id).vid_vde_off-1 then
+				if nextvcnt = vsmode.vid_vde_off-1 then
 					vid_vde <= '0';
 				end if;
 			end if;
-			if nexthcnt = mode(vmode_id).vid_hsync_off then
+			if nexthcnt = vsmode.vid_hsync_off then
 				vid_hsync <= '0';
 			end if;
-			if nexthcnt = mode(vmode_id).vid_hde_on then
+			if nexthcnt = vsmode.vid_hde_on then
 				vid_hde <= '1';
 			end if;
-			if nexthcnt = mode(vmode_id).vid_hde_off then
+			if nexthcnt = vsmode.vid_hde_off then
 				vid_hde <= '0';
 			end if;
 		elsif en2rck = '1' then
