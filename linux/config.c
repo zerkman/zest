@@ -67,6 +67,8 @@ static int handler(void* user, const char* section, const char* name, const char
   #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
   if (MATCH("main","mono")) {
     pconfig->mono = truefalse(value);
+  } else if (MATCH("main","extended_video_modes")) {
+    pconfig->extended_video_modes = truefalse(value);
   } else if (MATCH("main","mem_size")) {
     pconfig->mem_size = memorysize(value);
   } else if (MATCH("main", "wakestate")) {
@@ -114,4 +116,3 @@ void config_load(const char *filename) {
     return;
   }
 }
-

@@ -31,6 +31,7 @@ entity atarist_mb is
 		monomon : in std_logic;
 		mem_top	: in std_logic_vector(3 downto 0);
 		wakestate : in std_logic_vector(1 downto 0);
+		cfg_extmod : in std_logic;
 
 		pclken : out std_logic;
 		de : out std_logic;
@@ -458,7 +459,8 @@ begin
 
 		vid_vsync => vsync,
 		vid_hsync => hsync,
-		vid_de => de
+		vid_de => de,
+		cfg_extmod => cfg_extmod
 	);
 	glue_iA <= bus_A;
 	glue_iASn <= bus_ASn;

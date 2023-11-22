@@ -68,7 +68,9 @@ entity glue is
 
 		vid_vsync   : out std_logic;
 		vid_hsync   : out std_logic;
-		vid_de	    : out std_logic
+		vid_de	    : out std_logic;
+
+		cfg_extmod	: in std_logic
 	);
 end glue;
 
@@ -156,13 +158,39 @@ architecture behavioral of glue is
 		vid_hde_off			=> 49,
 		vid_vde_on			=> 36,
 		vid_vde_off			=> 436);
+	constant ext_mode_50	: videomode_t := (
+		cycles_per_line		=> 128,
+		n_lines				=> 313,
+		vblank_off			=> 25,
+		vde_on				=> 25,
+		vde_off				=> 301,
+		vblank_on			=> 308,
+		vvsync_on			=> 310,
+		hsync_off			=> 118,
+		hvsync_on			=> 16,
+		hblank_off			=> 10,
+		hde_on				=> 17,
+		hde_off				=> 97,
+		hblank_on			=> 115,
+		vid_hsync_on		=> 120,
+		vid_hsync_off		=> 126,
+		vid_hde_on			=> 10,
+		vid_hde_off			=> 115,
+		vid_vde_on			=> 34,
+		vid_vde_off			=> 310);
 
-	function mode_select(mono: in std_logic; hz50: in std_logic) return videomode_t is
+	signal extmod	: std_logic;
+
+	function mode_select(mono: in std_logic; hz50: in std_logic; cfg_extmod: in std_logic; extmod: in std_logic) return videomode_t is
 	begin
 		if mono = '1' then
 			return mode_hi;
 		elsif hz50 = '1' then
-			return mode_50;
+			if cfg_extmod = '1' and extmod = '1' then
+				return ext_mode_50;
+			else
+				return mode_50;
+			end if;
 		else
 			return mode_60;
 		end if;
@@ -232,10 +260,10 @@ oRDY <= sdma;
 DMAn <= sdma;
 RAMn <= sram;
 
-mode <= mode_select(mono,hz50);
-dmode <= mode_select(mono,hz50_0);
-smode <= mode_select(mono,line_pal);
-vsmode <= mode_select(mono_vs,hz50_vs);
+mode <= mode_select(mono,hz50,cfg_extmod,extmod);
+dmode <= mode_select(mono,hz50_0,cfg_extmod,extmod);
+smode <= mode_select(mono,line_pal,cfg_extmod,extmod);
+vsmode <= mode_select(mono_vs,hz50_vs,cfg_extmod,extmod);
 
 -- 8-bit bus (ACIA) signal management
 process(iA,iASn,VMAn)
@@ -265,6 +293,7 @@ begin
 		dma_w <= '0';
 		mmuct <= "00";
 		idtackff <= '1';
+		extmod <= '0';
 	elsif en8fck = '1' then
 		idtackff <= iDTACKn;
 		if iDTACKn = '0' and idtackff = '1' and sram = '0' then

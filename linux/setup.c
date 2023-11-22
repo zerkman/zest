@@ -66,6 +66,7 @@ static void setup_cfg(int reset) {
     cfg |= sound_vol<<10;
   cfg |= config.floppy_a_write_protect<<15;
   cfg |= config.floppy_b_write_protect<<16;
+  cfg |= config.extended_video_modes<<17;
   parmreg[0] = cfg;
 }
 
