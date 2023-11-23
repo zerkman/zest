@@ -66,40 +66,66 @@ v_opnwk:
 	move	sr,-(sp)	;
 	bra	mgde
 
-; Portion of code that is called after v_opnwk return
+; Portion of code that is called after standard VDI v_opnwk return
 post_opnwk:
-	move.l	(sp)+,a1	; int_out array
 
-	;move.w	d0,(a1)		; max X coord (commented out to leave unchanged)
-	move.w	#275,2(a1)	; max Y coord
+	moveq	#3,d0
+	and.b	$ffff8260.w,d0	; get screen mode
+	move	d0,d1
 
-	move.l	$44e.w,d0	; logical screen base (_v_bas_ad)
-	sub.l	#(276*160-200*160+254)&$ffff00,d0	; corrected screen address
-	move.l	d0,$44e.w	; new logical screen base
+	bset	#2,d0
+	move.b	d0,$ffff8260.w	; enable extended mode
 
+	lsl	#4,d1		; mode*16
+
+	move.l	$44e.w,a0	; logical screen base (_v_bas_ad)
+	suba.w	mdata+12(pc,d1.w),a0	; corrected screen address
+	move.l	a0,$44e.w	; new logical screen base
+	move.l	a0,d0
 	lsr.w	#8,d0
 	move.l	d0,$ffff8200.w	; physical screen address
 
-	bset.b	#2,$ffff8260.w	; enable extended mode
+	dc.w	$a000		; get Line-A structure address in a0
+	move.l	(sp)+,a1	; int_out array
+	move	mdata+0(pc,d1.w),d0	; screen width
+	move	d0,-12(a0)	; horizontal pixel resolution
+	subq	#1,d0
+	move	d0,(a1)		; max X coord
+	move	d0,-692(a0)	; max X coord (width-1)
 
-	dc.w	$a000
+	move	mdata+2(pc,d1.w),d0	; screen height
+	move	d0,-4(a0)	; vertical pixel resolution
+	subq	#1,d0
+	move	d0,2(a1)	; max Y coord
+	move	d0,-690(a0)	; max Y coord (height-1)
 
-	;move	d1,2(a0)		; bytes/scanline
-	;move	d1,-2(a0)		; bytes per screen line
-	move	#276,-4(a0)		; vertical pixel resolution
-	;move	ck_vwidth(pc),-12(a0)	; horizontal pixel resolution
+	move	mdata+4(pc,d1.w),d0	; bytes per scanline
+	move	d0,2(a0)		; bytes/scanline
+	move	d0,-2(a0)		; bytes per screen line
 
-	;move	d0,-44(a0)		; number of VT52 characters per line -1
+	move	mdata+6(pc,d1.w),-44(a0)	; number of VT52 characters per line -1
 
 	;move	-46(a0),d0		; text cell height (8 or 16)
 
-	;move	d1,-40(a0)		; VT52 text line size in bytes
-	move	#33,-42(a0)		; Number of VT52 text lines -1
-	;move	d1,-692(a0)		; max X coord (width-1)
-	move	#275,-690(a0)		; max Y coord (height-1)
+	move	mdata+8(pc,d1.w),-40(a0)	; VT52 text line size in bytes
+	move	mdata+10(pc,d1.w),d0	; number of VT52 text lines
+	subq	#1,d0
+	move	d0,-42(a0)		; Number of VT52 text lines -1
 
 	rte
 
+; Extended screen mode data values in order, and offsets
+; - 0:screen width in pixels
+; - 2:screen height in pixels
+; - 4:number of bytes per scanline
+; - 6:number of VT52 characters per line
+; - 8:VT52 text line size in bytes
+; - 10:number of VT52 text lines
+; - 12:number of extra screen size bytes (including padding for 256B alignment)
+; - 14:reserved dummy value, left to 0
+mdata:
+	dc.w	416,276,208, 52,1664,34,25600,0	; low resolution
+	dc.w	832,276,208,104,1664,34,25600,0	; medium resolution
 
 end_resident:
 
