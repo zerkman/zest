@@ -30,14 +30,14 @@ entity glue is
 		iA          : in std_logic_vector(23 downto 1);
 		iASn        : in std_logic;
 		iRWn        : in std_logic;
-		iD          : in std_logic_vector(1 downto 0);
+		iD          : in std_logic_vector(2 downto 0);
 		iUDSn       : in std_logic;
 		iLDSn       : in std_logic;
 		iDTACKn     : in std_logic;
 		oRWn        : out std_logic;
 		oDTACKn     : out std_logic;
 		BEER        : out std_logic;
-		oD          : out std_logic_vector(1 downto 0);
+		oD          : out std_logic_vector(2 downto 0);
 
 		FC          : in std_logic_vector(2 downto 0);
 		IPLn        : out std_logic_vector(2 downto 1);
@@ -162,9 +162,9 @@ architecture behavioral of glue is
 		cycles_per_line		=> 128,
 		n_lines				=> 313,
 		vblank_off			=> 25,
-		vde_on				=> 25,
-		vde_off				=> 301,
-		vblank_on			=> 308,
+		vde_on				=> 34,
+		vde_off				=> 310,
+		vblank_on			=> 310,
 		vvsync_on			=> 310,
 		hsync_off			=> 118,
 		hvsync_on			=> 16,
@@ -179,7 +179,8 @@ architecture behavioral of glue is
 		vid_vde_on			=> 34,
 		vid_vde_off			=> 310);
 
-	signal extmod	: std_logic;
+	signal extmod	: std_logic;	-- extended mode bit
+	signal extmod_vs : std_logic;	-- extended mode bit, saved on vsync
 
 	function mode_select(mono: in std_logic; hz50: in std_logic; cfg_extmod: in std_logic; extmod: in std_logic) return videomode_t is
 	begin
@@ -197,11 +198,12 @@ architecture behavioral of glue is
 	end function;
 
 	-- resolution
-	signal mono		: std_logic;	-- mono mode, synced to en2rck
+	signal mono		: std_logic;	-- mono mode, 1 cycle later than mono_0
 	signal mono_0	: std_logic;	-- mono mode, synced to en8rck
 	signal mono_vs	: std_logic;	-- mono mode, saved on vsync
+	signal medres	: std_logic;	-- medium mode
 	-- 0 -> 60 Hz, 1 -> 50 Hz
-	signal hz50		: std_logic;	-- PAL mode, synchronised to en2rck
+	signal hz50		: std_logic;	-- PAL mode, synchronised to en2fck
 	signal hz50_0	: std_logic;	-- PAL mode, synchronised to en8rck
 	signal hz50_vs	: std_logic;	-- PAL mode, saved on vsync
 
@@ -260,10 +262,10 @@ oRDY <= sdma;
 DMAn <= sdma;
 RAMn <= sram;
 
-mode <= mode_select(mono,hz50,cfg_extmod,extmod);
-dmode <= mode_select(mono,hz50_0,cfg_extmod,extmod);
-smode <= mode_select(mono,line_pal,cfg_extmod,extmod);
-vsmode <= mode_select(mono_vs,hz50_vs,cfg_extmod,extmod);
+mode <= mode_select(mono,hz50,cfg_extmod,extmod_vs);
+dmode <= mode_select(mono,hz50_0,cfg_extmod,extmod_vs);
+smode <= mode_select(mono,line_pal,cfg_extmod,extmod_vs);
+vsmode <= mode_select(mono_vs,hz50_vs,cfg_extmod,extmod_vs);
 
 -- 8-bit bus (ACIA) signal management
 process(iA,iASn,VMAn)
@@ -289,6 +291,7 @@ begin
 		sdtackn <= '1';
 		mono <= '0';
 		mono_0 <= '0';
+		medres <= '0';
 		hz50_0 <= '0';
 		dma_w <= '0';
 		mmuct <= "00";
@@ -311,7 +314,14 @@ begin
 			if iA(23 downto 15) = "111111111" and FC(2) = '1' then
 				-- hardware registers
 				if iA(15 downto 1)&'0' = x"820a" and iUDSn = '0' and iRWn = '1' then
-					oD <= hz50&'0';
+					oD <= '0'&hz50&'0';
+				end if;
+				if iA(15 downto 1)&'0' = x"8260" and iUDSn = '0' and iRWn = '1' then
+					-- read resolution
+					-- should be Shifter's job, but we need to allow read access to extmod so we do it in GLUE
+					oD(2) <= cfg_extmod and extmod;
+					oD(1) <= mono;
+					oD(0) <= medres;
 				end if;
 				if iA(15 downto 2)&"00" = x"8604" then
 					-- assert DTACKn for DMA register access
@@ -327,8 +337,12 @@ begin
 			if iA(23 downto 1)&'0' = x"ff820a" then
 				hz50_0 <= iD(1);
 			elsif iA(23 downto 1)&'0' = x"ff8260" then
-					-- resolution (write only - Read is managed by Shifter.)
+				-- resolution
+				if cfg_extmod = '1' then
+					extmod <= iD(2);
+				end if;
 				mono_0 <= iD(1);
+				medres <= iD(0);
 			elsif iA(23 downto 1)&'0' = x"ff8606" then
 				dma_w <= iD(0);
 			end if;
@@ -586,6 +600,7 @@ begin
 			line_pal <= '0';
 			hz50_vs <= '0';
 			mono_vs <= '0';
+			extmod_vs <= '0';
 			vid_vsync <= '0';
 			vid_hsync <= '0';
 			vid_vde <= '0';
@@ -629,6 +644,7 @@ begin
 					nextvcnt := (others => '0');
 					hz50_vs <= hz50;
 					mono_vs <= mono;
+					extmod_vs <= extmod;
 				else
 					nextvcnt := vcnt + 1;
 				end if;

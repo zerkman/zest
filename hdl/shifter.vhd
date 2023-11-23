@@ -85,15 +85,13 @@ begin
 	end if;
 end process;
 
--- read from palette or resolution registers
+-- read from palette
 process(CSn,RWn,address,palette,res)
 begin
 	od <= x"ffff";
 	if CSn = '0' and RWn = '1' then
 		if address < 16 then
 			oD <= "00000"&palette(address)(8 downto 6)&'0'&palette(address)(5 downto 3)&'0'&palette(address)(2 downto 0);
-		else
-			oD <= "000000" & res_ff & "00000000";
 		end if;
 	end if;
 end process;

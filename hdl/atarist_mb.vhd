@@ -174,12 +174,12 @@ architecture structure of atarist_mb is
 	signal glue_iA		: std_logic_vector(23 downto 1);
 	signal glue_iASn	: std_logic;
 	signal glue_iRWn	: std_logic;
-	signal glue_iD		: std_logic_vector(1 downto 0);
+	signal glue_iD		: std_logic_vector(2 downto 0);
 	signal glue_iUDSn	: std_logic;
 	signal glue_iLDSn	: std_logic;
 	signal glue_oRWn	: std_logic;
 	signal glue_DTACKn	: std_logic;
-	signal glue_oD		: std_logic_vector(1 downto 0);
+	signal glue_oD		: std_logic_vector(2 downto 0);
 	signal cs6850		: std_logic;
 	signal st_vsync		: std_logic;
 	signal st_hsync		: std_logic;
@@ -465,7 +465,7 @@ begin
 	glue_iA <= bus_A;
 	glue_iASn <= bus_ASn;
 	glue_iRWn <= bus_RWn;
-	glue_iD	<= bus_D(9 downto 8);
+	glue_iD	<= bus_D(10 downto 8);
 	glue_iUDSn <= bus_UDSn;
 	glue_iLDSn <= bus_LDSn;
 
