@@ -181,12 +181,58 @@ _is2:
 
 	move.l	$88.w,old_gem
 	move.l	#my_gem,$88.w	; AES/VDI (Trap #2) vector
+
+	moveq	#0,d0
+	move	mdata+12(pc),d0	; Extra screen bytes for mode 0
+	move	mdata+28(pc),d1	; Extra screen bytes for mode 1
+	cmp	d1,d0
+	bcc.s	foundmax
+	move	d1,d0		; maximum extra screen size
+foundmax:
+
+	move.l	$436.w,a0	; _memtop
+	move.l	a0,a3		; save old value
+	sub.l	d0,a0		; fix _memtop so it points before screen memory
+	move.l	a0,$436.w
+
+; Look for our program's MD (memory descriptor)
+; To our knowledge, there is no known standard way to find the MPB (Memory
+; Parameter Block) that has been initialised at boot.
+; Hence we directly search for our MD by scanning the system memory.
+	lea	begin-256(pc),a0	; basepage address
+	sub.l	a0,a3		; current block size value
+	lea	$2004.w,a1	; TOS internal variables
+	move.l	$432.w,a2	; _membot
+	sub.l	#12,a2		; remove size of MD
+mdsearch_lp:
+	cmp.l	(a1),a0		; Block address
+	bne.s	.cont
+	cmp.l	4(a1),a3	; Block size
+	beq.s	mdsearch_found
+.cont	addq.l	#2,a1
+	cmp.l	a2,a1
+	ble.s	mdsearch_lp
+	bra.s	mdsearch_notfound
+
+; Here we shrink the allocated buffer size for our program.
+; Since we are now using a larger video memory buffer, we need to inform the
+; system that a part of memory is not available anymore for allocation.
+; Our program's memory has been allocated by Malloc, and the normal system
+; behaviour is to allocate the largest available block of memory for any new
+; program. When the program quits, the memory block will become a free block,
+; so changing our program's memory descriptor will also affect the largest
+; free block after program termination.
+mdsearch_found:
+	sub.l	d0,4(a1)	; Shrink block size
+
+; if not found (should not happen!), do nothing
+mdsearch_notfound:
 	moveq	#0,d0
 	rts
 
 cconws:
 	move.l	a0,-(sp)
-	move	#9,-(sp)		; Cconws
+	move	#9,-(sp)	; Cconws
 	trap	#1
 	addq.l	#6,sp
 	rts
