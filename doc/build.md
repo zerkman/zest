@@ -43,11 +43,11 @@ The directory for the board definition files is `zturn-stuff/boards`.
 
 In the `zest/vivado` directory, you will find a `create_project.sh` shell script and different TCL script files, each one corresponding to a specific FPGA board. You will need to identify the file that corresponds to your hardware.
 
-If, for instance, you choose to create the project corresponding to the zest_z7lite.tcl file, enter the command:
+If, for instance, you choose to create the project corresponding to the `zest_z7lite_7010.tcl` file, enter the command:
 
-    $ ./create_project.sh zest_z7lite
+    $ ./create_project.sh zest_z7lite_7010
 
-This will create a `zest_z7lite` directory with all the project files in it.
+This will create a `zest_z7lite_7010` directory with all the project files in it.
 
 Now your Vivado project setup is complete.
 
@@ -56,16 +56,16 @@ Now your Vivado project setup is complete.
 Open the project in Vivado.
 From the left panel, in **Program and debug**, click **Generate Bitstream**. The process will take a few minutes to complete.
 
-When the generation is complete, you need to copy the bitstream file to the zeST setup directory. If, depending on your FPGA board, your Vivado project name is for instance `zest_z7lite`, the command will be:
+When the generation is complete, you need to copy the bitstream file to the zeST setup directory. If, depending on your FPGA board, your Vivado project name is for instance `zest_z7lite_7010`, the command will be:
 
-    $ cp $HOME/src/zest/vivado/zest_z7lite/zest_z7lite.runs/impl_1/zest_top.bit $HOME/src/zest/setup
+    $ cp $HOME/src/zest/vivado/zest_z7lite_7010/zest_z7lite_7010.runs/impl_1/zest_top.bit $HOME/src/zest/setup
 
 ### Export the hardware
 
 Click **File -> Export -> Export Hardware**. This opens the *Export Hardware Platform* dialog.
 - On the first page of the dialog, click **Next**.
 - As platform properties, choose **Pre-synthesis**, then click **Next**.
-- Now you can choose the export file name. The default is `$HOME/src/zest/vivado/zest_z7lite/zest_top.xsa`, assuming your Vivado project name is `zest_z7lite`. Just leave it as is and click **Next**.
+- Now you can choose the export file name. The default is `$HOME/src/zest/vivado/zest_z7lite_7010/zest_top.xsa`, assuming your Vivado project name is `zest_z7lite_7010`. Just leave it as is and click **Next**.
 - Click **Finish**.
 
 You have now generated the platform file to generate the bootloaders, as well as the Linux device tree.
