@@ -101,6 +101,7 @@ static int handler(void* user, const char* section, const char* name, const char
 
 void config_load(const char *filename) {
   config.mono = 0;
+  config.extended_video_modes = 0;
   config.mem_size = CFG_1M;
   config.wakestate = 3;
   config.rom_file = NULL;
