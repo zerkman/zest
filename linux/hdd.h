@@ -25,5 +25,7 @@ void hdd_exit(void);
 
 void hdd_interrupt(void);
 
+void hdd_changeimg(char *full_pathname);
+
 #endif
 

@@ -31,6 +31,9 @@ void set_wakestate(int ws);
 // Get current wakestate (1-4)
 int get_wakestate(void);
 
+// Set extended modes
+void set_extended();
+
 // Load ROM file
 // returns 0 on success
 int load_rom(const char *filename);

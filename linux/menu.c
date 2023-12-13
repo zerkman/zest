@@ -33,8 +33,7 @@ extern int tolower (int __c);
 #include "setup.h"
 #include "config.h"
 #include "floppy.h"
-
-#define FILE_SELECTOR_VIEWS 3
+#include "hdd.h"
 
 typedef struct _file_selector_state {
   int total_listing_files;
@@ -47,7 +46,16 @@ typedef struct _file_selector_state {
 enum {
   FILE_SELECTOR_DISK_A,
   FILE_SELECTOR_DISK_B,
-  FILE_SELECTOR_TOS_IMAGE
+  FILE_SELECTOR_TOS_IMAGE,
+  FILE_SELECTOR_HDD_IMAGE,
+  FILE_SELECTOR_VIEWS, // Always place this last!
+};
+
+enum {
+  UI_CLICK,
+  UI_CLOSE_FORM,
+  UI_OPEN_FILE_SELECTOR,
+  UI_KEEP_FORM_OPEN     = 99,
 };
 
 // Stuff that would be nice for the UI lib:
@@ -92,12 +100,12 @@ int view;
 static int buttonclick_warm_reset(ZuiWidget* obj)
 {
   warm_reset();
-  return 0;
+  return UI_CLOSE_FORM;
 }
 
 static int buttonclick_cold_reset(ZuiWidget* obj) {
   cold_reset();
-  return 0;
+  return UI_CLOSE_FORM;
 }
 
 
@@ -177,7 +185,7 @@ static int buttonclick_fsel_up_arrow(ZuiWidget* obj) {
       update_file_listing();
     }
   }
-  return 0;
+  return UI_CLICK;
 }
 
 static int buttonclick_fsel_down_arrow(ZuiWidget* obj) {
@@ -190,7 +198,7 @@ static int buttonclick_fsel_down_arrow(ZuiWidget* obj) {
       update_file_listing();
     }
   }
-  return 0;
+  return UI_CLICK;
 }
 
 void read_directory(char *path) {
@@ -247,6 +255,11 @@ void read_directory(char *path) {
           directory_filenames[current_view->total_listing_files]=*current_glob + pathname_bytes_to_skip;
           current_view->total_listing_files++;
         }
+      } else if (view==FILE_SELECTOR_HDD_IMAGE) {
+        if (strcmp(extension, "img")==0||strcmp(extension, "ahd")==0) {
+          directory_filenames[current_view->total_listing_files]=*current_glob + pathname_bytes_to_skip;
+          current_view->total_listing_files++;
+        }
       }
     }
     current_glob++;
@@ -266,7 +279,7 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
   int i=strlen(current_view->current_directory);
   if (i==1) {
     // We're at /
-    return 0;
+    return UI_CLICK;
   }
   char *p=current_view->current_directory+i-2;
   while (*p!='/') {
@@ -277,12 +290,12 @@ static int buttonclick_fsel_dir_up(ZuiWidget* obj) {
   // Update the form
   update_file_selector_when_entering_new_directory();
 
-  return 0;
+  return UI_CLICK;
 }
 
 static int buttonclick_fsel_cancel(ZuiWidget* obj) {
   globfree(&glob_info);
-  return 1;
+  return UI_CLOSE_FORM;
 }
 
 static int buttonclick_fsel_ok(ZuiWidget* obj) {
@@ -301,13 +314,17 @@ static int buttonclick_fsel_ok(ZuiWidget* obj) {
   }
   if (view==FILE_SELECTOR_DISK_A||view==FILE_SELECTOR_DISK_B) {
     int drive = view==FILE_SELECTOR_DISK_B;
-    strcpy(current_view->selected_file, selected_item-strlen(current_view->current_directory));
+    strcpy(current_view->selected_file,selected_item-strlen(current_view->current_directory));
     change_floppy(selected_item-strlen(current_view->current_directory),drive);
   } else if (view==FILE_SELECTOR_TOS_IMAGE) {
     load_rom(selected_item);
     cold_reset();
+  } else if (view==FILE_SELECTOR_HDD_IMAGE) {
+    strcpy(current_view->selected_file,selected_item-strlen(current_view->current_directory));
+    hdd_changeimg(selected_item);
+    cold_reset();
   }
-  return 1;
+  return UI_CLOSE_FORM;
 }
 
 static int buttonclick_fsel_ok_reset(ZuiWidget* obj) {
@@ -320,12 +337,12 @@ static int buttonclick_fsel_ok_reset(ZuiWidget* obj) {
 
 static int buttonclick_eject_floppy_a(ZuiWidget* obj) {
   change_floppy(NULL,0);
-  return 0;
+  return UI_CLICK;
 }
 
 static int buttonclick_eject_floppy_b(ZuiWidget* obj) {
   change_floppy(NULL,1);
-  return 0;
+  return UI_CLICK;
 }
 
 ZuiWidget * menu_file_selector() {
@@ -336,12 +353,14 @@ ZuiWidget * menu_file_selector() {
     zui_add_child(form, zui_text(0, 0, "\x5    Select a disk image for drive B   \x7"));
   } else if (view==FILE_SELECTOR_TOS_IMAGE) {
     zui_add_child(form, zui_text(0, 0, "\x5          Select a TOS image          \x7"));
+  } else if (view==FILE_SELECTOR_HDD_IMAGE) {
+    zui_add_child(form, zui_text(0, 0, "\x5       Select a hard disk image       \x7"));
   }
   zui_add_child(form,zui_text(FSEL_XCHARS-1,FSEL_YCHARS-1,"\x6"));                               // "window resize" glyph on ST font
   zui_add_child(form,zui_button(FSEL_XCHARS-1,1,"\x1",buttonclick_fsel_up_arrow));               // up arrow glyph on ST font
   zui_add_child(form,zui_button(FSEL_XCHARS-1,FSEL_YCHARS-2,"\x2",buttonclick_fsel_down_arrow)); // down arrow on ST font
   zui_add_child(form,zui_button(1,FSEL_YCHARS-1,"Dir up",buttonclick_fsel_dir_up));
-  if (view!=FILE_SELECTOR_TOS_IMAGE) {
+  if (view==FILE_SELECTOR_DISK_A||view==FILE_SELECTOR_DISK_B) {
     zui_add_child(form, zui_button(8, FSEL_YCHARS-1, "Ok", buttonclick_fsel_ok));
   }
   zui_add_child(form,zui_button(11,FSEL_YCHARS-1,"Ok (reset)",buttonclick_fsel_ok_reset));
@@ -374,7 +393,7 @@ static void setup_item_selector(int selector_view) {
       char *p=current_view->selected_file+strlen(current_view->current_directory);
       while (i) {
         if (strcmp(i, p)==0) {
-          // Initially we try center the cursor position
+          // Initially we try to center the cursor position
           current_view->file_selector_current_top=l-file_selector_filename_lines/2;
           current_view->file_selector_cursor_position=file_selector_filename_lines/2;
           if (current_view->file_selector_current_top<0) {
@@ -406,77 +425,142 @@ static void setup_item_selector(int selector_view) {
 static int buttonclick_insert_floppy_a(ZuiWidget* obj) {
   view=FILE_SELECTOR_DISK_A;
   setup_item_selector(FILE_SELECTOR_DISK_A);
-  return 2;
+  return UI_OPEN_FILE_SELECTOR;
 }
 
 static int buttonclick_insert_floppy_b(ZuiWidget* obj) {
   view=FILE_SELECTOR_DISK_B;
   setup_item_selector(FILE_SELECTOR_DISK_B);
-  return 3;
+  return UI_OPEN_FILE_SELECTOR;
 }
 
 static int buttonclick_select_tos(ZuiWidget* obj) {
   view=FILE_SELECTOR_TOS_IMAGE;
   setup_item_selector(FILE_SELECTOR_TOS_IMAGE);
-  return 4;
+  return UI_OPEN_FILE_SELECTOR;
 }
 
-static int buttonclick_change_ram_size(ZuiWidget* obj) {
-  return 0;
+static int buttonclick_select_hdd(ZuiWidget* obj) {
+  view=FILE_SELECTOR_HDD_IMAGE;
+  setup_item_selector(FILE_SELECTOR_HDD_IMAGE);
+  return UI_OPEN_FILE_SELECTOR;
 }
 
 static int buttonclick_exit_menu(ZuiWidget* obj) {
-  return 1;
+  return UI_CLOSE_FORM;
 }
 
 static int buttonclick_ws1(ZuiWidget* obj) {
   set_wakestate(1);
-  return 1;
+  return UI_KEEP_FORM_OPEN;
 }
 
 static int buttonclick_ws2(ZuiWidget* obj) {
   set_wakestate(2);
-  return 1;
+  return UI_KEEP_FORM_OPEN;
 }
 
 static int buttonclick_ws3(ZuiWidget* obj) {
   set_wakestate(3);
-  return 1;
+  return UI_KEEP_FORM_OPEN;
 }
 
 static int buttonclick_ws4(ZuiWidget* obj) {
   set_wakestate(4);
-  return 1;
+  return UI_KEEP_FORM_OPEN;
+}
+
+static int buttonclick_extended_modes(ZuiWidget* obj) {
+  config.extended_video_modes=(config.extended_video_modes+1)&1;
+  set_extended();
+  return UI_KEEP_FORM_OPEN;
+}
+
+int selected_ram_size=0;
+static int handle_ram_change(int value)
+{
+  if (selected_ram_size == value)  
+  {
+    if (config.mem_size != value) {
+      // User clicked on RAM size that's different that what's running,
+      // so we assume they want a memory re-config. Change RAM size and force cold boot.
+      config.mem_size = value;
+      cold_reset();
+      return UI_CLOSE_FORM;
+    } else {
+      return UI_KEEP_FORM_OPEN;
+    }
+  } else {
+    selected_ram_size = value;
+    return UI_KEEP_FORM_OPEN;
+  }
+}
+
+static int buttonclick_change_ram_size_0(ZuiWidget* obj) {
+  return handle_ram_change(0);
+}
+
+static int buttonclick_change_ram_size_1(ZuiWidget* obj) {
+  return handle_ram_change(1);
+}
+
+static int buttonclick_change_ram_size_2(ZuiWidget* obj) {
+  return handle_ram_change(2);
+}
+
+static int buttonclick_change_ram_size_3(ZuiWidget* obj) {
+  return handle_ram_change(3);
+}
+
+static int buttonclick_change_ram_size_4(ZuiWidget* obj) {
+  return handle_ram_change(4);
+}
+
+static int buttonclick_change_ram_size_5(ZuiWidget* obj) {
+  return handle_ram_change(5);
 }
 
 ZuiWidget * menu_form(void) {
   ZuiWidget * form=zui_panel(0,0,XCHARS,YCHARS);
-  zui_add_child(form,zui_text(0,0,"~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3  ~=[,,_,,]:3"));
+  //zui_add_child(form,zui_text(0,0,"~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3"));
+  zui_add_child(form,zui_text(0,0,"                       zeST main menu"));
   zui_add_child(form,zui_button(1,1,"Warm reset",buttonclick_warm_reset));
   zui_add_child(form,zui_button(1,2,"Cold reset",buttonclick_cold_reset));
   zui_add_child(form,zui_button(1,3,"Disk A",buttonclick_insert_floppy_a));
-  zui_add_child(form,zui_button(1,4,"Disk B",buttonclick_insert_floppy_b));
+  zui_add_child(form,zui_button(9,3,"Disk B",buttonclick_insert_floppy_b));
+  zui_add_child(form,zui_button(1,4,"Select hard disk image",buttonclick_select_hdd));
   zui_add_child(form,zui_button(1,5,"Select TOS image",buttonclick_select_tos));
   zui_add_child(form,zui_button(1,6,"Eject A",buttonclick_eject_floppy_a));
-  zui_add_child(form,zui_button(1,7,"Eject B",buttonclick_eject_floppy_b));
-  zui_add_child(form,zui_button(1,8,"RAM size",buttonclick_change_ram_size));
+  zui_add_child(form,zui_button(10,6,"Eject B",buttonclick_eject_floppy_b));
+  zui_add_child(form,zui_text(1,8,"RAM size:"));
+  int bg_ram[6]={1,1,1,1,1,1};
+  bg_ram[selected_ram_size] = 3;
+  zui_add_child(form,zui_button_ext(12,8,"256k" ,buttonclick_change_ram_size_0,0,bg_ram[0],2,3));
+  zui_add_child(form,zui_button_ext(17,8,"512k" ,buttonclick_change_ram_size_1,0,bg_ram[1],2,3));
+  zui_add_child(form,zui_button_ext(22,8,"1Mb"  ,buttonclick_change_ram_size_2,0,bg_ram[2],2,3));
+  zui_add_child(form,zui_button_ext(26,8,"2Mb"  ,buttonclick_change_ram_size_3,0,bg_ram[3],2,3));
+  zui_add_child(form,zui_button_ext(30,8,"2.5Mb",buttonclick_change_ram_size_4,0,bg_ram[4],2,3));
+  zui_add_child(form,zui_button_ext(36,8,"4Mb"  ,buttonclick_change_ram_size_5,0,bg_ram[5],2,3));
   int ws = get_wakestate();
-  int bg[4]={ 1, 1, 1, 1 };
-  bg[ws-1] = 3;
-  zui_add_child(form,zui_button_ext(1,9,"WS1",buttonclick_ws1,0,bg[0],2,3));
-  zui_add_child(form,zui_button_ext(5,9,"WS2",buttonclick_ws2,0,bg[1],2,3));
-  zui_add_child(form,zui_button_ext(9,9,"WS3",buttonclick_ws3,0,bg[2],2,3));
-  zui_add_child(form,zui_button_ext(13,9,"WS4",buttonclick_ws4,0,bg[3],2,3));
-  zui_add_child(form,zui_button(1,10,"Exit menu",buttonclick_exit_menu));
+  int bg_wakestate[4]={1,1,1,1};
+  bg_wakestate[ws-1]=3;
+  zui_add_child(form,zui_text(1,9,"Wakestates:"));
+  zui_add_child(form,zui_button_ext(13,9,"WS1",buttonclick_ws1,0,bg_wakestate[0],2,3));
+  zui_add_child(form,zui_button_ext(17,9,"WS2",buttonclick_ws2,0,bg_wakestate[1],2,3));
+  zui_add_child(form,zui_button_ext(21,9,"WS3",buttonclick_ws3,0,bg_wakestate[2],2,3));
+  zui_add_child(form,zui_button_ext(25,9,"WS4",buttonclick_ws4,0,bg_wakestate[3],2,3));
+  int bg_extended=config.extended_video_modes*2+1;
+  zui_add_child(form,zui_button_ext(1,10,"Extended video modes",buttonclick_extended_modes,0,bg_extended,2,3));
+  zui_add_child(form,zui_button(1,11,"Exit menu",buttonclick_exit_menu));
   return form;
 }
 
 const uint8_t osd_palette[3][24]={
   {
-    0x40,0x40,0x40,
+    0x09,0x0c,0x23,
     0xc0,0xc0,0xc0,
     0xff,0xff,0x80,
-    0x40,0x40,0xff
+    0x40,0xc3,0x40
   },
   {
     6, 40, 38,
@@ -518,60 +602,62 @@ void menu_init(void) {
   setup_file_selector(config.rom_file,FILE_SELECTOR_TOS_IMAGE);
   setup_file_selector(config.floppy_a,FILE_SELECTOR_DISK_A);
   setup_file_selector(config.floppy_b,FILE_SELECTOR_DISK_B);
+  setup_file_selector(config.hdd_image,FILE_SELECTOR_HDD_IMAGE);
 }
 
 static uint8_t gradient[MAX_SCANLINES][3];
-static const uint8_t gradient1_col1[3] = { 0xB1, 0x2B, 0x7F };
-static const uint8_t gradient1_col2[3] = { 0x72, 0xA1, 0xDF };
-static const uint8_t gradients[12][2][3]={
+static const uint8_t gradients[13][2][3]={
+  {{0xB1,0x2B,0x7F},{0x72,0xA1,0xDF}},
   {{0x80,0xc0,0xff},{0x88,0x88,0x88}},  // Light blue->Gray
   {{0x00,0xcc,0xcc},{0x88,0x88,0x88}},  // Cyan->Gray
-  {{245,177,97},  {236,54,110},  },
-  {{33,103,43},   {117,162,61},  },
-  {{174,68,223},  {246,135,135}, },
-  {{216,27,96},   {237,107,154}, },
-  {{255,166,0},   {255,99,97},   },
-  {{7,121,222},   {20,72,140},   },
-  {{0x32, 0x8B, 0x31}, {0x96, 0xCF, 0x24},},            //#328B31 -> #96CF24
-  {{0x99, 0x45, 0xFF}, {0x19, 0xFB, 0x9B},},            //#9945FF -> #19FB9B
-  {{0x06, 0xEB, 0x5B}, {0x00, 0x78, 0xE6},},            //#06EB5B -> #0078E6
-  {{0xFE, 0x37, 0xAF}, {0xFE, 0x07, 0x9C},},            //#FE37AF -> #FE079C
+  {{245 ,177 ,97  },{236 ,54  ,110 }},
+  {{33  ,103 ,43  },{117 ,162 ,61  }},
+  {{174 ,68  ,223 },{246 ,135 ,135 }},
+  {{216 ,27  ,96  },{237 ,107 ,154 }},
+  {{255 ,166 ,0   },{255 ,99  ,97  }},
+  {{7   ,121 ,222 },{20  ,72  ,140 }},
+  {{0x32,0x8B,0x31},{0x96,0xCF,0x24}},  //#328B31 -> #96CF24
+  {{0x99,0x45,0xFF},{0x19,0xFB,0x9B}},  //#9945FF -> #19FB9B
+  {{0x06,0xEB,0x5B},{0x00,0x78,0xE6}},  //#06EB5B -> #0078E6
+  {{0xFE,0x37,0xAF},{0xFE,0x07,0x9C}},  //#FE37AF -> #FE079C
 };
+#define TOTAL_GRADIENTS sizeof(gradients)/(2*3)
 
-//extern void osd_calculate_gradient(uint8_t col1[3], uint8_t col2[3], int steps, uint8_t *output);
+uint8_t top_palette[8][3] = {{7,121,222},{ 0,0,0 },{ 0,0,0 },{ 0,0,0 },{ 0,0,0 },{ 0,0,0 },{ 0,0,0 },{20,72,140},};
+
 void menu(void) {
-  static const uint8_t colour1[8*3]={
-    253,0,0,
-    253,0,0,
-    253,151,0,
-    253,253,0,
-    47,253,0,
-    0,152,253,
-    102,51,254,
-    102,51,254
-  };
   uint8_t osd_palette0[8][24];
 
   osd_init();
   osd_set_palette_all(osd_palette[0]);
+  osd_calculate_gradient( (uint8_t *)&top_palette[0], (uint8_t *)&top_palette[7], 8, (uint8_t *)&top_palette[0]);
   int i;
   for (i=0;i<8;++i) {
     memcpy(osd_palette0[i],osd_palette[0],24);
-    memcpy(&osd_palette0[i][3],&colour1[i*3],3);
+    memcpy(&osd_palette0[i][3],&top_palette[i],3);
   }
   osd_set_palette(0,8,osd_palette0);
 
-  ZuiWidget *form=menu_form();
+  ZuiWidget *form;
+  int retval=UI_KEEP_FORM_OPEN;
+  selected_ram_size = config.mem_size;
 
-  int retval=zui_run(XPOS,YPOS,form);
+  while (retval==UI_KEEP_FORM_OPEN)
+  {
+    form=menu_form();
+    retval=zui_run(XPOS,YPOS,form);
+  }
 
   zui_free(form);
 
-  if (retval>=2&&retval<=4) {
+  if (retval==UI_OPEN_FILE_SELECTOR) {
     // The 'Insert floppy A/floppy B/TOS' button has been pushed
+    static int gradient_count=0;
     ZuiWidget *form=menu_file_selector();
     static const uint8_t file_selector_main_cols[1][8*3]={{255,255,255, 0,0,0, 218,155,66, 192,61,10, 0,0,0, 0,0,0, 0,0,0, 0,0,0,}};
-    osd_calculate_gradient(gradient1_col1,gradient1_col2,MAX_SCANLINES,(uint8_t *)gradient);
+    osd_calculate_gradient(gradients[gradient_count][0],gradients[gradient_count][1],MAX_SCANLINES,(uint8_t *)gradient);
+    gradient_count++;
+    if (gradient_count==TOTAL_GRADIENTS) gradient_count=0;
 
     osd_set_palette_with_one_gradient(file_selector_main_cols[0],gradient,1);
 

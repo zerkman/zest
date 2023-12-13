@@ -124,6 +124,10 @@ void set_wakestate(int ws) {
   setup_cfg(3);
 }
 
+void set_extended() {
+  setup_cfg(3);
+}
+
 int get_wakestate(void) {
   return config.wakestate;
 }

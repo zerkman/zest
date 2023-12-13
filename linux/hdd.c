@@ -49,6 +49,11 @@ static void closeimg(void) {
   img_fd = -1;
 }
 
+void hdd_changeimg(char *full_pathname) {
+  closeimg();
+  openimg(full_pathname);
+}
+
 void hdd_init(volatile uint32_t *parmreg) {
   acsireg = (void*)(((uint8_t*)parmreg)+0x4000);
   iobuf = acsireg + (0x800/4);
