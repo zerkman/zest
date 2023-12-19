@@ -47,6 +47,9 @@ typedef struct {
 
   // hard disk
   const char *hdd_image;            // Hard disk image
+
+  // keyboard
+  int right_alt_is_altgr;           // right alt = 1:Milan AltGr code, 0:Alternate
 } ZestConfig;
 
 extern ZestConfig config;

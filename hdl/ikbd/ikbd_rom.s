@@ -414,8 +414,8 @@ ZF22F	STAB	M0093		; scan code
 	CLRB			; no repeat
 	JSR	tx_val		; put byte in send buffer
 ZF237	LDAA	cur_col
-	CMPA	#$01		; column 1 ?
-	BNE	ZF240
+	CMPA	#$00		; column 0 ? -> never happens
+	BNE	ZF240		; patch makes this whole test useless
 	JMP	ZF2D5		; end of loop
 ; Manage all other non modifier keys
 ZF240	LDAA	TRCSR
@@ -535,7 +535,7 @@ ZF30D	ABX
 	RTS
 
 MF311
-	FCB	$00,$00,$3B,$3C,$3D,$00,$00,$00,$3E,$01,$02,$0F,$10,$1E,$60,$2C
+	FCB	$00,$4C,$3B,$3C,$3D,$00,$00,$00,$3E,$01,$02,$0F,$10,$1E,$60,$2C
 	FCB	$3F,$03,$04,$11,$12,$1F,$20,$2D,$40,$05,$06,$13,$14,$21,$2E,$2F
 	FCB	$41,$07,$08,$15,$22,$23,$30,$31,$42,$09,$0A,$16,$17,$24,$25,$32
 	FCB	$43,$0B,$0C,$18,$19,$26,$33,$39,$44,$0D,$29,$1A,$1B,$27,$34,$3A
@@ -2069,7 +2069,7 @@ ZFF69
 	STAA	M00CB
 	RTS
 
-chksum	FCB	$A6,$FF,$00,$FF,$00,$FF,$00,$FF
+chksum	FCB	$5B,$FF,$00,$FF,$00,$FF,$00,$FF
 	FCB	$00,$FF,$00,$FF,$00,$FF,$00,$FF
 	FCB	$00,$FF,$00,$FF,$00,$FF,$00,$FF
 	FCB	$00,$FF,$00,$FF,$00,$FF,$00,$FF

@@ -99,7 +99,7 @@ architecture structure of zest_atari_st_core is
 	signal ikbd_tx		: std_logic;
 	signal ikbd_j0		: std_logic_vector(4 downto 0);
 	signal ikbd_j1		: std_logic_vector(4 downto 0);
-	signal ikbd_k		: std_logic_vector(94 downto 0);
+	signal ikbd_k		: std_logic_vector(95 downto 0);
 
 	signal cfg_extmod	: std_logic;
 
@@ -381,7 +381,7 @@ begin
 	ikbd_reset <= not soft_resetn;
 	ikbd_j0 <= out_reg7(26 downto 22);
 	ikbd_j1 <= out_reg7(31 downto 27);
-	ikbd_k <= out_reg6(30 downto 0) & out_reg5 & out_reg4;
+	ikbd_k <= out_reg6 & out_reg5 & out_reg4;
 	ikbd:entity atari_ikbd port map (
 		clk => ikbd_clk,
 		clkren => ikbd_clkren,

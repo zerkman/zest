@@ -22,6 +22,7 @@
 
 #include <linux/input-event-codes.h>
 
+#include "config.h"
 #include "input.h"
 #include "menu.h"
 #include "infomsg.h"
@@ -145,8 +146,7 @@ void * thread_ikbd(void * arg) {
             case KEY_RIGHT: key = joy_emu?126:68; break;
             case KEY_KP5: key = 69; break;
             case KEY_KPPLUS: key = 70; break;
-            case KEY_LEFTALT:
-            case KEY_RIGHTALT: key = 71; break;
+            case KEY_LEFTALT: key = 71; break;
             case KEY_102ND: key = 72; break;
             case KEY_D: key = 73; break;
             case KEY_C: key = 74; break;
@@ -170,6 +170,7 @@ void * thread_ikbd(void * arg) {
             case KEY_KP0: key = 92; break;
             case KEY_KPDOT: key = 93; break;
             case KEY_KPENTER: key = 94; break;
+            case KEY_RIGHTALT: key = config.right_alt_is_altgr?95:71; break;
             case BTN_LEFT: key = 122; break;
             case BTN_RIGHT: key = 127; break;
             case KEY_NUMLOCK:

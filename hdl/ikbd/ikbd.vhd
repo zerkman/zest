@@ -28,7 +28,7 @@ entity atari_ikbd is
 		tx		: out std_logic;
 		j0		: in std_logic_vector(4 downto 0);
 		j1		: in std_logic_vector(4 downto 0);
-		k		: in std_logic_vector(94 downto 0)
+		k		: in std_logic_vector(95 downto 0)
 	);
 end atari_ikbd;
 
@@ -68,7 +68,8 @@ architecture behavioral of atari_ikbd is
 
 begin
 
-	row(0) <= (colsel(1) or k(0))
+	row(0) <= (colsel(0) or k(95))
+		and (colsel(1) or k(0))
 		and (colsel(2) or k(1))
 		and (colsel(3) or k(2))
 		and (colsel(4) or k(3))

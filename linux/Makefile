@@ -51,7 +51,7 @@ floppy.o: floppy.c floppy.h floppy_img.h hdd.h config.h
 
 floppy_img.o: floppy_img.c floppy_img.h
 
-ikbd.o: ikbd.c input.h menu.h infomsg.h
+ikbd.o: ikbd.c input.h menu.h infomsg.h config.h
 
 infomsg.o: infomsg.c infomsg.h osd.h setup.h
 
