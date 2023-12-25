@@ -165,20 +165,24 @@ static int guess_size(Flopimg *img) {
   int tracks, sectors;
   for (tracks = MAXTRACK;tracks>0;tracks--) {
     for (sectors = 11; sectors >= 9; sectors--) {
-      if (!(img->image_size % tracks)) {
-        if ((img->image_size % (tracks*sectors*2*512))==0) {
-          img->ntracks = tracks;
-          img->nsides = 2;
-          img->nsectors = sectors;
-          printf("Geometry guessed: %d tracks, %d sides, %d sectors\n", tracks, 2, sectors);
-          return 1;
+      if (!(img->image_size%tracks)) {
+        if ((img->image_size%(tracks*sectors*2*512))==0) {
+          if (tracks*2*sectors*512==img->image_size) {
+            img->ntracks=tracks;
+            img->nsides=2;
+            img->nsectors=sectors;
+            printf("Geometry guessed: %d tracks, %d sides, %d sectors\n",tracks,2,sectors);
+            return 1;
+          }
         }
-        else if ((img->image_size % (tracks*sectors*1*512))==0) {
-          img->ntracks = tracks;
-          img->nsides = 1;
-          img->nsectors = sectors;
-          printf("Geometry guessed: %d tracks, %d sides, %d sectors\n", tracks, 2, sectors);
-          return 1;
+        else if ((img->image_size%(tracks*sectors*1*512))==0) {
+          if (tracks*1*sectors*512==img->image_size) {
+            img->ntracks=tracks;
+            img->nsides=1;
+            img->nsectors=sectors;
+            printf("Geometry guessed: %d tracks, %d sides, %d sectors\n",tracks,2,sectors);
+            return 1;
+          }
         }
       }
     }
@@ -231,21 +235,25 @@ static void load_st_msa(Flopimg *img, int skew, int interleave) {
     }
   } else {
     // MSA image file format
-    img->image_size = lseek(img->fd, 0, SEEK_END);
-    lseek(img->fd, 0, SEEK_SET);
+    img->image_size=lseek(img->fd, 0, SEEK_END);
+    lseek(img->fd,0,SEEK_SET);
     read(img->fd,buf,10);
     if (readwb(buf)!=0x0e0f) {
       printf("Error: not a valid .MSA file\n");
       return;
     }
-    img->nsectors = readwb(buf+2);
-    img->nsides = readwb(buf+4)+1;
+    int tracks=readwb(buf+8)+1;
+    if (img->ntracks>MAXTRACK) {
+      printf("Disk contains %d tracks, which is more than what is supported (%d)\n",tracks,MAXTRACK);
+    }
     unsigned short start_track = readwb(buf+6);
     if (start_track != 0) {
       printf("Partial .msa file supplied. It starts at track %d. This is currently not supported\n", start_track);
       return;
     }
-    img->ntracks = readwb(buf+8)+1;
+    img->nsectors=readwb(buf+2);
+    img->nsides=readwb(buf+4)+1;
+    img->ntracks=readwb(buf+8)+1;
     printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,img->nsectors);
   }
 

@@ -22,7 +22,7 @@
 
 #include <stdint.h>
 
-#define MAXTRACK 84
+#define MAXTRACK 85
 
 typedef struct {
   int fd;         // file descriptor
