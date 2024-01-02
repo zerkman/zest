@@ -105,7 +105,7 @@ void * thread_ikbd(void * arg) {
             case KEY_7: key = 28; break;
             case KEY_9: key = 29; break;
             case KEY_MINUS: key = 30; break;
-            case KEY_BACKSLASH: key = 31; break;
+            case KEY_GRAVE: key = 31; break;
             case KEY_DELETE: key = 32; break;
             case KEY_HOME: key = 33; break;
             case KEY_KP7: key = 34; break;
@@ -130,7 +130,7 @@ void * thread_ikbd(void * arg) {
             case KEY_I: key = 52; break;
             case KEY_P: key = 53; break;
             case KEY_RIGHTBRACE: key = 54; break;
-            case KEY_GRAVE: key = 55; break;
+            case KEY_BACKSLASH: key = 55; break;
             case KEY_DOWN: key = joy_emu?124:56; break;
             case KEY_KP4: key = 57; break;
             case KEY_KP6: key = 58; break;
