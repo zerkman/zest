@@ -1,6 +1,6 @@
 -- sound_mixer.vhd - Atari ST sound mixer
 --
--- Copyright (c) 2023 Francois Galea <fgalea at free.fr>
+-- Copyright (c) 2023-2024 Francois Galea <fgalea at free.fr>
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
 -- the Free Software Foundation, either version 3 of the License, or
