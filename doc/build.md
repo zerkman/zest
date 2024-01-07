@@ -165,7 +165,10 @@ In the configuration menu, choose **Target options**. In this menu:
  - As **Target Architecture Variant**, select **cortex-A9**.
  - Enable **NEON SIMD** and **VFP** extension support options.
 
-Then, go back to the main menu, then choose **Target packages**. This is where additional tools and libraries are installed on the board's Linux system.
+Then, go back to the main menu, then choose **Toolchain**.
+ - As **C library**, choose **uClibc-ng**.
+
+Go back again to the main menu, then choose **Target packages**. This is where additional tools and libraries are installed on the board's Linux system.
 
 One mandatory library that is required by zeST is `inih`. To install it:
  - Go to **Libraries**, then **Text and terminal handling**.
