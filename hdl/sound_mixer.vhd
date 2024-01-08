@@ -57,7 +57,7 @@ architecture rtl of sound_mixer is
 
 begin
 
-	osnd <= std_logic_vector(to_signed(sound/16,16));
+	osnd <= std_logic_vector(to_signed(sound/4,16));
 
 	-- Simple ALU logic
 	process(clk)
