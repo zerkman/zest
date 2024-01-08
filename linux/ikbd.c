@@ -173,6 +173,7 @@ void * thread_ikbd(void * arg) {
             case KEY_RIGHTALT: key = config.right_alt_is_altgr?95:71; break;
             case BTN_LEFT: key = 122; break;
             case BTN_RIGHT: key = 127; break;
+            case BTN_GAMEPAD: key = 127; break;
             case KEY_NUMLOCK:
               if (evvalue == 1) {
                 joy_emu = !joy_emu;
@@ -197,6 +198,20 @@ void * thread_ikbd(void * arg) {
           }
           if (key!=-1) {
             parmreg[4+key/32] = (parmreg[4+key/32] & ~(1<<key%32)) | (!evvalue)<<(key%32);
+          }
+          break;
+        case EV_ABS:
+          // direction event
+          if (evcode==ABS_HAT0X||evcode==ABS_HAT0Y) {
+            unsigned int val = 3;
+            key = -1;
+            if (evvalue==-1) val = 2;
+            if (evvalue==1) val = 1;
+            if (evcode==ABS_HAT0X) key = 125;  // left/right
+            if (evcode==ABS_HAT0Y) key = 123;  // up/down
+            if (key!=-1) {
+              parmreg[4+key/32] = (parmreg[4+key/32] & ~(3<<key%32)) | val<<(key%32);
+            }
           }
           break;
       }
