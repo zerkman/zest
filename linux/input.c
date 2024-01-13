@@ -26,6 +26,8 @@
 #include <poll.h>
 #include <sys/inotify.h>
 
+#include <linux/input-event-codes.h>
+
 #include "input.h"
 
 struct input_event {
@@ -35,9 +37,16 @@ struct input_event {
   unsigned int value;
 };
 
-static char *devname[256];
+// device identifier
+struct _dev_info {
+  char *name;          // name
+  unsigned int cap;    // capabilities
+  int joyid;           // joystick id (-1 if no joystick)
+} dev_info[256];
+
 static struct pollfd pfd[256];
 static int nfds = 0;
+static int njs = 0;
 static int fd_i = 0;
 static struct input_event ie[256];
 static int ie_count = 0;
@@ -50,7 +59,22 @@ static void add_device(const char *name) {
     sprintf(buf,"/dev/input/%s",name);
     pfd[nfds].fd = open(buf,O_RDONLY);
     pfd[nfds].events = POLLIN;
-    devname[nfds] = strdup(name);
+    dev_info[nfds].name = strdup(name);
+    dev_info[nfds].cap = 0;
+    dev_info[nfds].joyid = -1;
+    sprintf(buf,"/sys/class/input/event%s/device/capabilities/ev",name+5);
+    int fd = open(buf,O_RDONLY);
+    if (fd==-1) {
+      printf("error: %s is not accessible\n",buf);
+    } else {
+      int sz = read(fd,buf,sizeof(buf)-1);
+      close(fd);
+      buf[sz] = 0;
+      dev_info[nfds].cap = strtoul(buf,NULL,16);
+      if (dev_info[nfds].cap&1<<EV_ABS) {
+        dev_info[nfds].joyid = njs++;
+      }
+    }
     ++nfds;
   }
 }
@@ -58,15 +82,23 @@ static void add_device(const char *name) {
 static void rm_device(const char *name) {
   if (strncmp(name,"event",5)==0) {
     int i;
+    int joyid = -1;
     for (i=0;i<nfds;++i) {
-      if (strcmp(devname[i],name)==0) {
+      if (strcmp(dev_info[i].name,name)==0) {
+        joyid = dev_info[i].joyid;
         close(pfd[i].fd);
-        free(devname[i]);
+        free(dev_info[i].name);
         pfd[i] = pfd[nfds-1];
-        devname[i] = devname[nfds-1];
+        dev_info[i] = dev_info[nfds-1];
         --nfds;
         break;
       }
+    }
+    if (joyid>=0) {
+      for (i=0;i<nfds;++i) {
+        if (dev_info[i].joyid>joyid) --dev_info[i].joyid;
+      }
+      --njs;
     }
   }
 }
@@ -85,12 +117,13 @@ void input_init(void) {
   inotify_add_watch(inotify_fd,"/dev/input",IN_CREATE|IN_DELETE);
 }
 
-int input_event(int timeout, int *type, int *code, int *value) {
+int input_event(int timeout, int *type, int *code, int *value, int *joyid) {
   char inbuf[sizeof(struct inotify_event)+NAME_MAX+1];
   if (ie_i < ie_count) {
     *type = ie[ie_i].type;
     *code = ie[ie_i].code;
     *value = (int)ie[ie_i].value;
+    if (joyid) *joyid = dev_info[fd_i-1].joyid;
     ++ie_i;
     return 1;
   }
@@ -100,7 +133,7 @@ int input_event(int timeout, int *type, int *code, int *value) {
       ie_count = sz/sizeof(struct input_event);
       ie_i = 0;
       ++fd_i;
-      return input_event(timeout,type,code,value);
+      return input_event(timeout,type,code,value,joyid);
     }
   }
   // All poll events have been processed. We may now scan for new and removed
@@ -129,7 +162,7 @@ int input_event(int timeout, int *type, int *code, int *value) {
     return -1;
   } else if (retval>0) {
     fd_i = 0;
-    return input_event(timeout,type,code,value);
+    return input_event(timeout,type,code,value,joyid);
   }
   // timeout occurred
   return 0;

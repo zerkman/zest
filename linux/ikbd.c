@@ -52,8 +52,8 @@ void * thread_ikbd(void * arg) {
   input_init();
 
   while (thr_end == 0) {
-    int evtype, evcode, evvalue;
-    int retval = input_event(timeout,&evtype,&evcode,&evvalue);
+    int evtype, evcode, evvalue, joyid;
+    int retval = input_event(timeout,&evtype,&evcode,&evvalue,&joyid);
     if (retval < 0) {
       // an error occurred
       break;
@@ -201,15 +201,23 @@ void * thread_ikbd(void * arg) {
           }
           break;
         case EV_ABS:
-          // direction event
-          if (evcode==ABS_HAT0X||evcode==ABS_HAT0Y) {
+          // absolute direction event
+          // consider only the first two joysticks
+          if (joyid>=0 && joyid<2) {
             unsigned int val = 3;
             key = -1;
-            if (evvalue==-1) val = 2;
-            if (evvalue==1) val = 1;
-            if (evcode==ABS_HAT0X) key = 125;  // left/right
-            if (evcode==ABS_HAT0Y) key = 123;  // up/down
+            // PS4-type game controller events
+            if (evcode==ABS_HAT0X||evcode==ABS_HAT0Y) {
+              if (evvalue==-1) val = 2;
+              if (evvalue==1) val = 1;
+              if (evcode==ABS_HAT0X) key = 125;  // left/right axis
+              if (evcode==ABS_HAT0Y) key = 123;  // up/down axis
+            }
             if (key!=-1) {
+              if (joyid==1) {
+                // second joystick goes to the mouse port
+                key -= 5;
+              }
               parmreg[4+key/32] = (parmreg[4+key/32] & ~(3<<key%32)) | val<<(key%32);
             }
           }
