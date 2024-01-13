@@ -226,6 +226,8 @@ void * thread_ikbd(void * arg) {
       // HD6301 keyboard processor reads its mouse input pins.
       // This frequency is typically much higher than the frequency of USB mouse
       // events.
+      int mx0 = mx;
+      int my0 = my;
       if (dx>=2) {
         if (ox==1 && dx>=4) {
           mx = (mx+2)&3;
@@ -274,9 +276,11 @@ void * thread_ikbd(void * arg) {
         }
         timeout = 1;
       }
-      int x = (mx>>1)^mx;
-      int y = (my>>1)^my;
-      parmreg[7] = (parmreg[7] & 0xfc3fffff) | x<<22 | y<<24;
+      if (mx!=mx0 || my!=my0) {
+        int x = (mx>>1)^mx;
+        int y = (my>>1)^my;
+        parmreg[7] = (parmreg[7] & 0xfc3fffff) | x<<22 | y<<24;
+      }
     }
   }
 
