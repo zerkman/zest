@@ -4,16 +4,21 @@
 ## Required material
 
 You’ll need:
- - Vivado and Vitis IDE. The version I used is [2020.2](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/archive.html).
+
+ - Vivado and Vitis IDE. The version I used is [2023.2](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2023-2.html).
  - Development tools:
    - git
    - make
    - device-tree-compiler
    - u-boot-tools
+ - Development libraries:
+   - uuid-dev
+   - gnutls-dev
 
 My build system is a Debian bullseye Linux system, but I believe any GNU/Linux system will do.
 
 This documentation assumes the following file paths:
+
 - The Xilinx tools (Vivado, SDK) installation directory is `/opt/Xilinx`.
 - The Vitis workspace directory is `$HOME/xilinx/workspace`.
 - All source files and git clones are in `$HOME/src`.
@@ -63,6 +68,7 @@ When the generation is complete, you need to copy the bitstream file to the zeST
 ### Export the hardware
 
 Click **File -> Export -> Export Hardware**. This opens the *Export Hardware Platform* dialog.
+
 - On the first page of the dialog, click **Next**.
 - As platform properties, choose **Pre-synthesis**, then click **Next**.
 - Now you can choose the export file name. The default is `$HOME/src/zest/vivado/zest_z7lite_7010/zest_top.xsa`, assuming your Vivado project name is `zest_z7lite_7010`. Just leave it as is and click **Next**.
@@ -74,42 +80,52 @@ You may now exit Vivado.
 
 ## Build the device tree
 
+The current version (2023.2) of the Xilinx tools require to update one of the internally used tools.
+If not already done, the procedure is the following (as root):
+
+    # apt install rlwrap
+    # cd /opt/Xilinx/Vitis/2023.2/bin/unwrapped/lnx64.o
+    # rm rlwrap
+    # ln -s /usr/bin/rlwrap .
+
+Quit the root session and go back to your normal user session.
+
+### Create the device tree source
+
 Get the device tree source code, at the same version as your Vivado/Vitis setup.
 
     $ cd $HOME/src
     $ git clone https://github.com/Xilinx/device-tree-xlnx.git
     $ cd device-tree-xlnx
-    $ git checkout xilinx-v2020.2
+    $ git checkout xilinx-v2023.2
 
-Now, run Vitis.
+Start XSCT:
 
-### Vitis setup
+    $ /opt/Xilinx/Vitis/2023.2/bin/xsct
 
-At the first run of Vitis, you will be asked to choose a workspace directory. Choose `$HOME/xilinx/workspace`.
+Open the XSA file you exported from Vivado, provided the paths are the same as the previous steps:
 
-### Set up the device tree source directory
+    xsct% hsi open_hw_design $::env(HOME)/src/zest/vivado/zest_z7lite_7010/zest_top.xsa
 
-- Click **Window -> Preferences**. This opens the *Preferences* dialog.
-- On the left panel, choose **Xilinx -> Software Repositories**.
-- In the Local Repositories section, add the `$HOME/src/device-tree-xlnx` directory you just created above.
+Setup the path where you fetched the `device-tree-xlnx` repository:
 
-### Create the device tree project
+    xsct% hsi set_repo_path $::env(HOME)/src/device-tree-xlnx
 
-- Click **File -> New -> Platform Project...**. This opens the *New Platform Project* dialog.
-- As Platform project name, enter the name `zest_devicetree`. Then, click **Next**.
-- In the *Create a new platform from hardware (XSA)* tab, choose the XSA file you exported from Vivado. If you kept the default file name, it should be `$HOME/src/zest/vivado/project_name/zest_top.xsa`.
-- In *Software Specification*, as *Operating system*, choose **device_tree**. Leave the default setting for the processor. Leave the *Generate boot components* checkbox unchecked. Then, click **Finish**.
-- Click **Project -> Build All**. After a few seconds, the device tree source files will be generated.
+Create SW design and setup CPU:
+
+    xsct% hsi create_sw_design device-tree -os device_tree -proc ps7_cortexa9_0
+
+Generate DTS/DTSI files to specified folder:
+
+    xsct% hsi generate_target -dir $::env(HOME)/src/zest/setup/dt
+
+Exit XSCT:
+
+    xsct% exit
 
 ### Create the device tree blob
 
-The generated device tree files should be in the `$HOME/xilinx/workspace/zest_devicetree/ps7_cortexa9_0/device_tree_domain/bsp` directory. So issue the commands:
-
-    $ cd $HOME/src/zest
-    $ mkdir setup/dt
-    $ cp $HOME/xilinx/workspace/zest_devicetree/ps7_cortexa9_0/device_tree_domain/bsp/*.dts* setup/dt
-
-You also need the specific `zest.dts` device tree source file for your board.
+You will need the specific `zest.dts` device tree source file for your board.
 All zeST's board-specific device tree source files are in a dedicated subdirectory in `$HOME/src/zest/setup`.
 For instance, for the Z7-Lite board, issue the command:
 
@@ -126,16 +142,31 @@ This generates the `$HOME/src/zest/setup/devicetree.dtb` device tree blob file.
 
 ## Build the first stage bootloader
 
-The generation of the board support package (BSP) and first stage bootloader (FSBL), is done in Vitis.
+The generation of the first stage bootloader (FSBL) is done in XSCT.
 
-- Click **File -> New -> Platform Project...**. This opens the *New Platform Project* dialog.
-- As Platform project name, enter the name `zest_bsp`. Then, click **Next**.
-- In the *Create a new platform from hardware (XSA)* tab, choose the XSA file you exported from Vivado. If you kept the default file name, it should be `$HOME/xilinx/zest/zest_top.xsa`.
-- In *Software Specification*, as *Operating system*, choose **standalone**. Leave the default setting for the processor. Check the *Generate boot components* checkbox. Then, click **Finish**.
-- Click **Project -> Build All**. After a few seconds, the BSP and FSBL files will be generated.
-- Copy the FSBL binary file to the zeST `setup` directory:
+Start XSCT:
 
-      $ cp $HOME/xilinx/workspace/zest_bsp/zynq_fsbl/fsbl.elf $HOME/src/zest/setup
+    $ /opt/Xilinx/Vitis/2023.2/bin/xsct
+
+Open the hardware design from the XSA file you exported from Vivado:
+
+    xsct% set hwdsgn [hsi open_hw_design $::env(HOME)/src/zest/vivado/zest_z7lite_7010/zest_top.xsa]
+
+Generate and build the FSBL into a `$HOME/src/fsbl` directory:
+
+    xsct% hsi generate_app -hw $hwdsgn -os standalone -proc ps7_cortexa9_0 -app zynq_fsbl -compile -sw fsbl -dir $::env(HOME)/src/fsbl
+
+Exit XSCT:
+
+    xsct% exit
+
+Copy the FSBL executable file to the `setup` directory:
+
+    $ cp $HOME/src/fsbl/executable.elf $HOME/src/zest/setup/fsbl.elf
+
+Remove the `$HOME/src/fsbl` as it is no longer needed:
+
+    $ rm -rf $HOME/src/fsbl
 
 <!-- For early information when booting, you may add `FSBL_DEBUG_INFO` in the C preprocessor defines in the fsbl project properties. -->
 
@@ -228,7 +259,7 @@ Get the source code and issue the following configurations:
     $ cd $HOME/src
     $ git clone https://github.com/Xilinx/u-boot-xlnx.git
     $ cd u-boot-xlnx
-    $ git checkout xilinx-v2020.2
+    $ git checkout xilinx-v2023.2
     $ make xilinx_zynq_virt_defconfig
     $ sed -i 's/^\(CONFIG_DEFAULT_DEVICE_TREE\)=.*/\1=""/g' .config
     $ sed -i 's/^\(CONFIG_BAUDRATE\)=.*/\1=921600/g' .config
@@ -238,7 +269,7 @@ Copy the required files:
 
     $ cp $HOME/src/zest/setup/devicetree.dtb arch/arm/dts/unset.dtb
     $ mkdir -p board/xilinx/zynq/custom_hw_platform
-    $ cp $HOME/xilinx/workspace/zest_bsp/hw/ps7_init_gpl.[ch] board/xilinx/zynq/custom_hw_platform
+    $ cp $HOME/src/zest/vivado/zest_z7lite_7010/ps7_init_gpl.[ch] board/xilinx/zynq/custom_hw_platform
 
 Build u-boot
 
@@ -260,22 +291,21 @@ If you have performed the previous steps correctly, you should now have the foll
 - `u-boot.elf`
 
 In `$HOME/src/zest/setup` you should find a `boot.bif` text file containing the following:
-```
-//arch = zynq; split = false; format = BIN
-the_ROM_image:
-{
-        [bootloader]fsbl.elf
-        zest_top.bit
-        u-boot.elf
-        devicetree.dtb
-}
-```
+
+    //arch = zynq; split = false; format = BIN
+    the_ROM_image:
+    {
+            [bootloader]fsbl.elf
+            zest_top.bit
+            u-boot.elf
+            devicetree.dtb
+    }
 
 The file describes the proper pathnames for the different required files.
 
 Issue the command:
 
-    $ /opt/Xilinx/Vitis/2020.2/bin/bootgen -arch zynq -image boot.bif -o BOOT.bin
+    $ /opt/Xilinx/Vitis/2023.2/bin/bootgen -arch zynq -image boot.bif -o BOOT.bin
 
 If everything went correctly, now you’ve got the required `BOOT.bin` file.
 
@@ -285,7 +315,7 @@ You need a `boot.scr` boot script file for u-boot. It contains a list of command
 
 Create a `boot.cmd` file with the contents:
 
-    setenv bootargs console=ttyPS0,115200 rw earlyprintk uio_pdrv_genirq.of_id=generic-uio rootwait
+    setenv bootargs console=ttyPS0,921600 rw earlyprintk uio_pdrv_genirq.of_id=generic-uio rootwait
     fatload mmc 0 0x8000 uImage
     fatload mmc 0 0x800000 devicetree.dtb
     fatload mmc 0 0x900000 rootfs.ub
@@ -301,7 +331,7 @@ Then create `boot.scr` from it, placing it in your `setup` directory:
 Get the Linux source code:
 
     $ git clone https://github.com/Xilinx/linux-xlnx.git
-    $ git checkout xilinx-v2020.2
+    $ git checkout xilinx-v2023.2
 
 Create the default configuration file:
 
