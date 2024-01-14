@@ -45,6 +45,7 @@ void * thread_ikbd(void * arg) {
   unsigned int mx=0,my=0;
   int dx=0,dy=0,ox=0,oy=0;
   int timeout = 100;
+  int tp_x=-1,tp_y=-1;
 
   int joyemufd = open(JOY_EMU_LED_FILE,O_WRONLY|O_SYNC);
   int joy_emu = 0;
@@ -172,6 +173,7 @@ void * thread_ikbd(void * arg) {
             case KEY_KPENTER: key = 94; break;
             case KEY_RIGHTALT: key = config.right_alt_is_altgr?95:71; break;
             case BTN_LEFT: key = 122; break;
+            case BTN_NORTH: key = 122; break;
             case BTN_RIGHT: key = 127; break;
             case BTN_GAMEPAD: key = 127; break;
             case KEY_NUMLOCK:
@@ -193,6 +195,10 @@ void * thread_ikbd(void * arg) {
             case KEY_VOLUMEUP:
               if (evvalue) vol_up();
               break;
+            case BTN_TOUCH:
+              // finger removed from touch pad: stop coordinate tracking
+              if (evvalue==0) tp_x = tp_y = -1;
+              break;
             // default:
             //   printf("Key code:%d val:%d\n",evcode,evvalue);
           }
@@ -202,6 +208,20 @@ void * thread_ikbd(void * arg) {
           break;
         case EV_ABS:
           // absolute direction event
+
+          // touch pad event
+          if (evcode==ABS_MT_POSITION_X||evcode==ABS_MT_POSITION_Y) {
+            if (evcode==ABS_MT_POSITION_X) {
+              if (tp_x!=-1) dx += tp_x-evvalue;
+              tp_x = evvalue;
+            }
+            if (evcode==ABS_MT_POSITION_Y) {
+              if (tp_y!=-1) dy += tp_y-evvalue;
+              tp_y = evvalue;
+            }
+            timeout = 0;
+          }
+
           // consider only the first two joysticks
           if (joyid>=0 && joyid<2) {
             unsigned int val = 3;
