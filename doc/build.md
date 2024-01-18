@@ -33,17 +33,6 @@ Issue those commands:
 
 ## Create the Vivado project and generate the bitstream file
 
-### Download the board definition files
-
-This step is necessary (?) only to people using the Z-Turn board.
-
-To get the Z-Turn board definition files for Vivado, use the command:
-
-    $ cd $HOME/src
-    $ git clone https://github.com/q3k/zturn-stuff
-
-The directory for the board definition files is `zturn-stuff/boards`.
-
 ### Create the Vivado project
 
 In the `zest/vivado` directory, you will find a `create_project.sh` shell script and different TCL script files, each one corresponding to a specific FPGA board. You will need to identify the file that corresponds to your hardware.

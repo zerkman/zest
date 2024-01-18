@@ -15,115 +15,54 @@
 #   run results please launch the synthesis/implementation runs as needed.
 #
 #*****************************************************************************************
-# NOTE: In order to use this script for source control purposes, please make sure that the
-#       following files are added to the source control system:-
-#
-# 1. This project restoration tcl script (zest_zturn.tcl) that was generated.
-#
-# 2. The following source(s) files that were local or imported into the original project.
-#    (Please see the '$orig_proj_dir' and '$origin_dir' variable setting below at the start of the script)
-#
-#    <none>
-#
-# 3. The following remote source files that were added to the original project:-
-#
-#    "../hdl/configurator.vhd"
-#    "../hdl/ddr_controller_interface.vhd"
-#    "../hdl/ram_tdp.vhd"
-#    "../hdl/osd.vhd"
-#    "../hdl/ikbd/HD63701.v"
-#    "../hdl/ikbd/HD63701_ALU.v"
-#    "../hdl/ikbd/HD63701_CORE.v"
-#    "../hdl/ikbd/HD63701_EXEC.v"
-#    "../hdl/ikbd/HD63701_MCROM.v"
-#    "../hdl/ikbd/HD63701_SEQ.v"
-#    "../hdl/ikbd/MCU_BIROM.v"
-#    "../hdl/fx68k/fx68k.sv"
-#    "../hdl/fx68k/fx68kAlu.sv"
-#    "../hdl/fx68k/uaddrPla.sv"
-#    "../hdl/GrayCounter.vhd"
-#    "../hdl/aFifo.vhd"
-#    "../hdl/acia6850.vhd"
-#    "../hdl/atarist_bus.vhd"
-#    "../hdl/atarist_mb.vhd"
-#    "../hdl/clock_enabler.vhd"
-#    "../hdl/video_mixer.vhd"
-#    "../hdl/dma_controller.vhd"
-#    "../hdl/sound_mixer.vhd"
-#    "../hdl/floppy.vhd"
-#    "../hdl/acsi.vhd"
-#    "../hdl/glue.vhd"
-#    "../hdl/i2s_out.vhd"
-#    "../hdl/ikbd/ikbd.vhd"
-#    "../hdl/mc68901.vhd"
-#    "../hdl/mmu.vhd"
-#    "../hdl/scan_dbl.vhd"
-#    "../hdl/shifter.vhd"
-#    "../hdl/vclkconvert.vhd"
-#    "../hdl/wd1772.vhd"
-#    "../hdl/ym2149.vhd"
-#    "../hdl/bridge_host.vhd"
-#    "../hdl/bridge_dispatcher.vhd"
-#    "../hdl/zest_atari_st_core.vhd"
-#    "../hdl/zest_zturn_top.vhd"
-#    "../hdl/ikbd/ikbd_rom.mem"
-#    "../hdl/fx68k/microrom.mem"
-#    "../hdl/fx68k/nanorom.mem"
-#    "../xdc/zturn_7020.xdc"
-#    "../sim/simple_ram.vhd"
-#    "../sim/zest_sim_top.vhd"
-#
-#*****************************************************************************************
 
 # Check file required for this script exists
 proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
-   "../hdl/configurator.vhd" \
-   "../hdl/ddr_controller_interface.vhd" \
-   "../hdl/ram_tdp.vhd" \
-   "../hdl/osd.vhd" \
-   "../hdl/ikbd/HD63701.v" \
-   "../hdl/ikbd/HD63701_ALU.v" \
-   "../hdl/ikbd/HD63701_CORE.v" \
-   "../hdl/ikbd/HD63701_EXEC.v" \
-   "../hdl/ikbd/HD63701_MCROM.v" \
-   "../hdl/ikbd/HD63701_SEQ.v" \
-   "../hdl/ikbd/MCU_BIROM.v" \
-   "../hdl/fx68k/fx68k.sv" \
-   "../hdl/fx68k/fx68kAlu.sv" \
-   "../hdl/fx68k/uaddrPla.sv" \
-   "../hdl/GrayCounter.vhd" \
-   "../hdl/aFifo.vhd" \
-   "../hdl/acia6850.vhd" \
-   "../hdl/atarist_bus.vhd" \
-   "../hdl/atarist_mb.vhd" \
-   "../hdl/clock_enabler.vhd" \
-   "../hdl/video_mixer.vhd" \
-   "../hdl/dma_controller.vhd" \
-   "../hdl/sound_mixer.vhd" \
-   "../hdl/floppy.vhd" \
-   "../hdl/acsi.vhd" \
-   "../hdl/glue.vhd" \
-   "../hdl/i2s_out.vhd" \
-   "../hdl/ikbd/ikbd.vhd" \
-   "../hdl/mc68901.vhd" \
-   "../hdl/mmu.vhd" \
-   "../hdl/scan_dbl.vhd" \
-   "../hdl/shifter.vhd" \
-   "../hdl/vclkconvert.vhd" \
-   "../hdl/wd1772.vhd" \
-   "../hdl/ym2149.vhd" \
-   "../hdl/bridge_host.vhd" \
-   "../hdl/bridge_dispatcher.vhd" \
-   "../hdl/zest_atari_st_core.vhd" \
-   "../hdl/zest_zturn_top.vhd" \
-   "../hdl/ikbd/ikbd_rom.mem" \
-   "../hdl/fx68k/microrom.mem" \
-   "../hdl/fx68k/nanorom.mem" \
-   "../xdc/zturn_7020.xdc" \
-   "../sim/simple_ram.vhd" \
-   "../sim/zest_sim_top.vhd" \
+ "[file normalize "$origin_dir/hdl/bridge_host.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ddr_controller_interface.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_ALU.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_CORE.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_EXEC.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_MCROM.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_SEQ.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/MCU_BIROM.v"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/fx68k.sv"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/fx68kAlu.sv"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/uaddrPla.sv"]"\
+ "[file normalize "$origin_dir/hdl/GrayCounter.vhd"]"\
+ "[file normalize "$origin_dir/hdl/aFifo.vhd"]"\
+ "[file normalize "$origin_dir/hdl/acia6850.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ram_tdp.vhd"]"\
+ "[file normalize "$origin_dir/hdl/acsi.vhd"]"\
+ "[file normalize "$origin_dir/hdl/atarist_bus.vhd"]"\
+ "[file normalize "$origin_dir/hdl/clock_enabler.vhd"]"\
+ "[file normalize "$origin_dir/hdl/glue.vhd"]"\
+ "[file normalize "$origin_dir/hdl/mmu.vhd"]"\
+ "[file normalize "$origin_dir/hdl/shifter.vhd"]"\
+ "[file normalize "$origin_dir/hdl/video_mixer.vhd"]"\
+ "[file normalize "$origin_dir/hdl/mc68901.vhd"]"\
+ "[file normalize "$origin_dir/hdl/dma_controller.vhd"]"\
+ "[file normalize "$origin_dir/hdl/wd1772.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ym2149.vhd"]"\
+ "[file normalize "$origin_dir/hdl/sound_mixer.vhd"]"\
+ "[file normalize "$origin_dir/hdl/atarist_mb.vhd"]"\
+ "[file normalize "$origin_dir/hdl/bridge_dispatcher.vhd"]"\
+ "[file normalize "$origin_dir/hdl/configurator.vhd"]"\
+ "[file normalize "$origin_dir/hdl/floppy.vhd"]"\
+ "[file normalize "$origin_dir/hdl/i2s_out.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/ikbd.vhd"]"\
+ "[file normalize "$origin_dir/hdl/osd.vhd"]"\
+ "[file normalize "$origin_dir/hdl/scan_dbl.vhd"]"\
+ "[file normalize "$origin_dir/hdl/vclkconvert.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zest_atari_st_core.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zest_zturn_top.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/ikbd_rom.mem"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/microrom.mem"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/nanorom.mem"]"\
+ "[file normalize "$origin_dir/xdc/zturn_7020.xdc"]"\
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -220,25 +159,17 @@ set proj_dir [get_property directory [current_project]]
 
 # Set project properties
 set obj [current_project]
-set_property -name "board_part" -value "myir.com:mys-7z020:part0:2.1" -objects $obj
 set_property -name "default_lib" -value "xil_defaultlib" -objects $obj
 set_property -name "enable_vhdl_2008" -value "1" -objects $obj
 set_property -name "ip_cache_permissions" -value "read write" -objects $obj
 set_property -name "ip_output_repo" -value "$proj_dir/${_xil_proj_name_}.cache/ip" -objects $obj
 set_property -name "mem.enable_memory_map_generation" -value "1" -objects $obj
-set_property -name "platform.board_id" -value "mys-7z020" -objects $obj
+set_property -name "part" -value "xc7z020clg400-1" -objects $obj
 set_property -name "sim.central_dir" -value "$proj_dir/${_xil_proj_name_}.ip_user_files" -objects $obj
 set_property -name "sim.ip.auto_export_scripts" -value "1" -objects $obj
 set_property -name "simulator_language" -value "Mixed" -objects $obj
 set_property -name "target_language" -value "VHDL" -objects $obj
-set_property -name "webtalk.activehdl_export_sim" -value "8" -objects $obj
-set_property -name "webtalk.ies_export_sim" -value "8" -objects $obj
-set_property -name "webtalk.modelsim_export_sim" -value "8" -objects $obj
-set_property -name "webtalk.questa_export_sim" -value "8" -objects $obj
-set_property -name "webtalk.riviera_export_sim" -value "8" -objects $obj
-set_property -name "webtalk.vcs_export_sim" -value "8" -objects $obj
-set_property -name "webtalk.xsim_export_sim" -value "8" -objects $obj
-set_property -name "webtalk.xsim_launch_sim" -value "3" -objects $obj
+
 set_property -name "xpm_libraries" -value "XPM_CDC XPM_MEMORY" -objects $obj
 
 # Create 'sources_1' fileset (if not found)
@@ -496,6 +427,7 @@ set_property -name "file_type" -value "XDC" -objects $file_obj
 
 # Set 'constrs_1' fileset properties
 set obj [get_filesets constrs_1]
+set_property -name "target_part" -value "xc7z020clg400-1" -objects $obj
 
 # Create 'sim_1' fileset (if not found)
 if {[string equal [get_filesets -quiet sim_1] ""]} {
@@ -504,32 +436,12 @@ if {[string equal [get_filesets -quiet sim_1] ""]} {
 
 # Set 'sim_1' fileset object
 set obj [get_filesets sim_1]
-set files [list \
- [file normalize "${origin_dir}/sim/simple_ram.vhd"] \
- [file normalize "${origin_dir}/sim/zest_sim_top.vhd"] \
-]
-add_files -norecurse -fileset $obj $files
-
-# Set 'sim_1' fileset file properties for remote files
-set file "$origin_dir/sim/simple_ram.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
-set file "$origin_dir/sim/zest_sim_top.vhd"
-set file [file normalize $file]
-set file_obj [get_files -of_objects [get_filesets sim_1] [list "*$file"]]
-set_property -name "file_type" -value "VHDL" -objects $file_obj
-
-
-# Set 'sim_1' fileset file properties for local files
-# None
+# Empty (no sources present)
 
 # Set 'sim_1' fileset properties
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
-set_property -name "top" -value "zest_sim_top" -objects $obj
-set_property -name "top_auto_set" -value "0" -objects $obj
+set_property -name "top" -value "zest_top" -objects $obj
 set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
 
 # Set 'utils_1' fileset object
@@ -572,8 +484,8 @@ proc cr_bd_ps_domain { parentCell } {
   if { $bCheckIPs == 1 } {
      set list_check_ips "\
   xilinx.com:ip:clk_wiz:6.0\
-  xilinx.com:ip:proc_sys_reset:5.0\
   xilinx.com:ip:processing_system7:5.5\
+  xilinx.com:ip:proc_sys_reset:5.0\
   "
 
    set list_ips_missing ""
@@ -660,11 +572,11 @@ proc cr_bd_ps_domain { parentCell } {
 
 
   # Create ports
-  set IRQ_F2P [ create_bd_port -dir I -from 1 -to 0 -type intr IRQ_F2P ]
+  set irq_f2p [ create_bd_port -dir I -from 1 -to 0 -type intr irq_f2p ]
   set_property -dict [ list \
    CONFIG.PortWidth {2} \
    CONFIG.SENSITIVITY {EDGE_RISING} \
- ] $IRQ_F2P
+ ] $irq_f2p
   set bridge_addr [ create_bd_port -dir O -from 15 -to 2 bridge_addr ]
   set bridge_r [ create_bd_port -dir O bridge_r ]
   set bridge_r_data [ create_bd_port -dir I -from 31 -to 0 bridge_r_data ]
@@ -1248,7 +1160,7 @@ proc cr_bd_ps_domain { parentCell } {
   # Create port connections
   connect_bd_net -net A_0_1 [get_bd_ports ram_a] [get_bd_pins ddr_controller_inter_0/a]
   connect_bd_net -net DS_0_1 [get_bd_ports ram_ds] [get_bd_pins ddr_controller_inter_0/ds]
-  connect_bd_net -net IRQ_F2P_0_1 [get_bd_ports IRQ_F2P] [get_bd_pins processing_system7_0/IRQ_F2P]
+  connect_bd_net -net IRQ_F2P_0_1 [get_bd_ports irq_f2p] [get_bd_pins processing_system7_0/IRQ_F2P]
   connect_bd_net -net R_0_1 [get_bd_ports ram_r] [get_bd_pins ddr_controller_inter_0/r]
   connect_bd_net -net W_0_1 [get_bd_ports ram_w] [get_bd_pins ddr_controller_inter_0/w]
   connect_bd_net -net bridge_host_0_bridge_addr [get_bd_ports bridge_addr] [get_bd_pins bridge_host_0/bridge_addr]
@@ -1304,6 +1216,7 @@ if { $obj != "" } {
 
 }
 set obj [get_runs synth_1]
+set_property -name "part" -value "xc7z020clg400-1" -objects $obj
 set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
 
 # set the current synth run
@@ -1517,6 +1430,7 @@ set_property -name "options.warn_on_violation" -value "1" -objects $obj
 
 }
 set obj [get_runs impl_1]
+set_property -name "part" -value "xc7z020clg400-1" -objects $obj
 set_property -name "strategy" -value "Vivado Implementation Defaults" -objects $obj
 set_property -name "steps.write_bitstream.args.readback_file" -value "0" -objects $obj
 set_property -name "steps.write_bitstream.args.verbose" -value "0" -objects $obj
