@@ -15,123 +15,60 @@
 #   run results please launch the synthesis/implementation runs as needed.
 #
 #*****************************************************************************************
-# NOTE: In order to use this script for source control purposes, please make sure that the
-#       following files are added to the source control system:-
-#
-# 1. This project restoration tcl script (zest_z7lite.tcl) that was generated.
-#
-# 2. The following source(s) files that were local or imported into the original project.
-#    (Please see the '$orig_proj_dir' and '$origin_dir' variable setting below at the start of the script)
-#
-#    <none>
-#
-# 3. The following remote source files that were added to the original project:-
-#
-#    "../hdl/configurator.vhd"
-#    "../hdl/ddr_controller_interface.vhd"
-#    "../hdl/ram_tdp.vhd"
-#    "../hdl/osd.vhd"
-#    "../hdl/ikbd/HD63701.v"
-#    "../hdl/ikbd/HD63701_ALU.v"
-#    "../hdl/ikbd/HD63701_CORE.v"
-#    "../hdl/ikbd/HD63701_EXEC.v"
-#    "../hdl/ikbd/HD63701_MCROM.v"
-#    "../hdl/ikbd/HD63701_SEQ.v"
-#    "../hdl/ikbd/MCU_BIROM.v"
-#    "../hdl/fx68k/fx68k.sv"
-#    "../hdl/fx68k/fx68kAlu.sv"
-#    "../hdl/fx68k/uaddrPla.sv"
-#    "../hdl/GrayCounter.vhd"
-#    "../hdl/aFifo.vhd"
-#    "../hdl/acia6850.vhd"
-#    "../hdl/atarist_bus.vhd"
-#    "../hdl/clock_enabler.vhd"
-#    "../hdl/glue.vhd"
-#    "../hdl/mmu.vhd"
-#    "../hdl/shifter.vhd"
-#    "../hdl/mc68901.vhd"
-#    "../hdl/dma_controller.vhd"
-#    "../hdl/wd1772.vhd"
-#    "../hdl/ym2149.vhd"
-#    "../hdl/atarist_mb.vhd"
-#    "../hdl/video_mixer.vhd"
-#    "../hdl/sound_mixer.vhd"
-#    "../hdl/floppy.vhd"
-#    "../hdl/acsi.vhd"
-#    "../hdl/ikbd/ikbd.vhd"
-#    "../hdl/scan_dbl.vhd"
-#    "../hdl/vclkconvert.vhd"
-#    "../hdl/bridge_host.vhd"
-#    "../hdl/bridge_dispatcher.vhd"
-#    "../hdl/zest_atari_st_core.vhd"
-#    "../hdl/zhdmi/hdl/zhdmi_audio_packetizer.vhd"
-#    "../hdl/zhdmi/hdl/zhdmi_packet_gen.vhd"
-#    "../hdl/zhdmi/hdl/zhdmi_island_encoder.vhd"
-#    "../hdl/zhdmi/hdl/zhdmi_signaling.vhd"
-#    "../hdl/zhdmi/hdl/zhdmi_tmds_serializer_xilinx7.vhd"
-#    "../hdl/zhdmi/hdl/zhdmi_tmds_encoder.vhd"
-#    "../hdl/zhdmi/hdl/zhdmi_tx.vhd"
-#    "../hdl/zest_z7lite_top.vhd"
-#    "../hdl/ikbd/ikbd_rom.mem"
-#    "../hdl/fx68k/microrom.mem"
-#    "../hdl/fx68k/nanorom.mem"
-#    "../xdc/z7lite.xdc"
-#
-#*****************************************************************************************
 
 # Check file required for this script exists
 proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
-   "../hdl/configurator.vhd" \
-   "../hdl/ddr_controller_interface.vhd" \
-   "../hdl/ram_tdp.vhd" \
-   "../hdl/osd.vhd" \
-   "../hdl/ikbd/HD63701.v" \
-   "../hdl/ikbd/HD63701_ALU.v" \
-   "../hdl/ikbd/HD63701_CORE.v" \
-   "../hdl/ikbd/HD63701_EXEC.v" \
-   "../hdl/ikbd/HD63701_MCROM.v" \
-   "../hdl/ikbd/HD63701_SEQ.v" \
-   "../hdl/ikbd/MCU_BIROM.v" \
-   "../hdl/fx68k/fx68k.sv" \
-   "../hdl/fx68k/fx68kAlu.sv" \
-   "../hdl/fx68k/uaddrPla.sv" \
-   "../hdl/GrayCounter.vhd" \
-   "../hdl/aFifo.vhd" \
-   "../hdl/acia6850.vhd" \
-   "../hdl/atarist_bus.vhd" \
-   "../hdl/clock_enabler.vhd" \
-   "../hdl/glue.vhd" \
-   "../hdl/mmu.vhd" \
-   "../hdl/shifter.vhd" \
-   "../hdl/mc68901.vhd" \
-   "../hdl/dma_controller.vhd" \
-   "../hdl/wd1772.vhd" \
-   "../hdl/ym2149.vhd" \
-   "../hdl/atarist_mb.vhd" \
-   "../hdl/video_mixer.vhd" \
-   "../hdl/sound_mixer.vhd" \
-   "../hdl/floppy.vhd" \
-   "../hdl/acsi.vhd" \
-   "../hdl/ikbd/ikbd.vhd" \
-   "../hdl/scan_dbl.vhd" \
-   "../hdl/vclkconvert.vhd" \
-   "../hdl/bridge_host.vhd" \
-   "../hdl/bridge_dispatcher.vhd" \
-   "../hdl/zest_atari_st_core.vhd" \
-   "../hdl/zhdmi/hdl/zhdmi_audio_packetizer.vhd" \
-   "../hdl/zhdmi/hdl/zhdmi_packet_gen.vhd" \
-   "../hdl/zhdmi/hdl/zhdmi_island_encoder.vhd" \
-   "../hdl/zhdmi/hdl/zhdmi_signaling.vhd" \
-   "../hdl/zhdmi/hdl/zhdmi_tmds_serializer_xilinx7.vhd" \
-   "../hdl/zhdmi/hdl/zhdmi_tmds_encoder.vhd" \
-   "../hdl/zhdmi/hdl/zhdmi_tx.vhd" \
-   "../hdl/zest_z7lite_top.vhd" \
-   "../hdl/ikbd/ikbd_rom.mem" \
-   "../hdl/fx68k/microrom.mem" \
-   "../hdl/fx68k/nanorom.mem" \
-   "../xdc/z7lite.xdc" \
+ "[file normalize "$origin_dir/hdl/bridge_host.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ddr_controller_interface.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_ALU.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_CORE.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_EXEC.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_MCROM.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/HD63701_SEQ.v"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/MCU_BIROM.v"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/fx68k.sv"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/fx68kAlu.sv"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/uaddrPla.sv"]"\
+ "[file normalize "$origin_dir/hdl/GrayCounter.vhd"]"\
+ "[file normalize "$origin_dir/hdl/aFifo.vhd"]"\
+ "[file normalize "$origin_dir/hdl/acia6850.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ram_tdp.vhd"]"\
+ "[file normalize "$origin_dir/hdl/acsi.vhd"]"\
+ "[file normalize "$origin_dir/hdl/atarist_bus.vhd"]"\
+ "[file normalize "$origin_dir/hdl/clock_enabler.vhd"]"\
+ "[file normalize "$origin_dir/hdl/glue.vhd"]"\
+ "[file normalize "$origin_dir/hdl/mmu.vhd"]"\
+ "[file normalize "$origin_dir/hdl/shifter.vhd"]"\
+ "[file normalize "$origin_dir/hdl/video_mixer.vhd"]"\
+ "[file normalize "$origin_dir/hdl/mc68901.vhd"]"\
+ "[file normalize "$origin_dir/hdl/dma_controller.vhd"]"\
+ "[file normalize "$origin_dir/hdl/wd1772.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ym2149.vhd"]"\
+ "[file normalize "$origin_dir/hdl/sound_mixer.vhd"]"\
+ "[file normalize "$origin_dir/hdl/atarist_mb.vhd"]"\
+ "[file normalize "$origin_dir/hdl/bridge_dispatcher.vhd"]"\
+ "[file normalize "$origin_dir/hdl/configurator.vhd"]"\
+ "[file normalize "$origin_dir/hdl/floppy.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/ikbd.vhd"]"\
+ "[file normalize "$origin_dir/hdl/osd.vhd"]"\
+ "[file normalize "$origin_dir/hdl/scan_dbl.vhd"]"\
+ "[file normalize "$origin_dir/hdl/vclkconvert.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zest_atari_st_core.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zhdmi/hdl/zhdmi_audio_packetizer.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zhdmi/hdl/zhdmi_packet_gen.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zhdmi/hdl/zhdmi_island_encoder.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zhdmi/hdl/zhdmi_signaling.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zhdmi/hdl/zhdmi_tmds_serializer_xilinx7.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zhdmi/hdl/zhdmi_tmds_encoder.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zhdmi/hdl/zhdmi_tx.vhd"]"\
+ "[file normalize "$origin_dir/hdl/zest_z7lite_top.vhd"]"\
+ "[file normalize "$origin_dir/hdl/ikbd/ikbd_rom.mem"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/microrom.mem"]"\
+ "[file normalize "$origin_dir/hdl/fx68k/nanorom.mem"]"\
+ "[file normalize "$origin_dir/xdc/z7lite.xdc"]"\
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
