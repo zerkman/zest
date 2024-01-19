@@ -5,6 +5,7 @@ TARGETS="z7lite_7010 z7lite_7020 zturn"
 export XILINX_PATH=/opt/Xilinx
 export XILINX_VERSION=2023.2
 export BUILDROOT_VERSION=2023.11.1
+export EMUTOS_VERSION=1.2.1
 
 # Root filesystem
 if [ ! -f output/rootfs.ub ] ; then
@@ -51,3 +52,6 @@ for target in $TARGETS ; do
 
     rm -f output/$target/ps7_init*
 done
+
+# Release files
+./release.sh "$TARGETS"
