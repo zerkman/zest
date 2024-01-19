@@ -12,9 +12,12 @@ if [ $# -ne 0 ] ; then
 fi
 
 mkdir -p output/src
-if [ ! -d output/src/linux-xlnx ] ; then
-    cd output/src
+cd output/src
+if [ ! -d linux-xlnx ] ; then
     git clone https://github.com/Xilinx/linux-xlnx.git || exit $?
-    cd linux-xlnx
-    git checkout xilinx-v$XILINX_VERSION || exit $?
 fi
+cd linux-xlnx
+git checkout xilinx-v$XILINX_VERSION || exit $?
+make xilinx_zynq_defconfig
+make UIMAGE_LOADADDR=0x8000 uImage -j`nproc` || exit $?
+cp arch/arm/boot/uImage $ZEST_SETUP/output

@@ -6,6 +6,12 @@ export XILINX_PATH=/opt/Xilinx
 export XILINX_VERSION=2023.2
 export BUILDROOT_VERSION=2023.11.1
 
+# Root filesystem
+./rootfs.sh
+
+# Linux kernel
+./kernel.sh
+
 for target in $TARGETS ; do
     mkdir -p output/$target
 
