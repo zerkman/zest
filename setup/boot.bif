@@ -1,8 +1,0 @@
-//arch = zynq; split = false; format = BIN
-the_ROM_image:
-{
-	[bootloader]fsbl.elf
-	zest_top.bit
-	u-boot.elf
-	devicetree.dtb
-}

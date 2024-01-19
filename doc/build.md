@@ -279,7 +279,7 @@ If you have performed the previous steps correctly, you should now have the foll
 - `zest_top.bit`
 - `u-boot.elf`
 
-In `$HOME/src/zest/setup` you should find a `boot.bif` text file containing the following:
+In `$HOME/src/zest/setup` create a `boot.bif` text file containing the following:
 
     //arch = zynq; split = false; format = BIN
     the_ROM_image:
