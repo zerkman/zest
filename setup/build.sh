@@ -7,10 +7,19 @@ export XILINX_VERSION=2023.2
 export BUILDROOT_VERSION=2023.11.1
 
 # Root filesystem
-./rootfs.sh
+if [ ! -f output/rootfs.ub ] ; then
+    ./rootfs.sh
+fi
 
 # Linux kernel
-./kernel.sh
+if [ ! -f output/uImage ] ; then
+    ./kernel.sh
+fi
+
+# boot.scr
+if [ ! -f output/$target/boot.scr ] ; then
+    ./boot_scr.sh $target
+fi
 
 for target in $TARGETS ; do
     mkdir -p output/$target
@@ -35,6 +44,10 @@ for target in $TARGETS ; do
         ./u-boot.sh $target
     fi
 
-    rm -f output/$target/ps7_init*
+    # BOOT.bin
+    if [ ! -f output/$target/BOOT.bin ] ; then
+        ./boot_bin.sh $target
+    fi
 
+    rm -f output/$target/ps7_init*
 done
