@@ -23,7 +23,7 @@ fi
 
 cd $ZEST_SETUP/output/src/u-boot-xlnx
 make clean
-cp $ZEST_SETUP/u-boot_defconfig configs/zest_defconfig || exit $?
+cp $ZEST_SETUP/defconfig/u-boot configs/zest_defconfig || exit $?
 make zest_defconfig || exit $?
 cp $ZEST_SETUP/output/$target/devicetree.dtb arch/arm/dts/unset.dtb
 mkdir -p board/xilinx/zynq/custom_hw_platform

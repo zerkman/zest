@@ -22,7 +22,7 @@ if [ ! -d $buildroot ] ; then
 fi
 
 cd ${buildroot}
-cp $ZEST_SETUP/buildroot_defconfig configs/zest_defconfig
+cp $ZEST_SETUP/defconfig/buildroot configs/zest_defconfig
 make zest_defconfig
 make
 
