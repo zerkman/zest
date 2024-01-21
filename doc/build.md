@@ -1,13 +1,21 @@
 
 # How to generate everything from source
 
+This document describes the procedures to build all the components of zeST from source code.
+
+Two procedures are available:
+
+ - a fully automatic procedure if you are fine with the default settings in all components;
+ - a detailed step-by-step manual procedure if you are interested in tweaking some configuration files or just learn about zeST's internals.
+
 ## Required material
 
 You’ll need:
 
  - Vivado and Vitis IDE. The version I used is [2023.2](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2023-2.html).
  - The [vasm](http://sun.hasenbraten.de/vasm/) assembler, compiled with M68k backend and Motorola syntax (tested on version 1.9d)
- - Development tools:
+ - required command line tools:
+   - wget
    - git
    - make
    - device-tree-compiler
@@ -21,7 +29,6 @@ My build system is a Debian bullseye Linux system, but I believe any GNU/Linux s
 This documentation assumes the following file paths:
 
 - The Xilinx tools (Vivado, SDK) installation directory is `/opt/Xilinx`.
-- The Vitis workspace directory is `$HOME/xilinx/workspace`.
 - All source files and git clones are in `$HOME/src`.
 - Your Vivado project is in a subdirectory of `zest/vivado`. The project directory name depends on your FPGA board.
 
@@ -31,6 +38,20 @@ Issue those commands:
 
     $ cd $HOME/src
     $ git clone --depth=1 --recursive https://github.com/zerkman/zest.git
+
+# Automatically build everything
+
+You can build a whole zeST distribution archive with the following commands:
+
+    $ cd $HOME/src/zest/setup
+    $ ./build.sh
+
+Now go get a cup of tea and wait for the build process to finish.
+
+# Manual build procedure
+
+The following is a detailed procedure of the different zeST build steps.
+If you are only interested in the resulting build elements, you can follow the [automatic build procedure](#automatically-build-everything).
 
 ## Create the Vivado project and generate the bitstream file
 
@@ -76,7 +97,7 @@ If not already done, the procedure is the following (as root):
     # apt install rlwrap
     # cd /opt/Xilinx/Vitis/2023.2/bin/unwrapped/lnx64.o
     # rm rlwrap
-    # ln -s /usr/bin/rlwrap .
+    # ln -s /usr/bin/rlwrap .
 
 Quit the root session and go back to your normal user session.
 
@@ -209,7 +230,7 @@ This will generate a `zeST` binary executable file.
 
 After the Buildroot build, a base version of the root filesystem has been created. We need to patch it a bit, so that the booting process automatically mounts the SD card partition (to get access to the ROM and floppy image files), then runs the zeST executable file.
 
-The customisation is done by a `buildroot_post_build.sh` script file from the `zest/setup` directory. Run it from the Buildroot main directory, and build the root filesystem again (this time should be very quick):
+The customisation is done by a `buildroot_post_build.sh` script file from the `zest/setup` directory. Run it from the Buildroot main directory, and build the root filesystem again (this time should be very quick):
 
     $ cd $HOME/src/buildroot-2023.11.1
     $ sh $HOME/src/zest/setup/buildroot_post_build.sh
