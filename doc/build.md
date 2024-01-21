@@ -321,11 +321,13 @@ Then create `boot.scr` from it, placing it in your `setup` directory:
 Get the Linux source code:
 
     $ git clone https://github.com/Xilinx/linux-xlnx.git
+    $ cd linux-xlnx
     $ git checkout xilinx-v2023.2
 
-Create the default configuration file:
+Configure the kernel:
 
-    $ make xilinx_zynq_defconfig
+    $ cp $HOME/src/zest/setup/linux_defconfig arch/arm/configs/zest_defconfig
+    $ make zest_defconfig
 
 Build the kernel and copy the image file to your zeST `setup` directory:
 

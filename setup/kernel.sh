@@ -18,6 +18,7 @@ if [ ! -d linux-xlnx ] ; then
 fi
 cd linux-xlnx
 git checkout xilinx-v$XILINX_VERSION || exit $?
-make xilinx_zynq_defconfig
+cp $ZEST_SETUP/linux_defconfig arch/arm/configs/zest_defconfig
+make zest_defconfig
 make UIMAGE_LOADADDR=0x8000 uImage -j`nproc` || exit $?
 cp arch/arm/boot/uImage $ZEST_SETUP/output
