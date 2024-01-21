@@ -53,5 +53,8 @@ for target in $TARGETS ; do
     rm -f output/$target/ps7_init*
 done
 
+# Drivers
+./drivers.sh
+
 # Release files
 ./release.sh "$TARGETS"

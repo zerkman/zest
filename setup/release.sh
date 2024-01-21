@@ -19,3 +19,8 @@ if [ ! -f release/rom.img ] ; then
     unzip -p emutos-192k-$EMUTOS_VERSION.zip emutos-192k-$EMUTOS_VERSION/etos192uk.img > release/rom.img
     rm emutos-192k-$EMUTOS_VERSION.zip
 fi
+
+mkdir -p release/drivers
+cp drivers/*.prg release/drivers
+mkdir -p release/drivers/zkbd
+cp drivers/zkbd/*.prg release/drivers/zkbd

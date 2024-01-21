@@ -6,6 +6,7 @@
 You’ll need:
 
  - Vivado and Vitis IDE. The version I used is [2023.2](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2023-2.html).
+ - The [vasm](http://sun.hasenbraten.de/vasm/) assembler, compiled with M68k backend and Motorola syntax (tested on version 1.9d)
  - Development tools:
    - git
    - make
