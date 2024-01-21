@@ -24,3 +24,7 @@ mkdir -p release/drivers
 cp drivers/*.prg release/drivers
 mkdir -p release/drivers/zkbd
 cp drivers/zkbd/*.prg release/drivers/zkbd
+
+name="zeST-`date +%Y%m%d`"
+tar cf $name.tar release --transform s/release/$name/
+xz -9f $name.tar
