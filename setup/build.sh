@@ -9,17 +9,17 @@ export EMUTOS_VERSION=1.2.1
 
 # Root filesystem
 if [ ! -f output/rootfs.ub ] ; then
-    ./rootfs.sh
+    recipes/rootfs.sh
 fi
 
 # Linux kernel
 if [ ! -f output/uImage ] ; then
-    ./kernel.sh
+    recipes/kernel.sh
 fi
 
 # boot.scr
 if [ ! -f output/$target/boot.scr ] ; then
-    ./boot_scr.sh $target
+    recipes/boot_scr.sh $target
 fi
 
 for target in $TARGETS ; do
@@ -27,34 +27,34 @@ for target in $TARGETS ; do
 
     # Vivado
     if [ ! -f output/$target/zest_top.bit ] ; then
-        ./vivado.sh $target
+        recipes/vivado.sh $target
     fi
 
     # Device tree
     if [ ! -f output/$target/devicetree.dtb ] ; then
-        ./devicetree.sh $target
+        recipes/devicetree.sh $target
     fi
 
     # First stage bootloader
     if [ ! -f output/$target/fsbl.elf ] ; then
-        ./fsbl.sh $target
+        recipes/fsbl.sh $target
     fi
 
     # U-Boot
     if [ ! -f output/$target/u-boot.elf ] ; then
-        ./u-boot.sh $target
+        recipes/u-boot.sh $target
     fi
 
     # BOOT.bin
     if [ ! -f output/$target/BOOT.bin ] ; then
-        ./boot_bin.sh $target
+        recipes/boot_bin.sh $target
     fi
 
     rm -f output/$target/ps7_init*
 done
 
 # Drivers
-./drivers.sh
+recipes/drivers.sh
 
 # Release files
-./release.sh "$TARGETS"
+recipes/release.sh "$TARGETS"
