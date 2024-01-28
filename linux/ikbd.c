@@ -188,6 +188,7 @@ void * thread_ikbd(void * arg) {
               break;
             case KEY_PAGEUP:
             case KEY_SCROLLLOCK:
+            case BTN_START:
               menu();
               break;
             case KEY_MUTE:

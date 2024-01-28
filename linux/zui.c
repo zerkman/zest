@@ -308,11 +308,13 @@ int zui_run(int xpos, int ypos, ZuiWidget *obj) {
   }
 
   while (quit == 0 && thr_end == 0) {
-    int evtype, evcode, evvalue;
-    int retval = input_event(100,&evtype,&evcode,&evvalue,NULL);
+    int evtype, evcode, evvalue, joyid;
+    int retval = input_event(100,&evtype,&evcode,&evvalue,&joyid);
     if (retval < 0) {
       // an error occurred
       break;
+    } else if (retval == 9) {
+      continue;
     }
 
     // TODO: - This is copypasta from thread_floppy()
@@ -332,7 +334,25 @@ int zui_run(int xpos, int ypos, ZuiWidget *obj) {
       osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
     }
 
-    if (retval > 0 && evtype == EV_KEY) {
+    // simulate keyboard events with joystick
+    if (evtype == EV_ABS && joyid>=0) {
+      if (evcode==ABS_X && evvalue!=0) {
+        evtype = EV_KEY;
+        evcode = (evvalue==-1)?KEY_LEFT:KEY_RIGHT;
+        evvalue = 1;
+      }
+      if (evcode==ABS_Y && evvalue!=0) {
+        evtype = EV_KEY;
+        evcode = (evvalue==-1)?KEY_UP:KEY_DOWN;
+        evvalue = 1;
+      }
+    }
+    if (evtype == EV_KEY) {
+      if (evcode == BTN_B) evcode = KEY_ESC;
+      else if (evcode == BTN_A) evcode = KEY_ENTER;
+    }
+
+    if (evtype == EV_KEY) {
       // keyboard event, key is pressed
       if (evvalue == 1) {
         // key is pressed
