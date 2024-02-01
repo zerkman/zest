@@ -79,12 +79,12 @@ enum {
 
 #define XCHARS 60
 #define YCHARS 20   // XCHARS*YCHARS must not exceed 1624
-#define XPOS 176
-#define YPOS 116
+#define XPOS 80
+#define YPOS 40
 #define FSEL_XCHARS 40
 #define FSEL_YCHARS 24 // TODO: no idea why yet, but setting this value any higher some garbage appears on screen
-#define FSEL_XPOS 200
-#define FSEL_YPOS 40
+#define FSEL_XPOS 160
+#define FSEL_YPOS 8
 #if (FSEL_XCHARS*FSEL_YCHARS)>1624
 #error Too many characters (FSEL_XCHARS*FSEL_YCHARS)
 #endif
@@ -479,7 +479,7 @@ static int buttonclick_extended_modes(ZuiWidget* obj) {
 int selected_ram_size=0;
 static int handle_ram_change(int value)
 {
-  if (selected_ram_size == value)  
+  if (selected_ram_size == value)
   {
     if (config.mem_size != value) {
       // User clicked on RAM size that's different that what's running,
