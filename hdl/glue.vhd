@@ -154,7 +154,7 @@ architecture behavioral of glue is
 		hblank_on			=> 49,
 		vid_hsync_on		=> 51,
 		vid_hsync_off		=> 1,
-		vid_hde_on			=> 7,
+		vid_hde_on			=> 9,
 		vid_hde_off			=> 49,
 		vid_vde_on			=> 36,
 		vid_vde_off			=> 436);
