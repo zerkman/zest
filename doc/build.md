@@ -32,6 +32,18 @@ This documentation assumes the following file paths:
 - All source files and git clones are in `$HOME/src`.
 - Your Vivado project is in a subdirectory of `zest/vivado`. The project directory name depends on your FPGA board.
 
+## Fix rlwrap
+
+The current version (2023.2) of the Xilinx tools requires to update one of the internally used tools.
+If not already done, the procedure is the following (as root):
+
+    # apt install rlwrap
+    # cd /opt/Xilinx/Vitis/2023.2/bin/unwrapped/lnx64.o
+    # rm rlwrap
+    # ln -s /usr/bin/rlwrap .
+
+Quit the root session and go back to your normal user session.
+
 ## Get the zeST source code
 
 Issue those commands:
@@ -91,15 +103,7 @@ You may now exit Vivado.
 
 ## Build the device tree
 
-The current version (2023.2) of the Xilinx tools require to update one of the internally used tools.
-If not already done, the procedure is the following (as root):
-
-    # apt install rlwrap
-    # cd /opt/Xilinx/Vitis/2023.2/bin/unwrapped/lnx64.o
-    # rm rlwrap
-    # ln -s /usr/bin/rlwrap .
-
-Quit the root session and go back to your normal user session.
+Before going any further, make sure you correctly performed the [required fix for the current version of the Xilinx tools](#fix-rlwrap).
 
 ### Create the device tree source
 
@@ -200,7 +204,7 @@ Fetch the buildroot sources:
 Now a bit of configuration must be done. Issue the commands:
 
     $ cd buildroot-2023.11.1
-    $ cp $HOME/src/zest/setup/buildroot_defconfig configs/zest_defconfig
+    $ cp $HOME/src/zest/setup/defconfig/buildroot configs/zest_defconfig
     $ make zest_defconfig
 
 You may want to configure some extra packages to install on your Linux system.
