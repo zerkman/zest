@@ -186,6 +186,13 @@ architecture structure of atarist_mb is
 	signal blankn		: std_logic;
 	signal sde			: std_logic;
 
+	signal vid_vsync	: std_logic;
+	signal vid_hsync	: std_logic;
+	signal vid_hde		: std_logic;
+	signal vid_vde		: std_logic;
+	signal mono_hde		: std_logic;
+	signal hde			: std_logic;
+
 	signal mmu_RAMn		: std_logic;
 	signal mmu_DMAn		: std_logic;
 	signal mmu_DEVn		: std_logic;
@@ -457,9 +464,10 @@ begin
 		BLANKn => blankn,
 		DE => sde,
 
-		vid_vsync => vsync,
-		vid_hsync => hsync,
-		vid_de => de,
+		vid_vsync => vid_vsync,
+		vid_hsync => vid_hsync,
+		vid_hde => vid_hde,
+		vid_vde => vid_vde,
 		cfg_extmod => cfg_extmod
 	);
 	glue_iA <= bus_A;
@@ -468,6 +476,20 @@ begin
 	glue_iD	<= bus_D(10 downto 8);
 	glue_iUDSn <= bus_UDSn;
 	glue_iLDSn <= bus_LDSn;
+	vsync <= vid_vsync;
+	hsync <= vid_hsync;
+	hde <= vid_hde when monomon = '0' else mono_hde;
+	de <= vid_vde and hde;
+
+	hdegen:entity mono_hde_gen port map (
+		clk => clk,
+		clken => en32ck,
+		resetn => resetn,
+		vsync => vid_vsync,
+		in_hde => vid_hde,
+		mono => shifter_mono,
+		out_hde => mono_hde
+	);
 
 	mm:entity mmu port map (
 		clk => clk,
