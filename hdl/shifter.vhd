@@ -239,7 +239,7 @@ begin
 				rr(0) <= rr(0)(14 downto 0) & rr(1)(15);
 				rr(1) <= rr(1)(14 downto 0) & rr(2)(15);
 				rr(2) <= rr(2)(14 downto 0) & rr(3)(15);
-				rr(3) <= rr(3)(14 downto 0) & '0';
+				rr(3) <= rr(3)(14 downto 0) & monopal;
 			end if;
 		end if;
 	end if;
