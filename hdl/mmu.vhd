@@ -123,24 +123,26 @@ begin
 	end process;
 
 	-- MMU sequence
-	process(clk)
+	process(clk,resetn)
 	begin
-	if rising_edge(clk) then
+	if resetn = '0' then
 		delay_loadn <= '0';
 		delay_bus <= '0';
-		if resetn = '0' then
-			sdtackn <= '1';
-			cnt <= "10";
-			oD <= x"ff";
-			mode_load <= '0';
-			screen_adr <= (others => '0');
-			video_ptr <= (others => '0');
-			memcfg <= (others => '0');
-			dma_ptr <= (others => '0');
-			loadn <= '1';
-			cmpcsn_en <= '0';
-			mode_bus_2 <= '0';
-		elsif en8rck = '1' then
+		sdtackn <= '1';
+		cnt <= "10";
+		oD <= x"ff";
+		mode_load <= '0';
+		screen_adr <= (others => '0');
+		video_ptr <= (others => '0');
+		memcfg <= (others => '0');
+		dma_ptr <= (others => '0');
+		loadn <= '1';
+		cmpcsn_en <= '0';
+		mode_bus_2 <= '0';
+	elsif rising_edge(clk) then
+		delay_loadn <= '0';
+		delay_bus <= '0';
+		if en8rck = '1' then
 			if (RAMn = '0' or DEVn = '0') and cnt = 2 then
 				sdtackn <= '0';
 			end if;

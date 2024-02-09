@@ -281,9 +281,8 @@ begin
 end process;
 
 -- peripheral register access
-process(clk)
+process(clk,resetn)
 begin
-	if rising_edge(clk) then
 	if resetn = '0' then
 		ymdtackn <= '1';
 		sdtackn <= '1';
@@ -295,7 +294,8 @@ begin
 		mmuct <= "00";
 		idtackff <= '1';
 		extmod <= '0';
-	elsif en8fck = '1' then
+	elsif rising_edge(clk) then
+	if en8fck = '1' then
 		idtackff <= iDTACKn;
 		if iDTACKn = '0' and idtackff = '1' and sram = '0' then
 			-- synchronize with MMU counter
@@ -353,12 +353,12 @@ begin
 end process;
 
 -- RAMn / DEVn bus signals to the MMU
-process(clk)
+process(clk,resetn)
 begin
-	if rising_edge(clk) then
-		if resetn = '0' then
-			rwn_ff <= '1';
-		elsif en8rck = '1' then
+	if resetn = '0' then
+		rwn_ff <= '1';
+	elsif rising_edge(clk) then
+		if en8rck = '1' then
 			rwn_ff <= iRWn;
 		end if;
 	end if;
@@ -395,12 +395,12 @@ end process;
 
 -- bus error
 BEER <= beercnt(5);
-process(clk)
+process(clk,resetn)
 begin
-	if rising_edge(clk) then
-		if resetn = '0' then
-			beercnt <= "100000";
-		elsif en8rck = '1' then
+	if resetn = '0' then
+		beercnt <= "100000";
+	elsif rising_edge(clk) then
+		if en8rck = '1' then
 			if iASn = '0' and (iUDSn = '0' or iLDSn = '0') and iDTACKn = '1' and sdtackn = '1' then
 				if beercnt(5) = '1' then
 					beercnt <= beercnt + 1;
@@ -443,17 +443,17 @@ begin
 end process;
 
 -- dma operation
-process(clk)
+process(clk,resetn)
 begin
-	if rising_edge(clk) then
-		if resetn = '0' then
-			BRn <= '1';
-			BGACKn <= '1';
-			dma_st <= idle;
-			dma_cnt <= "000";
-			sdma <= '1';
-			oRWn <= '1';
-		elsif en8rck = '1' then
+	if resetn = '0' then
+		BRn <= '1';
+		BGACKn <= '1';
+		dma_st <= idle;
+		dma_cnt <= "000";
+		sdma <= '1';
+		oRWn <= '1';
+	elsif rising_edge(clk) then
+		if en8rck = '1' then
 			case dma_st is
 			when idle =>
 				if iRDY = '1' then
@@ -523,13 +523,13 @@ begin
 	end if;
 end process;
 
-process(clk)
+process(clk,resetn)
 begin
-	if rising_edge(clk) then
-		if resetn = '0' then
-			irq_hbl <= '0';
-			irq_vbl <= '0';
-		elsif en2fck = '1' then
+	if resetn = '0' then
+		irq_hbl <= '0';
+		irq_vbl <= '0';
+	elsif rising_edge(clk) then
+		if en2fck = '1' then
 			if vcnt = 0 and nexthcnt = mode.hvsync_on then
 				irq_vbl <= '1';
 			end if;
@@ -573,7 +573,7 @@ end process;
 IACKn <= not ack_mfp;
 
 -- video sync
-process(hcnt,smode)
+process(hcnt,smode,resetn)
 begin
 	nexthcnt <= (others => '0');
 	if resetn = '1' and hcnt+1 < smode.cycles_per_line then
@@ -581,32 +581,32 @@ begin
 	end if;
 end process;
 
-process(clk)
+process(clk,resetn)
 	variable nextvcnt : unsigned(8 downto 0);
 begin
-	if rising_edge(clk) then
-		if resetn = '0' then
-			svsync <= '1';
-			shsync <= '1';
-			hblank <= '1';
-			vblank <= '1';
-			hde <= '0';
-			vde <= '0';
-			hcnt <= (others => '1');
-			vcnt <= (others => '0');
-			line_pal <= '0';
-			hz50_vs <= '0';
-			mono_vs <= '0';
-			extmod_vs <= '0';
-			vid_vsync <= '0';
-			vid_hsync <= '0';
-			vid_vde <= '0';
-			vid_hde <= '0';
-			vsync1 <= '0';
-			vscnt <= 0;
-			hsdly <= '0';
-			hz50 <= '0';
-		elsif en2fck = '1' then
+	if resetn = '0' then
+		svsync <= '1';
+		shsync <= '1';
+		hblank <= '1';
+		vblank <= '1';
+		hde <= '0';
+		vde <= '0';
+		hcnt <= (others => '1');
+		vcnt <= (others => '0');
+		line_pal <= '0';
+		hz50_vs <= '0';
+		mono_vs <= '0';
+		extmod_vs <= '0';
+		vid_vsync <= '0';
+		vid_hsync <= '0';
+		vid_vde <= '0';
+		vid_hde <= '0';
+		vsync1 <= '0';
+		vscnt <= 0;
+		hsdly <= '0';
+		hz50 <= '0';
+	elsif rising_edge(clk) then
+		if en2fck = '1' then
 			-- update H signals
 			hcnt <= nexthcnt;
 			if nexthcnt = 0 then
