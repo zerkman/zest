@@ -143,6 +143,8 @@ begin
 		load1 <= '1';
 		reload <= '0';
 		reload1 <= '0';
+		pxcnt <= x"4";
+		loadsr <= "0000";
 	elsif rising_edge(clk) then
 		if enpxck = '1' then
 			reload1 <= reload;

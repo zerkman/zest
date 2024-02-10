@@ -136,6 +136,7 @@ begin
 		video_ptr <= (others => '0');
 		memcfg <= (others => '0');
 		dma_ptr <= (others => '0');
+		sde <= '0';
 		loadn <= '1';
 		cmpcsn_en <= '0';
 		mode_bus_2 <= '0';
