@@ -183,12 +183,12 @@ architecture behavioral of glue is
 	signal extmod	: std_logic;	-- extended mode bit
 	signal extmod_vs : std_logic;	-- extended mode bit, saved on vsync
 
-	function mode_select(mono: in std_logic; hz50: in std_logic; cfg_extmod: in std_logic; extmod: in std_logic) return videomode_t is
+	function mode_select(mono: in std_logic; hz50: in std_logic; a_cfg_extmod: in std_logic; a_extmod: in std_logic) return videomode_t is
 	begin
 		if mono = '1' then
 			return mode_hi;
 		elsif hz50 = '1' then
-			if cfg_extmod = '1' and extmod = '1' then
+			if a_cfg_extmod = '1' and a_extmod = '1' then
 				return ext_mode_50;
 			else
 				return mode_50;
