@@ -27,23 +27,21 @@ entity mono_hde_gen is
 		clk : in std_logic;
 		clken : in std_logic;
 		resetn : in std_logic;
-		vsync : in std_logic;
+		wakest : in std_logic_vector(1 downto 0);
 		in_hde : in std_logic;
-		mono : in std_logic;
 		out_hde : out std_logic
 	);
 end entity;
 
 architecture hdl of mono_hde_gen is
 	constant MAX : integer := 1023;
-	signal ccnt : integer range 0 to MAX;
-	signal cleft : integer range 0 to MAX;
-	signal cright : integer range 0 to MAX;
-	signal hde1 : std_logic;
-	signal vsync1 : std_logic;
-	signal wait_vsync : integer range 0 to 15;
 
+	signal ccnt : integer range 0 to MAX;
+	signal hde1 : std_logic;
+	signal begdly : integer range 0 to 31;
 begin
+
+	begdly <= to_integer(unsigned(wakest)+1)*4+14;
 
 process(clk,resetn)
 	variable nccnt : integer range 0 to MAX;
@@ -51,39 +49,20 @@ begin
 	if resetn = '0' then
 		ccnt <= 0;
 		hde1 <= '0';
-		vsync1 <= '0';
-		cleft <= MAX;
-		cright <= 0;
 		out_hde <= '0';
-		wait_vsync <= 15;
 	elsif rising_edge(clk) then
 		if clken = '1' then
-			vsync1 <= vsync;
 			hde1 <= in_hde;
-			if wait_vsync > 0 then
-				if vsync = '1' and vsync1 = '0' then
-					wait_vsync <= wait_vsync - 1;
-				end if;
-			else
-				if in_hde = '1' and hde1 = '0' then
-					nccnt := 0;
-				elsif ccnt < MAX then
-					nccnt := ccnt + 1;
-				end if;
-				ccnt <= nccnt;
-				if mono = '1' and in_hde = '1' then
-					if ccnt < cleft then
-						cleft <= ccnt;
-					end if;
-					if ccnt+1 > cright then
-						cright <= ccnt+1;
-					end if;
-				end if;
-				if nccnt = cleft then
-					out_hde <= '1';
-				elsif nccnt = cright then
-					out_hde <= '0';
-				end if;
+			if in_hde = '1' and hde1 = '0' then
+				nccnt := 0;
+			elsif ccnt < MAX then
+				nccnt := ccnt + 1;
+			end if;
+			ccnt <= nccnt;
+			if nccnt = begdly then
+				out_hde <= '1';
+			elsif nccnt = begdly+640 then
+				out_hde <= '0';
 			end if;
 		end if;
 	end if;

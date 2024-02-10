@@ -485,9 +485,8 @@ begin
 		clk => clk,
 		clken => en32ck,
 		resetn => resetn,
-		vsync => vid_vsync,
+		wakest => wakestate,
 		in_hde => vid_hde,
-		mono => shifter_mono,
 		out_hde => mono_hde
 	);
 
