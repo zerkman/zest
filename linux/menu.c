@@ -79,12 +79,12 @@ enum {
 
 #define XCHARS 60
 #define YCHARS 20   // XCHARS*YCHARS must not exceed 1624
-#define XPOS 80
-#define YPOS 40
+#define XPOS (config.mono?80:180)
+#define YPOS (config.mono?40:116)
 #define FSEL_XCHARS 40
 #define FSEL_YCHARS 24 // TODO: no idea why yet, but setting this value any higher some garbage appears on screen
-#define FSEL_XPOS 160
-#define FSEL_YPOS 8
+#define FSEL_XPOS (config.mono?160:260)
+#define FSEL_YPOS (config.mono?8:84)
 #if (FSEL_XCHARS*FSEL_YCHARS)>1624
 #error Too many characters (FSEL_XCHARS*FSEL_YCHARS)
 #endif
