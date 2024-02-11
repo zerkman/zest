@@ -3,7 +3,7 @@
 PROGS=extmod.prg
 
 AS=vasmm68k_mot
-ASOPT=-m68000 -Ftos
+ASOPT=-m68000 -Ftos -tos-flags=7 -nosym
 
 all: $(TARGETS) $(PROGS)
 
