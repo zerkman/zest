@@ -29,7 +29,7 @@ export_ip_user_files -of_objects [get_files "${proj}/${proj}.srcs/sources_1/bd/p
 set runs [create_ip_run [get_files -of_objects [get_fileset sources_1] "${proj}/${proj}.srcs/sources_1/bd/ps_domain/ps_domain.bd"]]
 launch_runs -jobs 16 \$runs
 wait_on_runs \$runs
-synth_design
+synth_design -flatten_hierarchy none
 opt_design
 place_design
 route_design
