@@ -56,17 +56,17 @@ static int sound_mute = 0;
 static int sound_vol = 16;
 
 static void setup_cfg(int reset) {
-  static const int mem_cfg[] = {0,1,3,7,9,15};
+  static const int mem_cfg[] = {0,1,3,7,9,15,55};
   static const int ws_cfg[] = {2,3,1,0};
   int cfg = reset;
   cfg |= config.mono?4:0;
   cfg |= mem_cfg[config.mem_size]<<4;
-  cfg |= ws_cfg[config.wakestate-1]<<8;
   if (sound_mute==0)
     cfg |= sound_vol<<10;
   cfg |= config.floppy_a_write_protect<<15;
   cfg |= config.floppy_b_write_protect<<16;
   cfg |= config.extended_video_modes<<17;
+  cfg |= ws_cfg[config.wakestate-1]<<18;
   parmreg[0] = cfg;
 }
 

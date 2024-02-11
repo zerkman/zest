@@ -45,7 +45,7 @@ static int truefalse(const char *x) {
 
 // interpret string str as a memory size setting
 static int memorysize(const char *x) {
-  static const char *values[] = {"256k","512k","1m","2m","2.5m","4m"};
+  static const char *values[] = {"256k","512k","1m","2m","2.5m","4m","14m"};
   int i;
   for (i=0;i<sizeof(values)/sizeof(values[0]);++i) {
     if (strcasecmp(x,values[i])==0)

@@ -71,6 +71,7 @@ entity glue is
 		vid_hde	    : out std_logic;
 		vid_vde	    : out std_logic;
 
+		cfg_highmem	: in std_logic;
 		cfg_extmod	: in std_logic
 	);
 end glue;
@@ -385,7 +386,7 @@ begin
 			elsif unsigned(iA&'0') < x"800" and unsigned(iA&'0') >= 8 and FC(2) = '1' then
 				-- protected ram access (supervisor mode only)
 				sram <= '0';
-			elsif unsigned(iA&'0') >= x"800" and iA(23 downto 22) = "00" then
+			elsif unsigned(iA&'0') >= x"800" and (iA(23 downto 22) = "00" or cfg_highmem = '1') then
 				-- ram access
 				sram <= '0';
 			end if;

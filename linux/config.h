@@ -26,7 +26,8 @@ enum cfg_mem_size {
   CFG_1M,
   CFG_2M,
   CFG_2_5M,
-  CFG_4M
+  CFG_4M,
+  CFG_14M
 };
 
 

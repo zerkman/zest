@@ -53,7 +53,7 @@ entity mmu is
 		VSYNC	: in std_logic;
 
 		-- max memory configuration
-		mem_top	: in std_logic_vector(3 downto 0);
+		mem_top	: in std_logic_vector(5 downto 0);
 
 		-- interface to RAM. Using own signals instead of hardware specific ones
 		ram_A	: out std_logic_vector(23 downto 1);
@@ -84,7 +84,7 @@ architecture behavioral of mmu is
 begin
 
 	al <= iA(7 downto 1) & '1';
-	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= "00"&mem_top or iA(23 downto 22) /= "00"))) else '0';
+	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= mem_top or iA(23 downto 22) /= "00"))) else '0';
 	mode_bus <= mode_bus_1 or mode_bus_2;
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;

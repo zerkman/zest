@@ -29,7 +29,7 @@ entity atarist_mb is
 		clken : out std_logic;
 		clken_error : out std_logic;
 		monomon : in std_logic;
-		mem_top	: in std_logic_vector(3 downto 0);
+		mem_top	: in std_logic_vector(5 downto 0);
 		wakestate : in std_logic_vector(1 downto 0);
 		cfg_extmod : in std_logic;
 
@@ -185,6 +185,7 @@ architecture structure of atarist_mb is
 	signal st_hsync		: std_logic;
 	signal blankn		: std_logic;
 	signal sde			: std_logic;
+	signal cfg_highmem	: std_logic;
 
 	signal vid_vsync	: std_logic;
 	signal vid_hsync	: std_logic;
@@ -312,6 +313,8 @@ begin
 	ram_W_DONE <= w_done;
 	ram_oD <= od;
 	id <= ram_iD;
+
+	cfg_highmem <= mem_top(5) or mem_top(4);
 
 	stbus:entity atarist_bus port map(
 		cpu_d => cpu_oD,
@@ -468,6 +471,7 @@ begin
 		vid_hsync => vid_hsync,
 		vid_hde => vid_hde,
 		vid_vde => vid_vde,
+		cfg_highmem => cfg_highmem,
 		cfg_extmod => cfg_extmod
 	);
 	glue_iA <= bus_A;

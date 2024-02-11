@@ -89,7 +89,7 @@ architecture structure of zest_atari_st_core is
 	signal clken_err	: std_logic;
 	signal st_rgb 		: std_logic_vector(8 downto 0);
 	signal monomon		: std_logic;
-	signal mem_top		: std_logic_vector(3 downto 0);
+	signal mem_top		: std_logic_vector(5 downto 0);
 	signal wakestate	: std_logic_vector(1 downto 0);
 	signal ikbd_clkren	: std_logic;
 	signal ikbd_clkfen	: std_logic;
@@ -184,12 +184,12 @@ begin
 	dblpix24 <= dblpix(15 downto 11) & "000" & dblpix(10 downto 5) & "00" & dblpix(4 downto 0) & "000";
 	ram_a <= x"00" & ram_a_23 & '0';
 	monomon <= out_reg0(2);
-	mem_top <= out_reg0(7 downto 4);
-	wakestate <= out_reg0(9 downto 8);
+	mem_top <= out_reg0(9 downto 4);
 	sound_vol <= out_reg0(14 downto 10);
 	wp0 <= out_reg0(15);
 	wp1 <= out_reg0(16);
 	cfg_extmod <= out_reg0(17);
+	wakestate <= out_reg0(19 downto 18);
 	in_reg0(31) <= host_r;
 	in_reg0(30) <= host_w;
 	in_reg0(29 downto 21) <= host_addr;
