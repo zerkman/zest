@@ -22,19 +22,19 @@ fi
 
 cd $ZEST_SETUP/output
 
-if [ ! -d src/dt ] ; then
-    cat <<EOF > devicetree.tcl
+if [ ! -d $target/dt ] ; then
+    cat <<EOF > $target/devicetree.tcl
 hsi open_hw_design $target/zest_top.xsa
 hsi set_repo_path src/device-tree-xlnx
 hsi create_sw_design device-tree -os device_tree -proc ps7_cortexa9_0
-hsi generate_target -dir src/dt
+hsi generate_target -dir $target/dt
 EOF
-    $XILINX_PATH/Vitis/$XILINX_VERSION/bin/xsct devicetree.tcl || exit $?
-    rm devicetree.tcl
+    $XILINX_PATH/Vitis/$XILINX_VERSION/bin/xsct $target/devicetree.tcl || exit $?
+    rm $target/devicetree.tcl
 fi
 
-cp $ZEST_SETUP/$board/zest.dts src/dt || exit $?
-cd src/dt
+cp $ZEST_SETUP/$board/zest.dts $target/dt || exit $?
+cd $target/dt
 cpp -nostdinc -I include -I arch -undef -x assembler-with-cpp zest.dts > devicetree.dts || exit $?
 dtc -I dts -O dtb -i . -o $ZEST_SETUP/output/$target/devicetree.dtb devicetree.dts || exit $?
-rm -f zest.dts devicetree.dtb
+rm -f zest.dts devicetree.dts
