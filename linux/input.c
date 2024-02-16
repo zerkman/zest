@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE    // versionsort
 #include <sys/types.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -25,23 +26,25 @@
 #include <unistd.h>
 #include <poll.h>
 #include <sys/inotify.h>
+#include <sys/ioctl.h>
 
+#include <linux/input.h>
 #include <linux/input-event-codes.h>
 
 #include "input.h"
 
-struct input_event {
-  struct timeval time;
-  unsigned short type;
-  unsigned short code;
-  unsigned int value;
-};
+#define BFELTBITS (sizeof(unsigned long)*8)
+#define BFSIZE(nbits) ((nbits+BFELTBITS-1)/BFELTBITS)
+#define BFTEST(bf,x) (bf[x/BFELTBITS]>>(x%BFELTBITS)&1)
 
 // device identifier
 struct _dev_info {
-  char *name;          // name
-  unsigned int cap;    // capabilities
-  int joyid;           // joystick id (-1 if no joystick)
+  // name
+  char *name;
+  // joystick id (-1 if no joystick)
+  int joyid;
+  // joystick X axis - Y is joy_axis+1
+  int joy_axis;
 } dev_info[256];
 
 static struct pollfd pfd[256];
@@ -54,29 +57,52 @@ static int ie_i = 0;
 static int inotify_fd;
 
 static void add_device(const char *name) {
-  if (strncmp(name,"event",5)==0) {
-    char buf[267];
-    sprintf(buf,"/dev/input/%s",name);
-    pfd[nfds].fd = open(buf,O_RDONLY);
-    pfd[nfds].events = POLLIN;
-    dev_info[nfds].name = strdup(name);
-    dev_info[nfds].cap = 0;
-    dev_info[nfds].joyid = -1;
-    sprintf(buf,"/sys/class/input/event%s/device/capabilities/ev",name+5);
-    int fd = open(buf,O_RDONLY);
-    if (fd==-1) {
-      printf("error: %s is not accessible\n",buf);
-    } else {
-      int sz = read(fd,buf,sizeof(buf)-1);
-      close(fd);
-      buf[sz] = 0;
-      dev_info[nfds].cap = strtoul(buf,NULL,16);
-      if (dev_info[nfds].cap&1<<EV_ABS) {
-        dev_info[nfds].joyid = njs++;
+  unsigned long evtypes[BFSIZE(EV_CNT)];
+  unsigned long cap[EV_CNT][BFSIZE(KEY_CNT)];
+  char buf[256];
+  int fd;
+  int evtype,evcode;
+  sprintf(buf,"/dev/input/%s",name);
+  fd = open(buf,O_RDONLY);
+  pfd[nfds].fd = fd;
+  pfd[nfds].events = POLLIN;
+  dev_info[nfds].name = strdup(name);
+  dev_info[nfds].joyid = -1;
+  // scan device capabilities
+  memset(evtypes,0,sizeof(evtypes));
+  memset(cap,0,sizeof(cap));
+  ioctl(fd,EVIOCGBIT(0,EV_CNT),evtypes);
+  for (evtype=1; evtype<EV_CNT; ++evtype) {
+    if (BFTEST(evtypes,evtype)) {
+      // scan possible codes
+      ioctl(fd,EVIOCGBIT(evtype,KEY_CNT),cap[evtype]);
+    }
+  }
+  // if device supports EV_ABS, and it has a button, test if it has joystick capabilities
+  if (BFTEST(evtypes,EV_ABS) && BFTEST(cap[EV_KEY],BTN_GAMEPAD)) {
+    int axis = -1;
+    for (evcode=0;evcode<KEY_CNT;++evcode) {
+      if (BFTEST(cap[EV_ABS],evcode)) {
+        int abs[6] = {0};
+        // If we find two consecutive axes with minval=-1 and maxval=1
+        // then it's a joystick
+        ioctl(fd,EVIOCGABS(evcode),abs);
+        if (abs[1]==-1 && abs[2]==1) {
+          if (axis!=-1) {
+            // joystick found
+            dev_info[nfds].joyid = njs++;
+            dev_info[nfds].joy_axis = axis;
+            break;
+          }
+          axis = evcode;
+        } else {
+          axis = -1;
+        }
       }
     }
-    ++nfds;
+
   }
+  ++nfds;
 }
 
 static void rm_device(const char *name) {
@@ -103,15 +129,24 @@ static void rm_device(const char *name) {
   }
 }
 
+static int is_event(const struct dirent *e) {
+  return strncmp(e->d_name,"event",5)==0;
+}
+
 void input_init(void) {
-  struct dirent *e;
-  DIR *dd = opendir("/dev/input");
+  struct dirent **namelist;
+  int i;
+
+  int ndev = scandir("/dev/input",&namelist,is_event,versionsort);
+  if (ndev<=0) return;
+
   nfds = 0;
 
-  while ((e=readdir(dd))!=NULL) {
-    add_device(e->d_name);
+  for (i=0; i<ndev; ++i) {
+    add_device(namelist[i]->d_name);
+    free(namelist[i]);
   }
-  closedir(dd);
+  free(namelist);
 
   inotify_fd = inotify_init1(IN_NONBLOCK);
   inotify_add_watch(inotify_fd,"/dev/input",IN_CREATE|IN_DELETE);
@@ -120,11 +155,21 @@ void input_init(void) {
 int input_event(int timeout, int *type, int *code, int *value, int *joyid) {
   char inbuf[sizeof(struct inotify_event)+NAME_MAX+1];
   if (ie_i < ie_count) {
+    const struct _dev_info *devinfo = &dev_info[fd_i-1];
     *type = ie[ie_i].type;
     *code = ie[ie_i].code;
     *value = (int)ie[ie_i].value;
-    if (joyid) *joyid = dev_info[fd_i-1].joyid;
+    if (joyid) *joyid = devinfo->joyid;
     ++ie_i;
+    if (*type==EV_ABS && devinfo->joyid>=0) {
+      // special treatment for identified joysticks
+      if (*code<devinfo->joy_axis || *code>devinfo->joy_axis+1) {
+        // ignore EV_ABS events from other axes
+        return input_event(timeout,type,code,value,joyid);
+      }
+      // remap the axis to ABS_X and ABS_Y
+      *code = *code-devinfo->joy_axis+ABS_X;
+    };
     return 1;
   }
   for (; fd_i<nfds; ++fd_i) {

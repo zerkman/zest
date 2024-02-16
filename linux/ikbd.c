@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #include <linux/input-event-codes.h>
 
@@ -175,7 +176,10 @@ void * thread_ikbd(void * arg) {
             case BTN_LEFT: key = 122; break;
             case BTN_NORTH: key = 122; break;
             case BTN_RIGHT: key = 127; break;
-            case BTN_GAMEPAD: key = 127; break;
+            case BTN_GAMEPAD:
+              if (joyid==0) key = 127;
+              if (joyid==1) key = 122;
+              break;
             case KEY_NUMLOCK:
               if (evvalue == 1) {
                 joy_emu = !joy_emu;
@@ -202,6 +206,7 @@ void * thread_ikbd(void * arg) {
             // default:
             //   printf("Key code:%d val:%d\n",evcode,evvalue);
           }
+          // printf("Key code:%#x joyid:%d key:%d val:%d\n",evcode,joyid,key,evvalue);
           if (key!=-1) {
             parmreg[4+key/32] = (parmreg[4+key/32] & ~(1<<key%32)) | (!evvalue)<<(key%32);
           }
@@ -226,18 +231,19 @@ void * thread_ikbd(void * arg) {
           if (joyid>=0 && joyid<2) {
             unsigned int val = 3;
             key = -1;
-            // PS4-type game controller events
-            if (evcode==ABS_HAT0X||evcode==ABS_HAT0Y) {
+            // game controller events
+            if (evcode==ABS_X||evcode==ABS_Y) {
               if (evvalue==-1) val = 2;
               if (evvalue==1) val = 1;
-              if (evcode==ABS_HAT0X) key = 125;  // left/right axis
-              if (evcode==ABS_HAT0Y) key = 123;  // up/down axis
+              if (evcode==ABS_X) key = 125;  // left/right axis
+              if (evcode==ABS_Y) key = 123;  // up/down axis
             }
             if (key!=-1) {
               if (joyid==1) {
                 // second joystick goes to the mouse port
                 key -= 5;
               }
+              // printf("evcode:%d joyid:%d key:%d val:%d\n",evcode,joyid,key,evvalue);
               parmreg[4+key/32] = (parmreg[4+key/32] & ~(3<<key%32)) | val<<(key%32);
             }
           }
