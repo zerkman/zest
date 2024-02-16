@@ -16,7 +16,9 @@ mkdir -p output/src
 cd output/src
 
 if [ ! -d $buildroot ] ; then
-    wget https://buildroot.org/downloads/${buildroot}.tar.xz || exit $?
+    if [ ! -f ${buildroot}.tar.xz ] ; then
+        wget https://buildroot.org/downloads/${buildroot}.tar.xz || exit $?
+    fi
     tar xf ${buildroot}.tar.xz
     rm -f ${buildroot}
 fi
