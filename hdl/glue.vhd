@@ -68,8 +68,7 @@ entity glue is
 
 		vid_vsync   : out std_logic;
 		vid_hsync   : out std_logic;
-		vid_hde	    : out std_logic;
-		vid_vde	    : out std_logic;
+		vid_de	    : out std_logic;
 
 		cfg_highmem	: in std_logic;
 		cfg_extmod	: in std_logic
@@ -221,6 +220,8 @@ architecture behavioral of glue is
 
 	signal vsync1    : std_logic;
 	signal vscnt     : integer range 0 to 3;
+	signal vid_vde   : std_logic;
+	signal vid_hde   : std_logic;
 
 	signal mode		: videomode_t;		-- current video mode, synced to 2 mhz clock
 	signal dmode	: videomode_t;		-- mode, synced to 8 mhz clock
@@ -253,6 +254,7 @@ begin
 
 BLANKn <= vblank nor hblank;
 DE <= vde and hde;
+vid_de <= vid_vde and vid_hde;
 VSYNC <= svsync;
 HSYNC <= shsync;
 VPAn <= vpa_irqn and vpa_acia;
@@ -576,8 +578,9 @@ IACKn <= not ack_mfp;
 -- video sync
 process(hcnt,smode,resetn)
 begin
-	nexthcnt <= (others => '0');
-	if resetn = '1' and hcnt+1 < smode.cycles_per_line then
+	if hcnt+1 = smode.cycles_per_line then
+		nexthcnt <= (others => '0');
+	else
 		nexthcnt <= hcnt+1;
 	end if;
 end process;
