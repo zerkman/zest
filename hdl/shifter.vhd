@@ -47,8 +47,8 @@ architecture behavioral of shifter is
 	signal monopal	: std_logic;
 	signal address	: integer;
 	-- resolution
-	signal res		: std_logic_vector(1 downto 0) := "00";
-	signal res_ff	: std_logic_vector(1 downto 0) := "00";
+	signal res		: std_logic_vector(1 downto 0);
+	signal res_ff	: std_logic_vector(1 downto 0);
 	signal res_w	: std_logic;
 	-- pixel registers
 	type pxregs_t is array (0 to 3) of std_logic_vector(15 downto 0);
@@ -97,8 +97,12 @@ begin
 end process;
 
 -- write to palette or resolution registers
-process(clk)
+process(clk,resetn)
 begin
+	if resetn = '0' then
+		monopal <= '0';
+		res_ff <= "00";
+	end if;
 	if rising_edge(clk) then
 		if en8ck = '1' then
 			if CSn = '0' and RWn = '0' then
