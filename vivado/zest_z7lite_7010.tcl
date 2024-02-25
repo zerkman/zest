@@ -165,7 +165,7 @@ set proj_dir [get_property directory [current_project]]
 
 # Set project properties
 set obj [current_project]
-set_property -name "default_lib" -value "xil_defaultlib" -objects $obj
+set_property -name "default_lib" -value "work" -objects $obj
 set_property -name "enable_vhdl_2008" -value "1" -objects $obj
 set_property -name "ip_cache_permissions" -value "read write" -objects $obj
 set_property -name "ip_output_repo" -value "$proj_dir/${_xil_proj_name_}.cache/ip" -objects $obj
@@ -490,7 +490,7 @@ set obj [get_filesets sim_1]
 set obj [get_filesets sim_1]
 set_property -name "hbs.configure_design_for_hier_access" -value "1" -objects $obj
 set_property -name "top" -value "zest_top" -objects $obj
-set_property -name "top_lib" -value "xil_defaultlib" -objects $obj
+set_property -name "top_lib" -value "work" -objects $obj
 
 # Set 'utils_1' fileset object
 set obj [get_filesets utils_1]

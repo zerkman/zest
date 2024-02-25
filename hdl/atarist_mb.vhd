@@ -423,6 +423,7 @@ begin
 		en8fck => en8fck,
 		en2rck => en2rck,
 		en2fck => en2fck,
+		en32ck => en32ck,
 		resetn => resetn,
 
 		iA => glue_iA,
@@ -463,6 +464,7 @@ begin
 		vid_vsync => vsync,
 		vid_hsync => hsync,
 		vid_de => de,
+		wakestate => wakestate,
 		cfg_highmem => cfg_highmem,
 		cfg_extmod => cfg_extmod
 	);

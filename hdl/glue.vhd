@@ -18,6 +18,61 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+library work;
+use work.all;
+
+entity mono_hde_gen is
+	port (
+		clk : in std_logic;
+		clken : in std_logic;
+		resetn : in std_logic;
+		wakest : in std_logic_vector(1 downto 0);
+		in_hde : in std_logic;
+		out_hde : out std_logic
+	);
+end entity;
+
+architecture hdl of mono_hde_gen is
+	constant MAX : integer := 1023;
+
+	signal ccnt : integer range 0 to MAX;
+	signal hde1 : std_logic;
+	signal begdly : integer range 0 to 31;
+begin
+
+	begdly <= to_integer(unsigned(wakest)+1)*4+14;
+
+process(clk,resetn)
+	variable nccnt : integer range 0 to MAX;
+begin
+	if resetn = '0' then
+		ccnt <= 0;
+		hde1 <= '0';
+		out_hde <= '0';
+	elsif rising_edge(clk) then
+		if clken = '1' then
+			hde1 <= in_hde;
+			if in_hde = '1' and hde1 = '0' then
+				nccnt := 0;
+			elsif ccnt < MAX then
+				nccnt := ccnt + 1;
+			end if;
+			ccnt <= nccnt;
+			if nccnt = begdly then
+				out_hde <= '1';
+			elsif nccnt = begdly+640 then
+				out_hde <= '0';
+			end if;
+		end if;
+	end if;
+end process;
+
+end architecture;
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
 entity glue is
 	port (
 		clk         : in std_logic;
@@ -25,6 +80,7 @@ entity glue is
 		en8fck      : in std_logic;
 		en2rck      : in std_logic;
 		en2fck      : in std_logic;
+		en32ck      : in std_logic;
 		resetn      : in std_logic;
 
 		iA          : in std_logic_vector(23 downto 1);
@@ -70,6 +126,7 @@ entity glue is
 		vid_hsync   : out std_logic;
 		vid_de	    : out std_logic;
 
+		wakestate   : in std_logic_vector(1 downto 0);
 		cfg_highmem	: in std_logic;
 		cfg_extmod	: in std_logic
 	);
@@ -224,7 +281,7 @@ architecture behavioral of glue is
 	signal vid_hde   : std_logic;
 
 	signal mode		: videomode_t;		-- current video mode, synced to 2 mhz clock
-	signal dmode	: videomode_t;		-- mode, synced to 8 mhz clock
+	signal dmode	: videomode_t;		-- mode, synced to 8 mhz clock
 	signal smode	: videomode_t;		-- mode, wrt. line-buffered hz50 (line_pal)
 	signal vsmode	: videomode_t;		-- mode stored at last VSYNC
 
@@ -250,11 +307,15 @@ architecture behavioral of glue is
 	signal mmuct	: unsigned(1 downto 0);
 	signal idtackff	: std_logic;
 
+	signal mono_hde : std_logic;
+	signal vimo_hde : std_logic;
+
 begin
 
 BLANKn <= vblank nor hblank;
 DE <= vde and hde;
-vid_de <= vid_vde and vid_hde;
+vimo_hde <= vid_hde when mono_vs = '0' else mono_hde;
+vid_de <= vid_vde and vimo_hde;
 VSYNC <= svsync;
 HSYNC <= shsync;
 VPAn <= vpa_irqn and vpa_acia;
@@ -267,6 +328,15 @@ mode <= mode_select(mono,hz50,cfg_extmod,extmod_vs);
 dmode <= mode_select(mono,hz50_0,cfg_extmod,extmod_vs);
 smode <= mode_select(mono,line_pal,cfg_extmod,extmod_vs);
 vsmode <= mode_select(mono_vs,hz50_vs,cfg_extmod,extmod_vs);
+
+hdegen: entity work.mono_hde_gen port map (
+	clk => clk,
+	clken => en32ck,
+	resetn => resetn,
+	wakest => wakestate,
+	in_hde => vid_hde,
+	out_hde => mono_hde
+	);
 
 -- 8-bit bus (ACIA) signal management
 process(iA,iASn,VMAn)
