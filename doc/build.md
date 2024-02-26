@@ -17,12 +17,18 @@ You’ll need:
  - required command line tools:
    - wget
    - git
+   - gcc
+   - g++
    - make
    - device-tree-compiler
    - u-boot-tools
+   - flex
+   - bison
  - Development libraries:
    - uuid-dev
    - gnutls-dev
+   - libssl-dev
+   - libtinfo5
 
 My build system is a Debian bullseye Linux system, but I believe any GNU/Linux system will do.
 
