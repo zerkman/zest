@@ -27,7 +27,7 @@ open_project "$proj/$proj.xpr"
 generate_target all [get_files "${proj}/${proj}.srcs/sources_1/bd/ps_domain/ps_domain.bd"]
 export_ip_user_files -of_objects [get_files "${proj}/${proj}.srcs/sources_1/bd/ps_domain/ps_domain.bd"] -no_script -sync -force -quiet
 set runs [create_ip_run [get_files -of_objects [get_fileset sources_1] "${proj}/${proj}.srcs/sources_1/bd/ps_domain/ps_domain.bd"]]
-launch_runs -jobs 16 \$runs
+launch_runs -jobs `nproc` \$runs
 wait_on_runs \$runs
 synth_design -flatten_hierarchy none
 opt_design
