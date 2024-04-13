@@ -7,6 +7,41 @@ export XILINX_VERSION=2023.2
 export BUILDROOT_VERSION=2023.11.1
 export EMUTOS_VERSION=1.2.1
 
+# Check dependencies
+MISSING=
+command -v wget > /dev/null || MISSING="$MISSING wget"
+command -v git > /dev/null || MISSING="$MISSING git"
+command -v gcc > /dev/null || MISSING="$MISSING gcc"
+command -v g++ > /dev/null || MISSING="$MISSING g++"
+command -v make > /dev/null || MISSING="$MISSING make"
+command -v dtc > /dev/null || MISSING="$MISSING device-tree-compiler"
+command -v mkimage > /dev/null || MISSING="$MISSING u-boot-tools"
+command -v flex > /dev/null || MISSING="$MISSING flex"
+command -v bison > /dev/null || MISSING="$MISSING bison"
+command -v pkg-config > /dev/null || MISSING="$MISSING pkgconf"
+
+if [ ! -z "$MISSING" ] ; then
+    echo "Missing dependencies. Please install the following packages:"
+    echo $MISSING
+    exit 1
+fi
+
+# Check library dependencies
+pkg-config uuid || MISSIN="$MISSING uuid-dev"
+pkg-config gnutls || MISSIN="$MISSING gnutls-dev"
+pkg-config libssl || MISSIN="$MISSING libssl-dev"
+# TODO: libtinfo5
+
+if [ ! -z "$MISSING" ] ; then
+    echo "Missing dependencies. Please install the following packages:"
+    echo $MISSING
+    exit 1
+fi
+
+# Check Xilinx tools install
+# TODO
+
+
 # Root filesystem
 if [ ! -f output/rootfs.ub ] ; then
     recipes/rootfs.sh
