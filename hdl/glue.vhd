@@ -135,160 +135,18 @@ end glue;
 
 architecture behavioral of glue is
 
-	type videomode_t is record
-		cycles_per_line	: integer;
-		n_lines			: integer;
-		vblank_off		: integer;
-		vde_on			: integer;
-		vde_off			: integer;
-		vblank_on		: integer;
-		vvsync_on		: integer;
-		hsync_off		: integer;
-		hvsync_on		: integer;
-		hblank_off		: integer;
-		hde_on			: integer;
-		hde_off			: integer;
-		hblank_on		: integer;
-		vid_hsync_on	: integer;
-		vid_hsync_off	: integer;
-		vid_hde_on		: integer;
-		vid_hde_off		: integer;
-		vid_vde_on		: integer;
-		vid_vde_off		: integer;
-	end record;
-	constant mode_50	: videomode_t := (
-		cycles_per_line		=> 128,
-		n_lines				=> 313,
-		vblank_off			=> 25,
-		vde_on				=> 63,		-- 47 on old GLUE revisions
-		vde_off				=> 263,		-- 247 on old GLUE revisions
-		vblank_on			=> 308,
-		vvsync_on			=> 310,
-		hsync_off			=> 118,
-		hvsync_on			=> 16,
-		hblank_off			=> 10,
-		hde_on				=> 17,
-		hde_off				=> 97,
-		hblank_on			=> 115,
-		vid_hsync_on		=> 120,
-		vid_hsync_off		=> 126,
-		vid_hde_on			=> 10,
-		vid_hde_off			=> 115,
-		vid_vde_on			=> 34,
-		vid_vde_off			=> 310);
-	constant mode_60	: videomode_t := (
-		cycles_per_line		=> 127,
-		n_lines				=> 263,
-		vblank_off			=> 16,
-		vde_on				=> 34,
-		vde_off				=> 234,
-		vblank_on			=> 258,
-		vvsync_on			=> 260,
-		hsync_off			=> 117,
-		hvsync_on			=> 16,
-		hblank_off			=> 9,
-		hde_on				=> 16,
-		hde_off				=> 96,
-		hblank_on			=> 115,
-		vid_hsync_on		=> 119,
-		vid_hsync_off		=> 125,
-		vid_hde_on			=> 9,
-		vid_hde_off			=> 115,
-		vid_vde_on			=> 16,
-		vid_vde_off			=> 258);
-	constant mode_hi	: videomode_t := (
-		cycles_per_line		=> 56,
-		n_lines				=> 501,
-		vblank_off			=> 30,
-		vde_on				=> 36,
-		vde_off				=> 436,
-		vblank_on			=> 442,
-		vvsync_on			=> 500,
-		hsync_off			=> 50,
-		hvsync_on			=> 0,
-		hblank_off			=> 7,
-		hde_on				=> 4,
-		hde_off				=> 44,
-		hblank_on			=> 49,
-		vid_hsync_on		=> 51,
-		vid_hsync_off		=> 1,
-		vid_hde_on			=> 8,
-		vid_hde_off			=> 50,
-		vid_vde_on			=> 36,
-		vid_vde_off			=> 436);
-	constant ext_mode_50	: videomode_t := (
-		cycles_per_line		=> 128,
-		n_lines				=> 313,
-		vblank_off			=> 25,
-		vde_on				=> 34,
-		vde_off				=> 310,
-		vblank_on			=> 310,
-		vvsync_on			=> 310,
-		hsync_off			=> 118,
-		hvsync_on			=> 16,
-		hblank_off			=> 10,
-		hde_on				=> 5,
-		hde_off				=> 109,
-		hblank_on			=> 115,
-		vid_hsync_on		=> 120,
-		vid_hsync_off		=> 126,
-		vid_hde_on			=> 10,
-		vid_hde_off			=> 115,
-		vid_vde_on			=> 34,
-		vid_vde_off			=> 310);
-
-	signal extmod	: std_logic;	-- extended mode bit
-	signal extmod_vs : std_logic;	-- extended mode bit, saved on vsync
-
-	function mode_select(mono: in std_logic; hz50: in std_logic; a_cfg_extmod: in std_logic; a_extmod: in std_logic) return videomode_t is
-	begin
-		if mono = '1' then
-			return mode_hi;
-		elsif hz50 = '1' then
-			if a_cfg_extmod = '1' and a_extmod = '1' then
-				return ext_mode_50;
-			else
-				return mode_50;
-			end if;
-		else
-			return mode_60;
-		end if;
-	end function;
-
 	-- resolution
-	signal mono		: std_logic;	-- mono mode, 1 cycle later than mono_0
-	signal mono_0	: std_logic;	-- mono mode, synced to en8rck
-	signal mono_vs	: std_logic;	-- mono mode, saved on vsync
+	signal mono_i	: std_logic;	-- mono mode, immediate value (combinational)
+	signal mono_ff	: std_logic;	-- mono mode, registered
+	signal mono		: std_logic;	-- mono mode, reference signal
 	signal medres	: std_logic;	-- medium mode
-	-- 0 -> 60 Hz, 1 -> 50 Hz
-	signal hz50		: std_logic;	-- PAL mode, synchronised to en2fck
-	signal hz50_0	: std_logic;	-- PAL mode, synchronised to en8rck
-	signal hz50_vs	: std_logic;	-- PAL mode, saved on vsync
-
-	signal hcnt		: unsigned(6 downto 0);
-	signal nexthcnt	: unsigned(6 downto 0);
-	signal vcnt		: unsigned(8 downto 0);
-	signal vblank	: std_logic;
-	signal hblank	: std_logic;
-	signal vde		: std_logic;
-	signal hde		: std_logic;
-	signal line_pal	: std_logic;
-	signal hsdly	: std_logic;
-
-	signal vsync1    : std_logic;
-	signal vscnt     : integer range 0 to 3;
-	signal vid_vde   : std_logic;
-	signal vid_hde   : std_logic;
-
-	signal mode		: videomode_t;		-- current video mode, synced to 2 mhz clock
-	signal dmode	: videomode_t;		-- mode, synced to 8 mhz clock
-	signal smode	: videomode_t;		-- mode, wrt. line-buffered hz50 (line_pal)
-	signal vsmode	: videomode_t;		-- mode stored at last VSYNC
+	signal pal_i	: std_logic;	-- PAL mode, immediate
+	signal pal_ff	: std_logic;	-- PAL mode, registered
+	signal pal		: std_logic;	-- PAL mode, reference signal
+	signal extmod   : std_logic;    -- extended mode bit
 
 	signal irq_vbl	: std_logic;
 	signal irq_hbl	: std_logic;
-	signal svsync	: std_logic;
-	signal shsync	: std_logic;
 	signal ack_vbl	: std_logic;
 	signal ack_hbl	: std_logic;
 	signal ack_mfp	: std_logic;
@@ -307,14 +165,62 @@ architecture behavioral of glue is
 	signal mmuct	: unsigned(1 downto 0);
 	signal idtackff	: std_logic;
 
+	signal ias		: std_logic;
+	signal ifc2z	: std_logic;	-- supervisor
+	signal iiack	: std_logic;	-- cpu space
+	signal fcx		: std_logic;	-- data/program
+	signal idev		: std_logic;	-- supervisor data/program + address=ffxxxx
+	signal mdesel	: std_logic;
+	signal syncsel	: std_logic;
+	signal isndcsb	: std_logic;
+	signal sndcsd	: std_logic_vector(1 downto 0);
+	signal ifcsb	: std_logic;
+	signal ifcsd	: std_logic;
+	signal ia16		: std_logic_vector(15 downto 0);
+
+	-- horizontal sync
+	signal hsc		: integer range 0 to 127;
+	signal hsync0	: std_logic;
+	signal hsync1	: std_logic;
+	signal shsync	: std_logic;
+
+	-- vertical sync
+	signal vsc		: integer range 0 to 511;
+	signal vsync1	: std_logic;
+	signal svsync	: std_logic;
+
+	-- horizontal de/blank
+	signal cpal		: std_logic;
+	signal cntsc	: std_logic;
+	signal hdec		: integer range 0 to 255;
+	signal hde		: std_logic;
+	signal hblank	: std_logic;
+
+	-- vertical de/blank
+	signal vdec		: integer range 0 to 511;
+	signal vblank	: std_logic;
+	signal vde		: std_logic;
+
+	-- signals for the additional de/sync signals management
+	signal vid_vde	: std_logic;
+	signal vid_hde	: std_logic;
+	signal vhsync0	: std_logic;
+	signal vhsync1	: std_logic;
+	signal vsmono	: std_logic;
+	signal vspal	: std_logic;
+	signal vscpal	: std_logic;
+	signal vscntsc	: std_logic;
+	signal vsyncd	: std_logic;
+	signal vscnt	: integer range 0 to 3;
+
+	-- mono HDE
 	signal mono_hde : std_logic;
 	signal vimo_hde : std_logic;
 
+
 begin
 
-BLANKn <= vblank nor hblank;
-DE <= vde and hde;
-vimo_hde <= vid_hde when mono_vs = '0' else mono_hde;
+vimo_hde <= vid_hde when vsmono = '0' else mono_hde;
 vid_de <= vid_vde and vimo_hde;
 VSYNC <= svsync;
 HSYNC <= shsync;
@@ -324,19 +230,133 @@ oRDY <= sdma;
 DMAn <= sdma;
 RAMn <= sram;
 
-mode <= mode_select(mono,hz50,cfg_extmod,extmod_vs);
-dmode <= mode_select(mono,hz50_0,cfg_extmod,extmod_vs);
-smode <= mode_select(mono,line_pal,cfg_extmod,extmod_vs);
-vsmode <= mode_select(mono_vs,hz50_vs,cfg_extmod,extmod_vs);
+ia16 <= iA(15 downto 1) & '0';
+ias <= not iASn;
+ifc2z <= FC(2);
+iiack <= FC(2) and FC(1) and FC(0) and ias;
+fcx <= FC(1) xor FC(0);
+idev <= '1' when ifc2z = '1' and fcx = '1' and iA(23 downto 16) = x"ff" else '0';
+mdesel <= '1' when idev = '1' and iASn = '0' and ia16 = x"8260" else '0';
+syncsel <= '1' when idev = '1' and iASn = '0' and ia16 = x"820a" else '0';
+isndcsb <= '0' when idev = '1' and iASn = '0' and iA(15 downto 8) = x"88" else '1';
+mono_i <= iD(1) when mdesel = '1' and iRWn = '0' and iUDSn = '0' else mono_ff;
+pal_i <= iD(1) when syncsel = '1' and iRWn = '0' and iUDSn = '0' else pal_ff;
+mono <= mono_i;
+pal <= pal_ff;
 
-hdegen: entity work.mono_hde_gen port map (
-	clk => clk,
-	clken => en32ck,
-	resetn => resetn,
-	wakest => wakestate,
-	in_hde => vid_hde,
-	out_hde => mono_hde
-	);
+-- mfp access
+process(idev,iA,iASn)
+begin
+	if idev = '1' and iASn = '0' and iA(15 downto 6)&"000000" = x"fa00" then
+		MFPCSn <= '0';
+	else
+		MFPCSn <= '1';
+	end if;
+end process;
+
+-- dma registers access
+process(idev,iA,iASn,iLDSn,iUDSn)
+begin
+	if idev = '1' and iASn = '0' and iLDSn = '0' and iUDSn = '0' and iA(15 downto 2)&"00" = x"8604" then
+		FCSn <= '0';
+	else
+		FCSn <= '1';
+	end if;
+end process;
+
+-- YM registers access
+process(isndcsb,iUDSn)
+begin
+	if isndcsb = '0' and iUDSn = '0' then
+		SNDCSn <= '0';
+	else
+		SNDCSn <= '1';
+	end if;
+end process;
+
+-- video registers
+process(clk,resetn)
+begin
+	if resetn = '0' then
+		mono_ff <= '0';
+		medres <= '0';
+		pal_ff <= '0';
+		extmod <= '0';
+	elsif rising_edge(clk) then
+		if en8rck = '1' then
+			if mdesel = '1' and iRwn = '0' and iUDSn = '0' then
+				-- write to registers
+				extmod <= iD(2) and cfg_extmod;
+				medres <= iD(0);
+			end if;
+		end if;
+		if en8fck = '1' then
+			mono_ff <= mono_i;
+			pal_ff <= pal_i;
+		end if;
+	end if;
+end process;
+
+
+-- peripheral register access
+process(clk,resetn)
+begin
+	if resetn = '0' then
+		oD <= (others => '1');
+		ymdtackn <= '1';
+		sdtackn <= '1';
+		dma_w <= '0';
+	elsif rising_edge(clk) then
+	if en8rck = '1' then
+		oD <= (others => '1');
+		sdtackn <= '1';
+		ymdtackn <= '1';
+		if idev = '1' and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRwn = '0' and rwn_ff = '1')) then
+			-- hardware registers
+			if syncsel = '1' and iUDSn = '0' and iRWn = '1' then
+				oD <= '0'&pal&'0';
+			end if;
+			if mdesel = '1' and iUDSn = '0' and iRWn = '1' then
+				-- read resolution
+				-- should be Shifter's job, but we need to allow read access to extmod so we do it in GLUE
+				oD(2) <= cfg_extmod and extmod;
+				oD(1) <= mono;
+				oD(0) <= medres;
+			end if;
+			if iA(15 downto 2)&"00" = x"8604" then
+				-- assert DTACKn for DMA register access
+				sdtackn <= '0';
+			end if;
+			if isndcsb = '0' then
+				-- assert DTACKn for PSG register access (1 extra cycle delay)
+				ymdtackn <= '0';
+			end if;
+		end if;
+		if idev = '1' and iASn = '0' and iUDSn = '0' and iRWn = '0' then
+			if ia16 = x"8606" then
+				dma_w <= iD(0);
+			end if;
+		end if;
+		if ymdtackn = '0' and iASn = '0' then
+			sdtackn <= '0';
+		end if;
+	end if;
+	end if;
+end process;
+
+
+-- bus error
+BEER <= beercnt(5);
+process(clk,resetn,iASn)
+begin
+	if resetn = '0' or iASn = '1' then
+		beercnt <= "100000";
+	elsif rising_edge(clk) then
+		if en8rck = '1' then
+			beercnt <= beercnt + 1;
+		end if;
+	end if;
+end process;
 
 -- 8-bit bus (ACIA) signal management
 process(iA,iASn,VMAn)
@@ -353,77 +373,6 @@ begin
 	end if;
 end process;
 
--- peripheral register access
-process(clk,resetn)
-begin
-	if resetn = '0' then
-		ymdtackn <= '1';
-		sdtackn <= '1';
-		mono <= '0';
-		mono_0 <= '0';
-		medres <= '0';
-		hz50_0 <= '0';
-		dma_w <= '0';
-		mmuct <= "00";
-		idtackff <= '1';
-		extmod <= '0';
-	elsif rising_edge(clk) then
-	if en8fck = '1' then
-		idtackff <= iDTACKn;
-		if iDTACKn = '0' and idtackff = '1' and sram = '0' then
-			-- synchronize with MMU counter
-			mmuct <= "11";
-		else
-			mmuct <= mmuct + 1;
-		end if;
-	elsif en8rck = '1' then
-		oD <= (others => '1');
-		sdtackn <= '1';
-		ymdtackn <= '1';
-		mono <= mono_0;
-		if FC /= "111" and iASn = '0' and (iUDSn = '0' or iLDSn = '0' or (iRwn = '0' and rwn_ff = '1')) then
-			if iA(23 downto 15) = "111111111" and FC(2) = '1' then
-				-- hardware registers
-				if iA(15 downto 1)&'0' = x"820a" and iUDSn = '0' and iRWn = '1' then
-					oD <= '0'&hz50&'0';
-				end if;
-				if iA(15 downto 1)&'0' = x"8260" and iUDSn = '0' and iRWn = '1' then
-					-- read resolution
-					-- should be Shifter's job, but we need to allow read access to extmod so we do it in GLUE
-					oD(2) <= cfg_extmod and extmod;
-					oD(1) <= mono;
-					oD(0) <= medres;
-				end if;
-				if iA(15 downto 2)&"00" = x"8604" then
-					-- assert DTACKn for DMA register access
-					sdtackn <= '0';
-				end if;
-				if iA(15 downto 8) = x"88" then
-					-- assert DTACKn for PSG register access (1 extra cycle delay)
-					ymdtackn <= '0';
-				end if;
-			end if;
-		end if;
-		if FC /= "111" and iASn = '0' and iUDSn = '0' and FC(2) = '1' and iRWn = '0' then
-			if iA(23 downto 1)&'0' = x"ff820a" then
-				hz50_0 <= iD(1);
-			elsif iA(23 downto 1)&'0' = x"ff8260" then
-				-- resolution
-				if cfg_extmod = '1' then
-					extmod <= iD(2);
-				end if;
-				mono_0 <= iD(1);
-				medres <= iD(0);
-			elsif iA(23 downto 1)&'0' = x"ff8606" then
-				dma_w <= iD(0);
-			end if;
-		end if;
-		if ymdtackn = '0' and iASn = '0' then
-			sdtackn <= '0';
-		end if;
-	end if;
-	end if;
-end process;
 
 -- RAMn / DEVn bus signals to the MMU
 process(clk,resetn)
@@ -466,52 +415,22 @@ begin
 	end if;
 end process;
 
--- bus error
-BEER <= beercnt(5);
+-- MMU counter
 process(clk,resetn)
 begin
 	if resetn = '0' then
-		beercnt <= "100000";
+		idtackff <= '1';
+		mmuct <= "00";
 	elsif rising_edge(clk) then
-		if en8rck = '1' then
-			if iASn = '0' and (iUDSn = '0' or iLDSn = '0') and iDTACKn = '1' and sdtackn = '1' then
-				if beercnt(5) = '1' then
-					beercnt <= beercnt + 1;
-				end if;
+		if en8fck = '1' then
+			idtackff <= iDTACKn;
+			if iDTACKn = '0' and idtackff = '1' and sram = '0' then
+				-- synchronize with MMU counter
+				mmuct <= "11";
 			else
-				beercnt <= "100000";
+				mmuct <= mmuct + 1;
 			end if;
 		end if;
-	end if;
-end process;
-
--- mfp access
-process(iA,iASn)
-begin
-	if iASn = '0' and iA(23 downto 6)&"000000" = x"fffa00" then
-		MFPCSn <= '0';
-	else
-		MFPCSn <= '1';
-	end if;
-end process;
-
--- dma registers access
-process(iA,iASn,iLDSn,iUDSn)
-begin
-	if iASn = '0' and iLDSn = '0' and iUDSn = '0' and iA(23 downto 2)&"00" = x"ff8604" then
-		FCSn <= '0';
-	else
-		FCSn <= '1';
-	end if;
-end process;
-
--- YM registers access
-process(iA,iASn,iUDSn)
-begin
-	if iASn = '0' and iUDSn = '0' and iA(23 downto 8) = x"ff88" then
-		SNDCSn <= '0';
-	else
-		SNDCSn <= '1';
 	end if;
 end process;
 
@@ -596,24 +515,29 @@ begin
 	end if;
 end process;
 
-process(clk,resetn)
+-- vbl irq
+process(clk,resetn,ack_vbl)
 begin
-	if resetn = '0' then
-		irq_hbl <= '0';
+	if resetn = '0' or ack_vbl = '1' then
 		irq_vbl <= '0';
 	elsif rising_edge(clk) then
-		if en2fck = '1' then
-			if vcnt = 0 and nexthcnt = mode.hvsync_on then
+		if en2rck = '1' then
+			if vsync1 = '1' then
 				irq_vbl <= '1';
 			end if;
-			if nexthcnt = 0 then
+		end if;
+	end if;
+end process;
+
+-- hbl irq
+process(clk,resetn,ack_hbl)
+begin
+	if resetn = '0' or ack_hbl = '1' then
+		irq_hbl <= '0';
+	elsif rising_edge(clk) then
+		if en2rck = '1' then
+			if hsync1 = '1' then
 				irq_hbl <= '1';
-			end if;
-			if ack_vbl = '1' then
-				irq_vbl <= '0';
-			end if;
-			if ack_hbl = '1' then
-				irq_hbl <= '0';
 			end if;
 		end if;
 	end if;
@@ -645,107 +569,125 @@ end process;
 -- Vectored interrupt acknowledge (for MFP)
 IACKn <= not ack_mfp;
 
--- video sync
-process(hcnt,smode,resetn)
+-- horizontal sync
+process(mono,hsc)
 begin
-	if hcnt+1 = smode.cycles_per_line then
-		nexthcnt <= (others => '0');
-	else
-		nexthcnt <= hcnt+1;
+	hsync0 <= '0';
+	hsync1 <= '0';
+	if mono = '0' and hsc = 101 then
+		hsync0 <= '1';
+	end if;
+	if mono = '1' and hsc = 121 then
+		hsync0 <= '1';
+	end if;
+	if mono = '0' and hsc = 111 then
+		hsync1 <= '1';
+	end if;
+	if mono = '1' and hsc = 127 then
+		hsync1 <= '1';
+	end if;
+end process;
+process(vscpal,vscntsc,vsmono,hsc)
+begin
+	vhsync0 <= '0';
+	vhsync1 <= '0';
+	if vscpal = '1' and hsc = 103 then
+		vhsync1 <= '1';
+	end if;
+	if vscpal = '1' and hsc = 109 then
+		vhsync0 <= '1';
+	end if;
+	if vscntsc = '1' and hsc = 103 then
+		vhsync1 <= '1';
+	end if;
+	if vscntsc = '1' and hsc = 109 then
+		vhsync0 <= '1';
+	end if;
+	if vsmono = '1' and hsc = 122 then
+		vhsync1 <= '1';
+	end if;
+	if vsmono = '1' and hsc = 72 then
+		vhsync0 <= '1';
+	end if;
+end process;
+process(clk,resetn)
+begin
+	if resetn = '0' then
+		hsc <= 0;
+		shsync <= '1';
+		vid_hsync <= '0';
+	elsif rising_edge(clk) then
+		if en2fck = '1' then
+			if hsc = 127 then
+				if mono = '1' then
+					hsc <= 72;
+				elsif pal = '1' then
+					hsc <= 0;
+				else	-- ntsc
+					hsc <= 1;
+				end if;
+			else
+				hsc <= hsc + 1;
+			end if;
+		end if;
+		if en2rck = '1' then
+			if hsync0 = '1' then
+				shsync <= '0';
+			end if;
+			if hsync1 = '1' then
+				shsync <= '1';
+			end if;
+			if vhsync0 = '1' then
+				vid_hsync <= '0';
+			end if;
+			if vhsync1 = '1' then
+				vid_hsync <= '1';
+			end if;
+		end if;
 	end if;
 end process;
 
+-- vertical sync
+vsync1 <= '1' when hsc = 127 and vsc = 511 else '0';
 process(clk,resetn)
-	variable nextvcnt : unsigned(8 downto 0);
 begin
 	if resetn = '0' then
+		vsc <= 0;
 		svsync <= '1';
-		shsync <= '1';
-		hblank <= '1';
-		vblank <= '1';
-		hde <= '0';
-		vde <= '0';
-		hcnt <= (others => '1');
-		vcnt <= (others => '0');
-		line_pal <= '0';
-		hz50_vs <= '0';
-		mono_vs <= '0';
-		extmod_vs <= '0';
-		vid_vsync <= '0';
-		vid_hsync <= '0';
-		vid_vde <= '0';
-		vid_hde <= '0';
-		vsync1 <= '0';
+		vspal <= '0';
+		vsmono <= '0';
+		vsyncd <= '1';
 		vscnt <= 0;
-		hsdly <= '0';
-		hz50 <= '0';
+		vid_vsync <= '0';
 	elsif rising_edge(clk) then
-		if en2fck = '1' then
-			-- update H signals
-			hcnt <= nexthcnt;
-			if nexthcnt = 0 then
-				shsync <= '1';
-			end if;
-			if hsdly = '1' then
-				hsdly <= '0';
-				hde <= '0';
-				hblank <= '1';
-			end if;
-			if nexthcnt = smode.hsync_off then
-				shsync <= '0';
-				hsdly <= '1';
-			end if;
-			if nexthcnt = mode.hde_on then
-				hde <= '1';
-			end if;
-			if nexthcnt = mode.hde_off then
-				hde <= '0';
-			end if;
-			if nexthcnt = mode.hblank_on then
-				hblank <= '1';
-			end if;
-			if nexthcnt = mode.hblank_off then
-				hblank <= '0';
-			end if;
-
-			-- update V signals
-			nextvcnt := vcnt;
-			if nexthcnt = 0 then
-				if vcnt+1 = vsmode.n_lines then
-					nextvcnt := (others => '0');
-					hz50_vs <= hz50;
-					mono_vs <= mono;
-					extmod_vs <= extmod;
+		if en2rck = '1' then
+			if hsc = 127 then
+				if vsc = 511 then
+					if mono = '1' then
+						vsc <= 11;
+					elsif pal = '1' then
+						vsc <= 199;
+					else
+						vsc <= 249;
+					end if;
+					vspal <= pal;
+					vsmono <= mono;
 				else
-					nextvcnt := vcnt + 1;
+					vsc <= vsc + 1;
 				end if;
-				vcnt <= nextvcnt;
-				if nextvcnt = dmode.vblank_on then
-					vblank <= '1';
-				end if;
-				if nextvcnt = dmode.vblank_off then
-					vblank <= '0';
-				end if;
-				if nextvcnt = dmode.vde_on then
-					vde <= '1';
-				end if;
-				if nextvcnt = dmode.vde_off then
-					vde <= '0';
-				end if;
-			end if;
-			if nexthcnt = mode.hvsync_on then
-				if nextvcnt = 0 then
-					svsync <= '1';
-				elsif nextvcnt = mode.vvsync_on then
+				if mono = '0' and vsc = 508 then
 					svsync <= '0';
-					vde <= '0';
+				end if;
+				if mono = '1' and vsc = 510 then
+					svsync <= '0';
 				end if;
 			end if;
-
-			if nexthcnt = vsmode.vid_hsync_on then
-				vid_hsync <= '1';
-				vsync1 <= svsync;
-				if svsync = '1' and vsync1 = '0' then
+			if vsync1 = '1' then
+				svsync <= '1';
+			end if;
+			if vhsync1 = '1' then
+				vsyncd <= svsync;
+				if svsync = '1' and vsyncd = '0' then
 					vid_vsync <= '1';
 					vscnt <= 3;
 				elsif vscnt > 0 then
@@ -754,29 +696,165 @@ begin
 						vid_vsync <= '0';
 					end if;
 				end if;
-				if nextvcnt = vsmode.vid_vde_on-1 then
-					vid_vde <= '1';
-				end if;
-				if nextvcnt = vsmode.vid_vde_off-1 then
-					vid_vde <= '0';
-				end if;
-			end if;
-			if nexthcnt = vsmode.vid_hsync_off then
-				vid_hsync <= '0';
-			end if;
-			if nexthcnt = vsmode.vid_hde_on then
-				vid_hde <= '1';
-			end if;
-			if nexthcnt = vsmode.vid_hde_off then
-				vid_hde <= '0';
-			end if;
-		elsif en2rck = '1' then
-			hz50 <= hz50_0;
-			if hcnt = mode_60.hde_on then
-				line_pal <= hz50_0;
 			end if;
 		end if;
 	end if;
 end process;
+
+-- horizontal DE/blank
+cpal <= '1' when mono = '0' and pal = '1' else '0';
+cntsc <= '1' when mono = '0' and pal = '0' else '0';
+vscpal <= '1' when vsmono = '0' and vspal = '1' else '0';
+vscntsc <= '1' when vsmono = '0' and vspal = '0' else '0';
+process(clk,resetn,shsync)
+begin
+	if resetn = '0' or shsync = '0' then
+		-- ihsyncb
+		hdec <= 0;
+		hblank <= '0';
+		hde <= '0';
+		vid_hde <= '0';
+	elsif rising_edge(clk) then
+		if en2fck = '1' then
+			hdec <= hdec + 1;
+			if mono = '1' or hdec = 114 then
+				hblank <= '0';
+			end if;
+			if cpal = '1' and hdec = 9 then
+				hblank <= '1';
+			end if;
+			if cntsc = '1' and hdec = 8 then
+				hblank <= '1';
+			end if;
+			if mono = '1' and hdec = 3 then
+				hde <= '1';
+			end if;
+			if cpal = '1' and hdec = 16 then
+				hde <= '1';
+			end if;
+			if cntsc = '1' and hdec = 15 then
+				hde <= '1';
+			end if;
+			if mono = '1' and hdec = 43 then
+				hde <= '0';
+			end if;
+			if cpal = '1' and hdec = 96 then
+				hde <= '0';
+			end if;
+			if cntsc = '1' and hdec = 95 then
+				hde <= '0';
+			end if;
+		end if;
+		if en2rck = '1' then
+			if vscpal = '1' and hdec = 10 then
+				vid_hde <= '1';
+			end if;
+			if vscpal = '1' and hdec = 115 then
+				vid_hde <= '0';
+			end if;
+			if vscntsc = '1' and hdec = 9 then
+				vid_hde <= '1';
+			end if;
+			if vscntsc = '1' and hdec = 115 then
+				vid_hde <= '0';
+			end if;
+			if vsmono = '1' and hdec = 8 then
+				vid_hde <= '1';
+			end if;
+			if vsmono = '1' and hdec = 50 then
+				vid_hde <= '0';
+			end if;
+		end if;
+	end if;
+end process;
+
+-- vertical DE/blank
+process(clk,resetn,svsync)
+begin
+	if resetn = '0' or svsync = '0' then
+		vdec <= 0;
+		vblank <= '0';
+		vde <= '0';
+		vid_vde <= '0';
+	elsif rising_edge(clk) then
+		if en2rck = '1' and hsync1 = '1' then
+			vdec <= vdec + 1;
+			if cpal = '1' and vdec = 24 then
+				vblank <= '1';
+			end if;
+			if cntsc = '1' and vdec = 15 then
+				vblank <= '1';
+			end if;
+			if cpal = '1' and vdec = 307 then
+				vblank <= '0';
+			end if;
+			if cntsc = '1' and vdec = 257 then
+				vblank <= '0';
+			end if;
+			if mono = '1' and vdec = 35 then
+				vde <= '1';
+			end if;
+			if cpal = '1' and vdec = 62 then	-- 46 on old GLUE revisions
+				vde <= '1';
+			end if;
+			if cntsc = '1' and vdec = 33 then
+				vde <= '1';
+			end if;
+			if mono = '1' and vdec = 435 then
+				vde <= '0';
+			end if;
+			if cpal = '1' and vdec = 262 then	-- 246 on old GLUE revisions
+				vde <= '0';
+			end if;
+			if cntsc = '1' and vdec = 233 then
+				vde <= '0';
+			end if;
+		end if;
+		if en2rck = '1' and vhsync1 = '1' then
+			if vscpal = '1' and vdec = 33 then
+				vid_vde <= '1';
+			end if;
+			if vscntsc = '1' and vdec = 15 then
+				vid_vde <= '1';
+			end if;
+			if vsmono = '1' and vdec = 35 then
+				vid_vde <= '1';
+			end if;
+			if vscpal = '1' and vdec = 309 then
+				vid_vde <= '0';
+			end if;
+			if vscntsc = '1' and vdec = 257 then
+				vid_vde <= '0';
+			end if;
+			if vsmono = '1' and vdec = 435 then
+				vid_vde <= '0';
+			end if;
+		end if;
+	end if;
+end process;
+
+-- DE/BLANKn
+process(clk,resetn)
+begin
+	if resetn = '0' then
+		BLANKn <= '1';
+		DE <= '0';
+	elsif rising_edge(clk) then
+		if en2rck = '1' then
+			BLANKn <= vblank and hblank;
+			DE <= vde and hde;
+		end if;
+	end if;
+end process;
+
+-- Mono HDE signal generation
+hdegen: entity work.mono_hde_gen port map (
+	clk => clk,
+	clken => en32ck,
+	resetn => resetn,
+	wakest => wakestate,
+	in_hde => vid_hde,
+	out_hde => mono_hde
+	);
 
 end behavioral;
