@@ -40,7 +40,7 @@ architecture hdl of mono_hde_gen is
 	signal begdly : integer range 0 to 31;
 begin
 
-	begdly <= to_integer(unsigned(wakest)+1)*4+14;
+	begdly <= to_integer(unsigned(wakest)-1)*4+14;
 
 process(clk,resetn)
 	variable nccnt : integer range 0 to MAX;
@@ -192,6 +192,7 @@ architecture behavioral of glue is
 	-- horizontal de/blank
 	signal cpal		: std_logic;
 	signal cntsc	: std_logic;
+	signal cextpal	: std_logic;
 	signal hdec		: integer range 0 to 255;
 	signal hde		: std_logic;
 	signal hblank	: std_logic;
@@ -702,8 +703,9 @@ begin
 end process;
 
 -- horizontal DE/blank
-cpal <= '1' when mono = '0' and pal = '1' else '0';
+cpal <= '1' when mono = '0' and pal = '1' and extmod = '0' else '0';
 cntsc <= '1' when mono = '0' and pal = '0' else '0';
+cextpal <= '1' when mono = '0' and pal = '1' and extmod = '1' else '0';
 vscpal <= '1' when vsmono = '0' and vspal = '1' else '0';
 vscntsc <= '1' when vsmono = '0' and vspal = '0' else '0';
 process(clk,resetn,shsync)
@@ -742,6 +744,15 @@ begin
 				hde <= '0';
 			end if;
 			if cntsc = '1' and hdec = 95 then
+				hde <= '0';
+			end if;
+			if cextpal = '1' and hdec = 9 then
+				hblank <= '1';
+			end if;
+			if cextpal = '1' and hdec = 3 then
+				hde <= '1';
+			end if;
+			if cextpal = '1' and hdec = 107 then
 				hde <= '0';
 			end if;
 		end if;
@@ -808,6 +819,18 @@ begin
 			end if;
 			if cntsc = '1' and vdec = 233 then
 				vde <= '0';
+			end if;
+			if cextpal = '1' and vdec = 24 then
+				vblank <= '1';
+			end if;
+			if cextpal = '1' and vdec = 33 then
+				vde <= '1';
+			end if;
+			if cextpal = '1' and vdec = 309 then
+				vde <= '0';
+			end if;
+			if cextpal = '1' and vdec = 309 then
+				vblank <= '0';
 			end if;
 		end if;
 		if en2rck = '1' and vhsync1 = '1' then
