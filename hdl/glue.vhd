@@ -141,7 +141,8 @@ architecture behavioral of glue is
 	signal mono		: std_logic;	-- mono mode, reference signal
 	signal medres	: std_logic;	-- medium mode
 	signal pal_i	: std_logic;	-- PAL mode, immediate
-	signal pal_ff	: std_logic;	-- PAL mode, registered
+	signal pal_ff	: std_logic;	-- PAL mode, synced with en8fck
+	signal pal_ff2	: std_logic;	-- PAL mode, synced with en2rck
 	signal pal		: std_logic;	-- PAL mode, reference signal
 	signal extmod   : std_logic;    -- extended mode bit
 
@@ -294,6 +295,9 @@ begin
 		if en8fck = '1' then
 			mono_ff <= mono_i;
 			pal_ff <= pal_i;
+		end if;
+		if en2rck = '1' then
+			pal_ff2 <= pal_ff;
 		end if;
 	end if;
 end process;
@@ -622,7 +626,7 @@ begin
 			if hsc = 127 then
 				if mono = '1' then
 					hsc <= 72;
-				elsif pal = '1' then
+				elsif pal_ff2 = '1' then
 					hsc <= 0;
 				else	-- ntsc
 					hsc <= 1;
