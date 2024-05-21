@@ -57,7 +57,7 @@ static int sound_vol = 16;
 
 static void setup_cfg(int reset) {
   static const int mem_cfg[] = {0,1,3,7,9,15,55};
-  static const int ws_cfg[] = {0,1,3,2};
+  static const int ws_cfg[] = {2,3,1,0};
   int cfg = reset;
   cfg |= config.mono?4:0;
   cfg |= mem_cfg[config.mem_size]<<4;
