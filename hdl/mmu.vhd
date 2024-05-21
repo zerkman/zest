@@ -129,7 +129,7 @@ begin
 		delay_loadn <= '0';
 		delay_bus <= '0';
 		sdtackn <= '1';
-		cnt <= "10";
+		cnt <= "00";
 		oD <= x"ff";
 		mode_load <= '0';
 		screen_adr <= (others => '0');
