@@ -861,9 +861,9 @@ begin
 end process;
 
 -- DE/BLANKn
-process(clk,resetn)
+process(clk,resetn,svsync)
 begin
-	if resetn = '0' then
+	if resetn = '0' or svsync = '0' then
 		BLANKn <= '1';
 		DE <= '0';
 	elsif rising_edge(clk) then
