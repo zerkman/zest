@@ -128,7 +128,8 @@ entity glue is
 
 		wakestate   : in std_logic_vector(1 downto 0);
 		cfg_highmem	: in std_logic;
-		cfg_extmod	: in std_logic
+		cfg_extmod  : in std_logic;
+		cfg_rom256k : in std_logic
 	);
 end glue;
 
@@ -403,7 +404,10 @@ begin
 				end if;
 			end if;
 		else
-			if unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fe" and iRWn = '1' then
+			if ((unsigned(iA(23 downto 16)) >= x"fa" and unsigned(iA(23 downto 16)) <= x"fb")
+			or (unsigned(iA(23 downto 16)) >= x"fc" and unsigned(iA(23 downto 16)) <= x"fe" and cfg_rom256k = '0')
+			or (unsigned(iA(23 downto 16)) >= x"e0" and unsigned(iA(23 downto 16)) <= x"e3" and cfg_rom256k = '1'))
+			and iRWn = '1' then
 				-- rom access
 				sram <= '0';
 			elsif unsigned(iA&'0') < 8 and iRWn = '1' and FC(2) = '1' then
