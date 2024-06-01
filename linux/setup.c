@@ -55,6 +55,22 @@ volatile int thr_end = 0;
 static int sound_mute = 0;
 static int sound_vol = 16;
 
+static int cfg_rom256k = 0;
+
+static unsigned long read_u32(const unsigned char *p) {
+  unsigned long a = *p++;
+  unsigned long b = *p++;
+  unsigned long c = *p++;
+  unsigned long d = *p++;
+  return a<<24 | b<<16 | c<<8 | d;
+}
+
+static unsigned long read_u16(const unsigned char *p) {
+  unsigned long a = *p++;
+  unsigned long b = *p++;
+  return a<<8 | b;
+}
+
 static void setup_cfg(int reset) {
   static const int mem_cfg[] = {0,1,3,7,9,15,55};
   static const int ws_cfg[] = {2,3,1,0};
@@ -67,6 +83,7 @@ static void setup_cfg(int reset) {
   cfg |= config.floppy_b_write_protect<<16;
   cfg |= config.extended_video_modes<<17;
   cfg |= ws_cfg[config.wakestate-1]<<18;
+  cfg |= cfg_rom256k<<20;
   parmreg[0] = cfg;
 }
 
@@ -110,7 +127,7 @@ static uint8_t *mem_array;
 
 void cold_reset() {
   setup_cfg(2); // Bit 0 clear=reset
-  memset(mem_array+8,0,0x1fff8);
+  memset(mem_array+8,0,0xe00000-4);
   setup_cfg(3); // end reset
 }
 
@@ -151,14 +168,52 @@ void set_sound_mute(int x) {
 }
 
 int load_rom(const char *filename) {
+  unsigned char buf[0x40];
+  unsigned long rom_addr,rom_size;
+  int is_emutos = 0;
+  int tos_version = 0;
   FILE *bootfd = fopen(filename,"rb");
   if (!bootfd) {
     printf("Could not open ROM file `%s`\n",filename);
     return 1;
   }
-  fread(mem_array+0xfc0000,1,0x30000,bootfd);
+  fread(buf,1,0x40,bootfd);
+  if (buf[0]!=0x60 || buf[1]!=0x2e) {
+    printf("%s: invalid header\n",filename);
+    return 1;
+  }
+  if (read_u32(buf+0x2c)==0x45544F53) {
+    // magic value 'ETOS' found => system is EmuTOS
+    is_emutos = 1;
+  } else {
+    // we are not running EmuTOS but plain TOS
+    is_emutos = 0;
+    tos_version = read_u16(buf+2);
+    if ((tos_version<0x100 || tos_version>0x104) && tos_version!=0x206) {
+      // supported TOS versions are 1.00-1.04 / TOS 2.06
+      printf("%s: unsupported TOS version\n",filename);
+      return 1;
+    }
+  }
+  rom_addr = read_u32(buf+8);
+  // detect ROM size from ROM start address
+  if (rom_addr==0xe00000) {
+    rom_size = 0x40000;
+    cfg_rom256k = 1;
+  } else {
+    rom_size = 0x30000;
+    cfg_rom256k = 0;
+  }
+  memcpy(mem_array+rom_addr,buf,0x40);
+  fread(mem_array+rom_addr+0x40,1,rom_size-0x40,bootfd);
   fclose(bootfd);
-  memcpy(mem_array,mem_array+0xfc0000,8);
+  memcpy(mem_array,mem_array+rom_addr,8);
+  // Remove CRC check from TOS 2.06
+  if (!is_emutos && tos_version==0x206) {
+    // bcc $e00894 => bra $e00894
+    mem_array[0xe007f6] = 0x60;
+  }
+
   return 0;
 }
 
