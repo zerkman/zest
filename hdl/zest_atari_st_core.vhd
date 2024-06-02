@@ -102,7 +102,7 @@ architecture structure of zest_atari_st_core is
 	signal ikbd_k		: std_logic_vector(95 downto 0);
 
 	signal cfg_extmod	: std_logic;
-	signal cfg_rom256k	: std_logic;
+	signal cfg_romsize	: std_logic_vector(1 downto 0);
 
 	signal wp0				: std_logic;
 	signal wp1				: std_logic;
@@ -191,7 +191,7 @@ begin
 	wp1 <= out_reg0(16);
 	cfg_extmod <= out_reg0(17);
 	wakestate <= out_reg0(19 downto 18);
-	cfg_rom256k <= out_reg0(20);
+	cfg_romsize <= out_reg0(21 downto 20);
 	in_reg0(31) <= host_r;
 	in_reg0(30) <= host_w;
 	in_reg0(29 downto 21) <= host_addr;
@@ -282,7 +282,7 @@ begin
 		mem_top	=> mem_top,
 		wakestate => wakestate,
 		cfg_extmod => cfg_extmod,
-		cfg_rom256k => cfg_rom256k,
+		cfg_romsize => cfg_romsize,
 		pclken => pclken,
 		de => st_de,
 		hsync => st_hsync,

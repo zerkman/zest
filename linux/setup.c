@@ -55,7 +55,7 @@ volatile int thr_end = 0;
 static int sound_mute = 0;
 static int sound_vol = 16;
 
-static int cfg_rom256k = 0;
+static int cfg_romsize = 0;	// 0:192k 1:256k 2:512k 3:1M
 
 static unsigned long read_u32(const unsigned char *p) {
   unsigned long a = *p++;
@@ -83,7 +83,7 @@ static void setup_cfg(int reset) {
   cfg |= config.floppy_b_write_protect<<16;
   cfg |= config.extended_video_modes<<17;
   cfg |= ws_cfg[config.wakestate-1]<<18;
-  cfg |= cfg_rom256k<<20;
+  cfg |= cfg_romsize<<20;
   parmreg[0] = cfg;
 }
 
@@ -169,7 +169,8 @@ void set_sound_mute(int x) {
 
 int load_rom(const char *filename) {
   unsigned char buf[0x40];
-  unsigned long rom_addr,rom_size;
+  unsigned long rom_addr;
+  unsigned int rom_size;
   int is_emutos = 0;
   int tos_version = 0;
   FILE *bootfd = fopen(filename,"rb");
@@ -196,17 +197,21 @@ int load_rom(const char *filename) {
     }
   }
   rom_addr = read_u32(buf+8);
-  // detect ROM size from ROM start address
-  if (rom_addr==0xe00000) {
-    rom_size = 0x40000;
-    cfg_rom256k = 1;
-  } else {
-    rom_size = 0x30000;
-    cfg_rom256k = 0;
-  }
   memcpy(mem_array+rom_addr,buf,0x40);
-  fread(mem_array+rom_addr+0x40,1,rom_size-0x40,bootfd);
+  rom_size = 0x40+fread(mem_array+rom_addr+0x40,1,0x100000-0x40,bootfd);
   fclose(bootfd);
+  if (rom_size==0x30000 && rom_addr==0xFC0000)
+    cfg_romsize = 0;
+  else if (rom_size==0x40000 && rom_addr==0xE00000)
+    cfg_romsize = 1;
+  else if (rom_size==0x80000 && rom_addr==0xE00000)
+    cfg_romsize = 2;
+  else if (rom_size==0x100000 && rom_addr==0xE00000)
+    cfg_romsize = 3;
+  else {
+    printf("%s: unsupported ROM size/address\n",filename);
+    return 1;
+  }
   memcpy(mem_array,mem_array+rom_addr,8);
   // Remove CRC check from TOS 2.06
   if (!is_emutos && tos_version==0x206) {

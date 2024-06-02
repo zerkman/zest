@@ -32,7 +32,7 @@ entity atarist_mb is
 		mem_top	: in std_logic_vector(5 downto 0);
 		wakestate : in std_logic_vector(1 downto 0);
 		cfg_extmod : in std_logic;
-		cfg_rom256k : in std_logic;
+		cfg_romsize : in std_logic_vector(1 downto 0);
 
 		pclken : out std_logic;
 		de : out std_logic;
@@ -468,7 +468,7 @@ begin
 		wakestate => wakestate,
 		cfg_highmem => cfg_highmem,
 		cfg_extmod => cfg_extmod,
-		cfg_rom256k => cfg_rom256k
+		cfg_romsize => cfg_romsize
 	);
 	glue_iA <= bus_A;
 	glue_iASn <= bus_ASn;
