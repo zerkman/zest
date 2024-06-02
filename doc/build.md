@@ -12,7 +12,7 @@ Two procedures are available:
 
 You’ll need:
 
- - Vivado and Vitis IDE. The version I used is [2023.2](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2023-2.html).
+ - Vivado and Vitis Embedded Development. The version I used is [2024.1](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools/2024-1.html).
  - The [vasm](http://sun.hasenbraten.de/vasm/) assembler, compiled with M68k backend and Motorola syntax (tested on version 1.9d)
  - required command line tools:
    - wget
@@ -40,11 +40,11 @@ This documentation assumes the following file paths:
 
 ## Fix rlwrap
 
-The current version (2023.2) of the Xilinx tools requires to update one of the internally used tools.
+The current version (2024.1) of the Xilinx tools requires to update one of the internally used tools.
 If not already done, the procedure is the following (as root):
 
     # apt install rlwrap
-    # cd /opt/Xilinx/Vitis/2023.2/bin/unwrapped/lnx64.o
+    # cd /opt/Xilinx/Vitis/2024.1/bin/unwrapped/lnx64.o
     # rm rlwrap
     # ln -s /usr/bin/rlwrap .
 
@@ -118,11 +118,11 @@ Get the device tree source code, at the same version as your Vivado/Vitis setup.
     $ cd $HOME/src
     $ git clone https://github.com/Xilinx/device-tree-xlnx.git
     $ cd device-tree-xlnx
-    $ git checkout xilinx-v2023.2
+    $ git checkout xilinx-v2024.1
 
 Start XSCT:
 
-    $ /opt/Xilinx/Vitis/2023.2/bin/xsct
+    $ /opt/Xilinx/Vitis/2024.1/bin/xsct
 
 Open the XSA file you exported from Vivado, provided the paths are the same as the previous steps:
 
@@ -167,7 +167,7 @@ The generation of the first stage bootloader (FSBL) is done in XSCT.
 
 Start XSCT:
 
-    $ /opt/Xilinx/Vitis/2023.2/bin/xsct
+    $ /opt/Xilinx/Vitis/2024.1/bin/xsct
 
 Open the hardware design from the XSA file you exported from Vivado:
 
@@ -266,7 +266,7 @@ Get the source code and issue the following configurations:
     $ cd $HOME/src
     $ git clone https://github.com/Xilinx/u-boot-xlnx.git
     $ cd u-boot-xlnx
-    $ git checkout xilinx-v2023.2
+    $ git checkout xilinx-v2024.1
     $ make xilinx_zynq_virt_defconfig
     $ sed -i 's/^\(CONFIG_DEFAULT_DEVICE_TREE\)=.*/\1=""/g' .config
     $ sed -i 's/^\(CONFIG_BAUDRATE\)=.*/\1=921600/g' .config
@@ -312,7 +312,7 @@ The file describes the proper pathnames for the different required files.
 
 Issue the command:
 
-    $ /opt/Xilinx/Vitis/2023.2/bin/bootgen -arch zynq -image boot.bif -o BOOT.bin
+    $ /opt/Xilinx/Vitis/2024.1/bin/bootgen -arch zynq -image boot.bif -o BOOT.bin
 
 If everything went correctly, now you’ve got the required `BOOT.bin` file.
 
@@ -339,7 +339,7 @@ Get the Linux source code:
 
     $ git clone https://github.com/Xilinx/linux-xlnx.git
     $ cd linux-xlnx
-    $ git checkout xilinx-v2023.2
+    $ git checkout xilinx-v2024.1
 
 Configure the kernel:
 

@@ -17,7 +17,7 @@ if [ ! -d linux-xlnx ] ; then
     git clone https://github.com/Xilinx/linux-xlnx.git || exit $?
 fi
 cd linux-xlnx
-git checkout xilinx-v$XILINX_VERSION || exit $?
+git checkout xilinx-v$XILINX_KERNEL_VERSION || exit $?
 cp $ZEST_SETUP/defconfig/linux arch/arm/configs/zest_defconfig
 make zest_defconfig
 make UIMAGE_LOADADDR=0x8000 uImage -j`nproc` || exit $?
