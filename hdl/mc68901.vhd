@@ -101,23 +101,28 @@ architecture behavioral of mc68901 is
 	signal prescale	: prescale_t := (2,5,8,25,32,50,100);
 	signal xtldiv	: std_logic;
 
+	type cntarray_t is array(0 to 3) of std_logic_vector(7 downto 0);
 	signal tato		: std_logic;
 	signal tapc		: integer range 0 to 100;
 	signal tamc		: unsigned(7 downto 0);
+	signal tamc_r	: cntarray_t;
 	signal tai1		: std_logic_vector(2 downto 0);
 
 	signal tbto		: std_logic;
 	signal tbpc		: integer range 0 to 100;
 	signal tbmc		: unsigned(7 downto 0);
+	signal tbmc_r	: cntarray_t;
 	signal tbi1		: std_logic_vector(2 downto 0);
 
 	signal tcto		: std_logic;
 	signal tcpc		: integer range 0 to 100;
 	signal tcmc		: unsigned(7 downto 0);
+	signal tcmc_r	: cntarray_t;
 
 	signal tdto		: std_logic;
 	signal tdpc		: integer range 0 to 100;
 	signal tdmc		: unsigned(7 downto 0);
+	signal tdmc_r	: cntarray_t;
 
 	signal sirqn	: std_logic;
 	signal intv		: std_logic_vector(15 downto 0);
@@ -197,20 +202,24 @@ begin
 			tato <= '0';
 			tapc <= 1;
 			tamc <= x"01";
+			tamc_r <= (others => x"00");
 			tai1 <= (others => '0');
 
 			tbto <= '0';
 			tbpc <= 1;
 			tbmc <= x"01";
+			tbmc_r <= (others => x"00");
 			tbi1 <= (others => '0');
 
 			tcto <= '0';
 			tcpc <= 1;
 			tcmc <= x"01";
+			tcmc_r <= (others => x"00");
 
 			tdto <= '0';
 			tdpc <= 1;
 			tdmc <= x"01";
+			tdmc_r <= (others => x"00");
 			csn1 <= '1';
 			siackn <= (others => '1');
 		elsif rising_edge(clk) then
@@ -318,6 +327,15 @@ begin
 			end if;
 
 			if clkren = '1' then
+				tamc_r(0 to tamc_r'high-1) <= tamc_r(1 to tamc_r'high);
+				tbmc_r(0 to tbmc_r'high-1) <= tbmc_r(1 to tbmc_r'high);
+				tcmc_r(0 to tcmc_r'high-1) <= tcmc_r(1 to tcmc_r'high);
+				tdmc_r(0 to tdmc_r'high-1) <= tdmc_r(1 to tdmc_r'high);
+				tamc_r(tamc_r'high) <= std_logic_vector(tamc);
+				tbmc_r(tbmc_r'high) <= std_logic_vector(tbmc);
+				tcmc_r(tcmc_r'high) <= std_logic_vector(tcmc);
+				tdmc_r(tdmc_r'high) <= std_logic_vector(tdmc);
+
 				csn1 <= csn;
 				siackn <= iackn & siackn(siackn'high downto 1);
 				sod <= x"ff";
@@ -343,10 +361,10 @@ begin
 							when x"19" => sod <= "0000" & tacr;
 							when x"1b" => sod <= "0000" & tbcr;
 							when x"1d" => sod <= '0' & tcdcr(5 downto 3) & '0' & tcdcr(2 downto 0);
-							when x"1f" => sod <= std_logic_vector(tamc);
-							when x"21" => sod <= std_logic_vector(tbmc);
-							when x"23" => sod <= std_logic_vector(tcmc);
-							when x"25" => sod <= std_logic_vector(tdmc);
+							when x"1f" => sod <= std_logic_vector(tamc_r(0));
+							when x"21" => sod <= std_logic_vector(tbmc_r(0));
+							when x"23" => sod <= std_logic_vector(tcmc_r(0));
+							when x"25" => sod <= std_logic_vector(tdmc_r(0));
 							when x"27" => sod <= scr;
 							when x"29" => sod <= ucr;
 							when x"2b" => sod <= rsr;
