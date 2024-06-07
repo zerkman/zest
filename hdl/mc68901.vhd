@@ -167,308 +167,306 @@ begin
 	ipl <= priority(intv);
 	isr_ipl <= priority(isra&isrb);
 
-	process(clk)
+	process(clk,resetn)
 	begin
-		if rising_edge(clk) then
-			if resetn = '0' then
-				gpip <= x"00";
-				aer <= x"00";
-				ddr <= x"00";
-				iera <= x"00";
-				ierb <= x"00";
-				ipra <= x"00";
-				iprb <= x"00";
-				isra <= x"00";
-				isrb <= x"00";
-				imra <= x"00";
-				imrb <= x"00";
-				vr <= "00001";
-				tacr <= "0000";
-				tbcr <= "0000";
-				tcdcr <= "000000";
-				scr <= x"00";
-				ucr <= x"00";
-				rsr <= x"00";
-				sod <= x"ff";
-				dtackn_irq <= '1';
-				dtackn_reg <= '1';
+		if resetn = '0' then
+			gpip <= x"00";
+			aer <= x"00";
+			ddr <= x"00";
+			iera <= x"00";
+			ierb <= x"00";
+			ipra <= x"00";
+			iprb <= x"00";
+			isra <= x"00";
+			isrb <= x"00";
+			imra <= x"00";
+			imrb <= x"00";
+			vr <= "00001";
+			tacr <= "0000";
+			tbcr <= "0000";
+			tcdcr <= "000000";
+			scr <= x"00";
+			ucr <= x"00";
+			rsr <= x"00";
+			sod <= x"ff";
+			dtackn_irq <= '1';
+			dtackn_reg <= '1';
 
-				tato <= '0';
-				tapc <= x"01";
-				tamc <= x"01";
-				tai1 <= (others => '0');
+			tato <= '0';
+			tapc <= x"01";
+			tamc <= x"01";
+			tai1 <= (others => '0');
 
-				tbto <= '0';
-				tbpc <= x"01";
-				tbmc <= x"01";
-				tbi1 <= (others => '0');
+			tbto <= '0';
+			tbpc <= x"01";
+			tbmc <= x"01";
+			tbi1 <= (others => '0');
 
-				tcto <= '0';
-				tcpc <= x"01";
-				tcmc <= x"01";
+			tcto <= '0';
+			tcpc <= x"01";
+			tcmc <= x"01";
 
-				tdto <= '0';
-				tdpc <= x"01";
-				tdmc <= x"01";
-				csn1 <= '1';
-				siackn <= (others => '1');
-			else
-				if xtlcken = '1' then
-					-- Timer A operation
-					tai1 <= tai1(tai1'high-1 downto 0) & tai;
-					if ierb(6) = '1' and tacr(3) = '1' and tai1(tai1'high) /= tai1(tai1'high-1) and tai = aer(4) then
-						-- Pulse count interrupt, GPIP4 channel
-						iprb(6) <= '1';
-					end if;
-					if tacr /= "0000" then
-						-- Decrement counters in delay mode or pulse width measurement mode or event count mode
-						if tacr(3) = '0' or (tacr = "1000" and tai1(tai1'high) /= tai1(tai1'high-1) and tai = aer(4)) then
-							if tapc = x"01" or tacr = "1000" then
-								if tacr /= "1000" then
-									tapc <= to_unsigned(prescale(to_integer(unsigned(tacr(2 downto 0)))),tapc'length);
-								end if;
-								if tamc = x"01" then
-									tamc <= unsigned(tadr);
-									tato <= not tato;
-									if iera(5) = '1' then
-										-- Time out interrupt, Timer A channel
-										ipra(5) <= '1';
-									end if;
-								else
-									tamc <= tamc-1;
-								end if;
-							else
-								tapc <= tapc-1;
+			tdto <= '0';
+			tdpc <= x"01";
+			tdmc <= x"01";
+			csn1 <= '1';
+			siackn <= (others => '1');
+		elsif rising_edge(clk) then
+			if xtlcken = '1' then
+				-- Timer A operation
+				tai1 <= tai1(tai1'high-1 downto 0) & tai;
+				if ierb(6) = '1' and tacr(3) = '1' and tai1(tai1'high) /= tai1(tai1'high-1) and tai = aer(4) then
+					-- Pulse count interrupt, GPIP4 channel
+					iprb(6) <= '1';
+				end if;
+				if tacr /= "0000" then
+					-- Decrement counters in delay mode or pulse width measurement mode or event count mode
+					if tacr(3) = '0' or (tacr = "1000" and tai1(tai1'high) /= tai1(tai1'high-1) and tai = aer(4)) then
+						if tapc = x"01" or tacr = "1000" then
+							if tacr /= "1000" then
+								tapc <= to_unsigned(prescale(to_integer(unsigned(tacr(2 downto 0)))),tapc'length);
 							end if;
-						end if;
-					end if;
-
-					-- Timer B operation
-					tbi1 <= tbi1(tbi1'high-1 downto 0) & tbi;
-					if ierb(3) = '1' and tbcr(3) = '1' and tbi1(tbi1'high) /= tbi1(tbi1'high-1) and tbi = aer(3) then
-						-- Pulse count interrupt, GPIP3 channel
-						iprb(3) <= '1';
-					end if;
-					if tbcr /= "0000" then
-						-- Decrement counters in delay mode or pulse width measurement mode or event count mode
-						if tbcr(3) = '0' or (tbcr = "1000" and tbi1(tbi1'high) /= tbi1(tbi1'high-1) and tbi = aer(3)) then
-							if tbpc = x"01" or tbcr = "1000" then
-								if tbcr /= "1000" then
-									tbpc <= to_unsigned(prescale(to_integer(unsigned(tbcr(2 downto 0)))),tbpc'length);
-								end if;
-								if tbmc = x"01" then
-									tbmc <= unsigned(tbdr);
-									tbto <= not tbto;
-									if iera(0) = '1' then
-										-- Time out interrupt, Timer B channel
-										ipra(0) <= '1';
-									end if;
-								else
-									tbmc <= tbmc-1;
+							if tamc = x"01" then
+								tamc <= unsigned(tadr);
+								tato <= not tato;
+								if iera(5) = '1' then
+									-- Time out interrupt, Timer A channel
+									ipra(5) <= '1';
 								end if;
 							else
-								tbpc <= tbpc-1;
-							end if;
-						end if;
-					end if;
-
-					-- Timer C operation
-					if tcdcr(5 downto 3) /= "000" then
-						-- Decrement counters in delay mode
-						if tcpc = x"01" then
-							tcpc <= to_unsigned(prescale(to_integer(unsigned(tcdcr(5 downto 3)))),tcpc'length);
-							if tcmc = x"01" then
-								tcmc <= unsigned(tcdr);
-								tcto <= not tcto;
-								if ierb(5) = '1' then
-									-- Time out interrupt, Timer C channel
-									iprb(5) <= '1';
-								end if;
-							else
-								tcmc <= tcmc-1;
+								tamc <= tamc-1;
 							end if;
 						else
-							tcpc <= tcpc-1;
-						end if;
-					end if;
-
-					-- Timer D operation
-					if tcdcr(2 downto 0) /= "000" then
-						-- Decrement counters in delay mode
-						if tdpc = x"01" then
-							tdpc <= to_unsigned(prescale(to_integer(unsigned(tcdcr(2 downto 0)))),tdpc'length);
-							if tdmc = x"01" then
-								tdmc <= unsigned(tddr);
-								tdto <= not tdto;
-								if ierb(4) = '1' then
-									-- Time out interrupt, Timer D channel
-									iprb(4) <= '1';
-								end if;
-							else
-								tdmc <= tdmc-1;
-							end if;
-						else
-							tdpc <= tdpc-1;
+							tapc <= tapc-1;
 						end if;
 					end if;
 				end if;
 
-				if clkren = '1' then
-					csn1 <= csn;
-					siackn <= iackn & siackn(siackn'high downto 1);
-					sod <= x"ff";
-					dtackn_irq <= '1';
-					dtackn_reg <= '1';
-					if csn = '0' and csn1 = '0' then
-						-- register access
-						if rwn = '1' then
-							-- register read access
-							case addr is
-								when x"01" => sod <= (gpip and ddr) or (ii and not ddr);
-								when x"03" => sod <= aer;
-								when x"05" => sod <= ddr;
-								when x"07" => sod <= iera;
-								when x"09" => sod <= ierb;
-								when x"0b" => sod <= ipra;
-								when x"0d" => sod <= iprb;
-								when x"0f" => sod <= isra;
-								when x"11" => sod <= isrb;
-								when x"13" => sod <= imra;
-								when x"15" => sod <= imrb;
-								when x"17" => sod <= vr & "000";
-								when x"19" => sod <= "0000" & tacr;
-								when x"1b" => sod <= "0000" & tbcr;
-								when x"1d" => sod <= '0' & tcdcr(5 downto 3) & '0' & tcdcr(2 downto 0);
-								when x"1f" => sod <= std_logic_vector(tamc);
-								when x"21" => sod <= std_logic_vector(tbmc);
-								when x"23" => sod <= std_logic_vector(tcmc);
-								when x"25" => sod <= std_logic_vector(tdmc);
-								when x"27" => sod <= scr;
-								when x"29" => sod <= ucr;
-								when x"2b" => sod <= rsr;
-								when x"2d" => sod <= tsr;
-								when x"2f" => sod <= udr;
-								when others =>
-							end case;
-						else
-							-- register write access
-							case addr is
-								when x"01" => gpip <= id;
-								when x"03" => aer <= id;
-								when x"05" => ddr <= id;
-								when x"07" =>
-									iera <= id;
-									ipra <= ipra and id;
-									if ddr(7) = '0' and iera(7) = '0' and id(7) = '1' and ii(7) = aer(7) then ipra(7) <= '1'; end if;
-									if ddr(6) = '0' and iera(6) = '0' and id(6) = '1' and ii(6) = aer(6) then ipra(6) <= '1'; end if;
-								when x"09" =>
-									ierb <= id;
-									iprb <= iprb and id;
-									if ddr(5) = '0' and ierb(7) = '0' and id(7) = '1' and ii(5) = aer(5) then iprb(7) <= '1'; end if;
-									if ddr(4) = '0' and ierb(6) = '0' and id(6) = '1' and ii(4) = aer(4) then iprb(6) <= '1'; end if;
-									if ddr(3) = '0' and ierb(3) = '0' and id(3) = '1' and ii(3) = aer(3) then iprb(3) <= '1'; end if;
-									if ddr(2) = '0' and ierb(2) = '0' and id(2) = '1' and ii(2) = aer(2) then iprb(2) <= '1'; end if;
-									if ddr(1) = '0' and ierb(1) = '0' and id(1) = '1' and ii(1) = aer(1) then iprb(1) <= '1'; end if;
-									if ddr(0) = '0' and ierb(0) = '0' and id(0) = '1' and ii(0) = aer(0) then iprb(0) <= '1'; end if;
-								when x"0b" => ipra <= ipra and id;
-								when x"0d" => iprb <= iprb and id;
-								when x"0f" => isra <= isra and id;
-								when x"11" => isrb <= isrb and id;
-								when x"13" => imra <= id;
-								when x"15" => imrb <= id;
-								when x"17" =>
-									vr <= id(7 downto 3);
-									if id(3) = '0' then
-										isra <= x"00";
-										isrb <= x"00";
-									end if;
-								when x"19" =>
-									tacr <= id(3 downto 0);
-									if id(4) = '1' then
-										-- reset timer output
-										tato <= '0';
-									end if;
-									if id(3 downto 0) = "0000" then
-										tapc <= x"01";
-									elsif tacr = "0000" and id(3 downto 0) /= "1000" then
-										tapc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tapc'length);
-									end if;
-								when x"1b" =>
-									tbcr <= id(3 downto 0);
-									if id(4) = '1' then
-										-- reset timer output
-										tbto <= '0';
-									end if;
-									if id(3 downto 0) = "0000" then
-										tbpc <= x"01";
-									elsif tbcr = "0000" and id(3 downto 0) /= "1000" then
-										tbpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tbpc'length);
-									end if;
-								when x"1d" =>
-									tcdcr <= id(6 downto 4) & id(2 downto 0);
-									if tcdcr(5 downto 3) = "000" and id(6 downto 4) /= "000" then
-										tcpc <= to_unsigned(prescale(to_integer(unsigned(id(6 downto 4)))),tcpc'length);
-									end if;
-									if tcdcr(2 downto 0) = "000" and id(2 downto 0) /= "000" then
-										tdpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tdpc'length);
-									end if;
-								when x"1f" =>
-									tadr <= id;
-									if tacr = "0000" then
-										tamc <= unsigned(id);
-									end if;
-								when x"21" =>
-									tbdr <= id;
-									if tbcr = "0000" then
-										tbmc <= unsigned(id);
-									end if;
-								when x"23" =>
-									tcdr <= id;
-									if tcdcr(5 downto 3) = "000" then
-										tcmc <= unsigned(id);
-									end if;
-								when x"25" =>
-									tddr <= id;
-									if tcdcr(2 downto 0) = "000" then
-										tdmc <= unsigned(id);
-									end if;
-								when x"27" => scr <= id;
-								when x"29" => ucr <= id;
-								when x"2b" => rsr <= id;
-								when x"2d" => tsr <= id;
-								when x"2f" => udr <= id;
-								when others => null;
-							end case;
-						end if;
-						dtackn_reg <= '0';
-					end if;
-
-					ii1 <= ii;
-					if ddr(7) = '0' and ii(7) /= ii1(7) and ii(7) = aer(7) and iera(7) = '1' then ipra(7) <= '1'; end if;
-					if ddr(6) = '0' and ii(6) /= ii1(6) and ii(6) = aer(6) and iera(6) = '1' then ipra(6) <= '1'; end if;
-					if ddr(5) = '0' and ii(5) /= ii1(5) and ii(5) = aer(5) and ierb(7) = '1' then iprb(7) <= '1'; end if;
-					if ddr(4) = '0' and ii(4) /= ii1(4) and ii(4) = aer(4) and ierb(6) = '1' then iprb(6) <= '1'; end if;
-					if ddr(3) = '0' and ii(3) /= ii1(3) and ii(3) = aer(3) and ierb(3) = '1' then iprb(3) <= '1'; end if;
-					if ddr(2) = '0' and ii(2) /= ii1(2) and ii(2) = aer(2) and ierb(2) = '1' then iprb(2) <= '1'; end if;
-					if ddr(1) = '0' and ii(1) /= ii1(1) and ii(1) = aer(1) and ierb(1) = '1' then iprb(1) <= '1'; end if;
-					if ddr(0) = '0' and ii(0) /= ii1(0) and ii(0) = aer(0) and ierb(0) = '1' then iprb(0) <= '1'; end if;
-
-					if sirqn = '0' and iackn = '0' and siackn(0) = '0' and dsn = '0' then
-						-- begin interrupt acknowledge cycle
-						dtackn_irq <= '0';
-						sod <= vr(7 downto 4) & ipl;
-						if ipl(3) = '1' then
-							ipra(to_integer(unsigned(ipl(2 downto 0)))) <= '0';
-						else
-							iprb(to_integer(unsigned(ipl(2 downto 0)))) <= '0';
-						end if;
-						if vr(3) = '1' then
-							-- software end of interrupt mode
-							if ipl(3) = '1' then
-								isra(to_integer(unsigned(ipl(2 downto 0)))) <= '1';
-							else
-								isrb(to_integer(unsigned(ipl(2 downto 0)))) <= '1';
+				-- Timer B operation
+				tbi1 <= tbi1(tbi1'high-1 downto 0) & tbi;
+				if ierb(3) = '1' and tbcr(3) = '1' and tbi1(tbi1'high) /= tbi1(tbi1'high-1) and tbi = aer(3) then
+					-- Pulse count interrupt, GPIP3 channel
+					iprb(3) <= '1';
+				end if;
+				if tbcr /= "0000" then
+					-- Decrement counters in delay mode or pulse width measurement mode or event count mode
+					if tbcr(3) = '0' or (tbcr = "1000" and tbi1(tbi1'high) /= tbi1(tbi1'high-1) and tbi = aer(3)) then
+						if tbpc = x"01" or tbcr = "1000" then
+							if tbcr /= "1000" then
+								tbpc <= to_unsigned(prescale(to_integer(unsigned(tbcr(2 downto 0)))),tbpc'length);
 							end if;
+							if tbmc = x"01" then
+								tbmc <= unsigned(tbdr);
+								tbto <= not tbto;
+								if iera(0) = '1' then
+									-- Time out interrupt, Timer B channel
+									ipra(0) <= '1';
+								end if;
+							else
+								tbmc <= tbmc-1;
+							end if;
+						else
+							tbpc <= tbpc-1;
+						end if;
+					end if;
+				end if;
+
+				-- Timer C operation
+				if tcdcr(5 downto 3) /= "000" then
+					-- Decrement counters in delay mode
+					if tcpc = x"01" then
+						tcpc <= to_unsigned(prescale(to_integer(unsigned(tcdcr(5 downto 3)))),tcpc'length);
+						if tcmc = x"01" then
+							tcmc <= unsigned(tcdr);
+							tcto <= not tcto;
+							if ierb(5) = '1' then
+								-- Time out interrupt, Timer C channel
+								iprb(5) <= '1';
+							end if;
+						else
+							tcmc <= tcmc-1;
+						end if;
+					else
+						tcpc <= tcpc-1;
+					end if;
+				end if;
+
+				-- Timer D operation
+				if tcdcr(2 downto 0) /= "000" then
+					-- Decrement counters in delay mode
+					if tdpc = x"01" then
+						tdpc <= to_unsigned(prescale(to_integer(unsigned(tcdcr(2 downto 0)))),tdpc'length);
+						if tdmc = x"01" then
+							tdmc <= unsigned(tddr);
+							tdto <= not tdto;
+							if ierb(4) = '1' then
+								-- Time out interrupt, Timer D channel
+								iprb(4) <= '1';
+							end if;
+						else
+							tdmc <= tdmc-1;
+						end if;
+					else
+						tdpc <= tdpc-1;
+					end if;
+				end if;
+			end if;
+
+			if clkren = '1' then
+				csn1 <= csn;
+				siackn <= iackn & siackn(siackn'high downto 1);
+				sod <= x"ff";
+				dtackn_irq <= '1';
+				dtackn_reg <= '1';
+				if csn = '0' and csn1 = '0' then
+					-- register access
+					if rwn = '1' then
+						-- register read access
+						case addr is
+							when x"01" => sod <= (gpip and ddr) or (ii and not ddr);
+							when x"03" => sod <= aer;
+							when x"05" => sod <= ddr;
+							when x"07" => sod <= iera;
+							when x"09" => sod <= ierb;
+							when x"0b" => sod <= ipra;
+							when x"0d" => sod <= iprb;
+							when x"0f" => sod <= isra;
+							when x"11" => sod <= isrb;
+							when x"13" => sod <= imra;
+							when x"15" => sod <= imrb;
+							when x"17" => sod <= vr & "000";
+							when x"19" => sod <= "0000" & tacr;
+							when x"1b" => sod <= "0000" & tbcr;
+							when x"1d" => sod <= '0' & tcdcr(5 downto 3) & '0' & tcdcr(2 downto 0);
+							when x"1f" => sod <= std_logic_vector(tamc);
+							when x"21" => sod <= std_logic_vector(tbmc);
+							when x"23" => sod <= std_logic_vector(tcmc);
+							when x"25" => sod <= std_logic_vector(tdmc);
+							when x"27" => sod <= scr;
+							when x"29" => sod <= ucr;
+							when x"2b" => sod <= rsr;
+							when x"2d" => sod <= tsr;
+							when x"2f" => sod <= udr;
+							when others =>
+						end case;
+					else
+						-- register write access
+						case addr is
+							when x"01" => gpip <= id;
+							when x"03" => aer <= id;
+							when x"05" => ddr <= id;
+							when x"07" =>
+								iera <= id;
+								ipra <= ipra and id;
+								if ddr(7) = '0' and iera(7) = '0' and id(7) = '1' and ii(7) = aer(7) then ipra(7) <= '1'; end if;
+								if ddr(6) = '0' and iera(6) = '0' and id(6) = '1' and ii(6) = aer(6) then ipra(6) <= '1'; end if;
+							when x"09" =>
+								ierb <= id;
+								iprb <= iprb and id;
+								if ddr(5) = '0' and ierb(7) = '0' and id(7) = '1' and ii(5) = aer(5) then iprb(7) <= '1'; end if;
+								if ddr(4) = '0' and ierb(6) = '0' and id(6) = '1' and ii(4) = aer(4) then iprb(6) <= '1'; end if;
+								if ddr(3) = '0' and ierb(3) = '0' and id(3) = '1' and ii(3) = aer(3) then iprb(3) <= '1'; end if;
+								if ddr(2) = '0' and ierb(2) = '0' and id(2) = '1' and ii(2) = aer(2) then iprb(2) <= '1'; end if;
+								if ddr(1) = '0' and ierb(1) = '0' and id(1) = '1' and ii(1) = aer(1) then iprb(1) <= '1'; end if;
+								if ddr(0) = '0' and ierb(0) = '0' and id(0) = '1' and ii(0) = aer(0) then iprb(0) <= '1'; end if;
+							when x"0b" => ipra <= ipra and id;
+							when x"0d" => iprb <= iprb and id;
+							when x"0f" => isra <= isra and id;
+							when x"11" => isrb <= isrb and id;
+							when x"13" => imra <= id;
+							when x"15" => imrb <= id;
+							when x"17" =>
+								vr <= id(7 downto 3);
+								if id(3) = '0' then
+									isra <= x"00";
+									isrb <= x"00";
+								end if;
+							when x"19" =>
+								tacr <= id(3 downto 0);
+								if id(4) = '1' then
+									-- reset timer output
+									tato <= '0';
+								end if;
+								if id(3 downto 0) = "0000" then
+									tapc <= x"01";
+								elsif tacr = "0000" and id(3 downto 0) /= "1000" then
+									tapc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tapc'length);
+								end if;
+							when x"1b" =>
+								tbcr <= id(3 downto 0);
+								if id(4) = '1' then
+									-- reset timer output
+									tbto <= '0';
+								end if;
+								if id(3 downto 0) = "0000" then
+									tbpc <= x"01";
+								elsif tbcr = "0000" and id(3 downto 0) /= "1000" then
+									tbpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tbpc'length);
+								end if;
+							when x"1d" =>
+								tcdcr <= id(6 downto 4) & id(2 downto 0);
+								if tcdcr(5 downto 3) = "000" and id(6 downto 4) /= "000" then
+									tcpc <= to_unsigned(prescale(to_integer(unsigned(id(6 downto 4)))),tcpc'length);
+								end if;
+								if tcdcr(2 downto 0) = "000" and id(2 downto 0) /= "000" then
+									tdpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tdpc'length);
+								end if;
+							when x"1f" =>
+								tadr <= id;
+								if tacr = "0000" then
+									tamc <= unsigned(id);
+								end if;
+							when x"21" =>
+								tbdr <= id;
+								if tbcr = "0000" then
+									tbmc <= unsigned(id);
+								end if;
+							when x"23" =>
+								tcdr <= id;
+								if tcdcr(5 downto 3) = "000" then
+									tcmc <= unsigned(id);
+								end if;
+							when x"25" =>
+								tddr <= id;
+								if tcdcr(2 downto 0) = "000" then
+									tdmc <= unsigned(id);
+								end if;
+							when x"27" => scr <= id;
+							when x"29" => ucr <= id;
+							when x"2b" => rsr <= id;
+							when x"2d" => tsr <= id;
+							when x"2f" => udr <= id;
+							when others => null;
+						end case;
+					end if;
+					dtackn_reg <= '0';
+				end if;
+
+				ii1 <= ii;
+				if ddr(7) = '0' and ii(7) /= ii1(7) and ii(7) = aer(7) and iera(7) = '1' then ipra(7) <= '1'; end if;
+				if ddr(6) = '0' and ii(6) /= ii1(6) and ii(6) = aer(6) and iera(6) = '1' then ipra(6) <= '1'; end if;
+				if ddr(5) = '0' and ii(5) /= ii1(5) and ii(5) = aer(5) and ierb(7) = '1' then iprb(7) <= '1'; end if;
+				if ddr(4) = '0' and ii(4) /= ii1(4) and ii(4) = aer(4) and ierb(6) = '1' then iprb(6) <= '1'; end if;
+				if ddr(3) = '0' and ii(3) /= ii1(3) and ii(3) = aer(3) and ierb(3) = '1' then iprb(3) <= '1'; end if;
+				if ddr(2) = '0' and ii(2) /= ii1(2) and ii(2) = aer(2) and ierb(2) = '1' then iprb(2) <= '1'; end if;
+				if ddr(1) = '0' and ii(1) /= ii1(1) and ii(1) = aer(1) and ierb(1) = '1' then iprb(1) <= '1'; end if;
+				if ddr(0) = '0' and ii(0) /= ii1(0) and ii(0) = aer(0) and ierb(0) = '1' then iprb(0) <= '1'; end if;
+
+				if sirqn = '0' and iackn = '0' and siackn(0) = '0' and dsn = '0' then
+					-- begin interrupt acknowledge cycle
+					dtackn_irq <= '0';
+					sod <= vr(7 downto 4) & ipl;
+					if ipl(3) = '1' then
+						ipra(to_integer(unsigned(ipl(2 downto 0)))) <= '0';
+					else
+						iprb(to_integer(unsigned(ipl(2 downto 0)))) <= '0';
+					end if;
+					if vr(3) = '1' then
+						-- software end of interrupt mode
+						if ipl(3) = '1' then
+							isra(to_integer(unsigned(ipl(2 downto 0)))) <= '1';
+						else
+							isrb(to_integer(unsigned(ipl(2 downto 0)))) <= '1';
 						end if;
 					end if;
 				end if;
