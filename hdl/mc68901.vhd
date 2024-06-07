@@ -98,24 +98,25 @@ architecture behavioral of mc68901 is
 	signal siackn	: std_logic_vector(2 downto 0);
 
 	type prescale_t is array(1 to 7) of integer;
-	signal prescale	: prescale_t := (4,10,16,50,64,100,200);
+	signal prescale	: prescale_t := (2,5,8,25,32,50,100);
+	signal xtldiv	: std_logic;
 
 	signal tato		: std_logic;
-	signal tapc		: unsigned(7 downto 0);
+	signal tapc		: integer range 0 to 100;
 	signal tamc		: unsigned(7 downto 0);
-	signal tai1		: std_logic_vector(4 downto 0);
+	signal tai1		: std_logic_vector(2 downto 0);
 
 	signal tbto		: std_logic;
-	signal tbpc		: unsigned(7 downto 0);
+	signal tbpc		: integer range 0 to 100;
 	signal tbmc		: unsigned(7 downto 0);
-	signal tbi1		: std_logic_vector(4 downto 0);
+	signal tbi1		: std_logic_vector(2 downto 0);
 
 	signal tcto		: std_logic;
-	signal tcpc		: unsigned(7 downto 0);
+	signal tcpc		: integer range 0 to 100;
 	signal tcmc		: unsigned(7 downto 0);
 
 	signal tdto		: std_logic;
-	signal tdpc		: unsigned(7 downto 0);
+	signal tdpc		: integer range 0 to 100;
 	signal tdmc		: unsigned(7 downto 0);
 
 	signal sirqn	: std_logic;
@@ -170,6 +171,7 @@ begin
 	process(clk,resetn)
 	begin
 		if resetn = '0' then
+			xtldiv <= '0';
 			gpip <= x"00";
 			aer <= x"00";
 			ddr <= x"00";
@@ -193,26 +195,29 @@ begin
 			dtackn_reg <= '1';
 
 			tato <= '0';
-			tapc <= x"01";
+			tapc <= 1;
 			tamc <= x"01";
 			tai1 <= (others => '0');
 
 			tbto <= '0';
-			tbpc <= x"01";
+			tbpc <= 1;
 			tbmc <= x"01";
 			tbi1 <= (others => '0');
 
 			tcto <= '0';
-			tcpc <= x"01";
+			tcpc <= 1;
 			tcmc <= x"01";
 
 			tdto <= '0';
-			tdpc <= x"01";
+			tdpc <= 1;
 			tdmc <= x"01";
 			csn1 <= '1';
 			siackn <= (others => '1');
 		elsif rising_edge(clk) then
 			if xtlcken = '1' then
+				xtldiv <= not xtldiv;
+			end if;
+			if xtlcken = '1' and xtldiv = '0' then
 				-- Timer A operation
 				tai1 <= tai1(tai1'high-1 downto 0) & tai;
 				if ierb(6) = '1' and tacr(3) = '1' and tai1(tai1'high) /= tai1(tai1'high-1) and tai = aer(4) then
@@ -222,9 +227,9 @@ begin
 				if tacr /= "0000" then
 					-- Decrement counters in delay mode or pulse width measurement mode or event count mode
 					if tacr(3) = '0' or (tacr = "1000" and tai1(tai1'high) /= tai1(tai1'high-1) and tai = aer(4)) then
-						if tapc = x"01" or tacr = "1000" then
+						if tapc = 1 or tacr = "1000" then
 							if tacr /= "1000" then
-								tapc <= to_unsigned(prescale(to_integer(unsigned(tacr(2 downto 0)))),tapc'length);
+								tapc <= prescale(to_integer(unsigned(tacr(2 downto 0))));
 							end if;
 							if tamc = x"01" then
 								tamc <= unsigned(tadr);
@@ -251,9 +256,9 @@ begin
 				if tbcr /= "0000" then
 					-- Decrement counters in delay mode or pulse width measurement mode or event count mode
 					if tbcr(3) = '0' or (tbcr = "1000" and tbi1(tbi1'high) /= tbi1(tbi1'high-1) and tbi = aer(3)) then
-						if tbpc = x"01" or tbcr = "1000" then
+						if tbpc = 1 or tbcr = "1000" then
 							if tbcr /= "1000" then
-								tbpc <= to_unsigned(prescale(to_integer(unsigned(tbcr(2 downto 0)))),tbpc'length);
+								tbpc <= prescale(to_integer(unsigned(tbcr(2 downto 0))));
 							end if;
 							if tbmc = x"01" then
 								tbmc <= unsigned(tbdr);
@@ -274,8 +279,8 @@ begin
 				-- Timer C operation
 				if tcdcr(5 downto 3) /= "000" then
 					-- Decrement counters in delay mode
-					if tcpc = x"01" then
-						tcpc <= to_unsigned(prescale(to_integer(unsigned(tcdcr(5 downto 3)))),tcpc'length);
+					if tcpc = 1 then
+						tcpc <= prescale(to_integer(unsigned(tcdcr(5 downto 3))));
 						if tcmc = x"01" then
 							tcmc <= unsigned(tcdr);
 							tcto <= not tcto;
@@ -294,8 +299,8 @@ begin
 				-- Timer D operation
 				if tcdcr(2 downto 0) /= "000" then
 					-- Decrement counters in delay mode
-					if tdpc = x"01" then
-						tdpc <= to_unsigned(prescale(to_integer(unsigned(tcdcr(2 downto 0)))),tdpc'length);
+					if tdpc = 1 then
+						tdpc <= prescale(to_integer(unsigned(tcdcr(2 downto 0))));
 						if tdmc = x"01" then
 							tdmc <= unsigned(tddr);
 							tdto <= not tdto;
@@ -388,9 +393,9 @@ begin
 									tato <= '0';
 								end if;
 								if id(3 downto 0) = "0000" then
-									tapc <= x"01";
+									tapc <= 1;
 								elsif tacr = "0000" and id(3 downto 0) /= "1000" then
-									tapc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tapc'length);
+									tapc <= prescale(to_integer(unsigned(id(2 downto 0))));
 								end if;
 							when x"1b" =>
 								tbcr <= id(3 downto 0);
@@ -399,17 +404,17 @@ begin
 									tbto <= '0';
 								end if;
 								if id(3 downto 0) = "0000" then
-									tbpc <= x"01";
+									tbpc <= 1;
 								elsif tbcr = "0000" and id(3 downto 0) /= "1000" then
-									tbpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tbpc'length);
+									tbpc <= prescale(to_integer(unsigned(id(2 downto 0))));
 								end if;
 							when x"1d" =>
 								tcdcr <= id(6 downto 4) & id(2 downto 0);
 								if tcdcr(5 downto 3) = "000" and id(6 downto 4) /= "000" then
-									tcpc <= to_unsigned(prescale(to_integer(unsigned(id(6 downto 4)))),tcpc'length);
+									tcpc <= prescale(to_integer(unsigned(id(6 downto 4))));
 								end if;
 								if tcdcr(2 downto 0) = "000" and id(2 downto 0) /= "000" then
-									tdpc <= to_unsigned(prescale(to_integer(unsigned(id(2 downto 0)))),tdpc'length);
+									tdpc <= prescale(to_integer(unsigned(id(2 downto 0))));
 								end if;
 							when x"1f" =>
 								tadr <= id;
