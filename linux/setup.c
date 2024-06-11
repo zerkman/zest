@@ -127,7 +127,7 @@ static uint8_t *mem_array;
 
 void cold_reset() {
   setup_cfg(2); // Bit 0 clear=reset
-  memset(mem_array+8,0,0xe00000-4);
+  memset(mem_array+8,0,0xe00000-8);
   setup_cfg(3); // end reset
 }
 
