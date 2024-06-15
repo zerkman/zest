@@ -40,7 +40,7 @@ architecture hdl of mono_hde_gen is
 	signal begdly : integer range 0 to 31;
 begin
 
-	begdly <= to_integer(unsigned(wakest)-1)*4+14;
+	begdly <= to_integer(unsigned(wakest)+1)*4+14;
 
 process(clk,resetn)
 	variable nccnt : integer range 0 to MAX;
