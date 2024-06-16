@@ -64,6 +64,6 @@ bus_d <= (cpu_d or (15 downto 0 => cpu_e)) and shifter_od
 		and dma_d;
 d <= bus_d;
 
-shifter_id <= (bus_d or (15 downto 0 => shifter_e)) and ram_d;
+shifter_id <= bus_d when shifter_e = '0' else ram_d;
 
 end architecture;
