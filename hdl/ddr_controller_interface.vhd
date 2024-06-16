@@ -262,8 +262,8 @@ begin
 	--Read and Read Response (R)
 	M_AXI_RREADY	<= axi_rready;
 	-- transfer done status
-	W_DONE	<= wdone;
-	R_DONE	<= rdone;
+	w_done <= wdone;
+	r_done <= rdone_ff;
 	r_d <= rod;
 	ERROR <= write_resp_error;
 
@@ -368,7 +368,7 @@ begin
 	axi_araddr(1 downto 0) <= "00";
 	axi_arvalid <= M_AXI_ARESETN and (init_read or axi_arvalid_ff) and not axi_rready;
 	rdone <= (axi_rready and M_AXI_RVALID) or (r and rdone_ff);
-	rod <= ((15 downto 0 => not M_AXI_RVALID) or rdata) and rdata_ff;
+	rod <= rdata_ff;
 
 	rdata(15 downto 8) <= (7 downto 0 => ds_rd(1)) and ((M_AXI_RDATA(7 downto 0) and (7 downto 0 => not a1_rd)) or (M_AXI_RDATA(23 downto 16) and (7 downto 0 => a1_rd)));
 	rdata(7 downto 0) <= (7 downto 0 => ds_rd(0)) and ((M_AXI_RDATA(15 downto 8) and (7 downto 0 => not a1_rd)) or (M_AXI_RDATA(31 downto 24) and (7 downto 0 => a1_rd)));
@@ -394,8 +394,6 @@ begin
 				if axi_rready = '1' and M_AXI_RVALID = '1' then
 					rdata_ff <= rdata;
 					axi_rready <= '0';
-				elsif r = '0' then
-					rdata_ff <= (others => '1');
 				end if;
 				if init_read = '1' then
 					ds_rd <= ds;
