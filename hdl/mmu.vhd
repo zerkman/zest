@@ -100,11 +100,13 @@ begin
 		ram_R <= '0';
 		ram_W <= '0';
 		if mode_load = '1' and delay_bus = '0' then
-			-- get shifter data
-			ram_A <= video_ptr;
-			ram_DS <= "11";
-			ram_R <= '1';
-			ram_W <= '0';
+			if video_ptr(23 downto 18) <= mem_top then
+				-- get shifter data
+				ram_A <= video_ptr;
+				ram_DS <= "11";
+				ram_R <= '1';
+				ram_W <= '0';
+			end if;
 		elsif mode_bus = '1' and delay_loadn = '0' then
 			-- valid ST RAM/ROM address
 			if RAMn = '0' then
