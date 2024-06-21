@@ -6,10 +6,11 @@
 module HD63701_MCROM
 (
 	input			CLK,
+	input clken,
 	input [5:0] PHASE,
 	input [7:0] OPCODE,
 
-	output `mcwidth mcode
+	output reg `mcwidth mcode
 );
 
 `include "HD63701_MCODE.i"
@@ -29,9 +30,10 @@ HD63701_MCROM_S7 r7(CLK,OPCODE,mc7);
 HD63701_MCROM_S8 r8(CLK,OPCODE,mc8);
 HD63701_MCROM_S9 r9(CLK,OPCODE,mc9);
 
-assign mcode = 
+always @( posedge CLK )
+	if (clken) mcode <=
 				(p==`phRST  ) ? {`mcLDV,  `vaRST,   `mcrn,`mcpN,`amE0,`pcN}: 	//(Load Reset Vector)
-				
+
 				(p==`phVECT ) ? {`mcLDN,`mcrM,`mcrn,`mcrU,`mcpN,`amE0,`pcN}:	//(Load VectorH)
 				(p==`phVEC1 ) ? {`mcLDN,`mcrM,`mcrn,`mcrV,`mcpN,`amE1,`pcN}:	//(Load VectorL)
 				(p==`phVEC2 ) ? {`mcLDN,`mcrT,`mcrn,`mcrP,`mcp0,`amPC,`pcN}:	//(Load to PC)
@@ -58,7 +60,7 @@ assign mcode =
 				(p==`phINTR8) ? 0:
 				(p==`phINTR9) ? 0:
 									`MC_HALT;
-				
+
 endmodule
 
 module HD63701_MCROM_S0( input CLK, input [7:0] OPCODE, output reg `mcwidth mcode );
@@ -110,4 +112,3 @@ module HD63701_MCROM_S9( input CLK, input [7:0] OPCODE, output reg `mcwidth mcod
 `include "HD63701_MCODE.i"
 always @( posedge CLK ) mcode <= MCODE_S9(OPCODE);
 endmodule
-

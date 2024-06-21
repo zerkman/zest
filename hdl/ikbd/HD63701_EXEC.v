@@ -7,10 +7,12 @@
 module HD63701_EXEC
 (
 	input						CLK,
+	input						clkren,
+	input						clkfen,
 	input						RST,
-	
+
 	input			[7:0]		DI,
-	
+
 	output	  [15:0]		AD,
 	output 					RW,
 	output reg  [7:0]		DO,
@@ -51,8 +53,8 @@ reg	[5:0]	rC;
 wire IsCCR   = (mcop==`mcCCB)|(mcop==`mcSCB);
 wire IsCChit = (({(rC[1]^rC[3]),rC} & mccf[6:0]) == 7'h0) ^ mccf[7];
 
-wire [15:0] R0, R1, RR;
-wire  [5:0] CC;
+wire [15:0] R0, R1, RRc;
+wire  [5:0] CCc;
 
 HD63701_DSEL13 sR0(
 	.o(R0),
@@ -88,12 +90,36 @@ HD63701_DSEL13 sR1(
 	.fC(mcr1 == `mcrE), .dC(rE)
 );
 
+// registered ALU inputs
+reg [4:0] alu_mcop;
+reg [7:0] alu_mccf;
+reg alu_bw;
+reg [15:0] alu_R0;
+reg [15:0] alu_R1;
+reg alu_C;
+
+always @( posedge CLK ) begin
+	alu_mcop <= mcop;
+	alu_mccf <= mccf;
+	alu_bw <= (mcr2==`mcrn) ? mcr0[2] : mcr2[2];
+	alu_R0 <= R0;
+	alu_R1 <= R1;
+	alu_C <= rC[0];
+end
+
 HD63701_ALU ALU(
-	.op(mcop),.cf(mccf),.bw((mcr2==`mcrn) ? mcr0[2] : mcr2[2]),
-	.R0(R0),.R1(R1),.C(rC[0]),
-	.RR(RR),.RC(CC)
+	.op(alu_mcop),.cf(alu_mccf),.bw(alu_bw),
+	.R0(alu_R0),.R1(alu_R1),.C(alu_C),
+	.RR(RRc),.RC(CCc)
 );
 
+reg [15:0] RR;
+reg  [5:0] CC;
+
+always @( posedge CLK ) begin
+	RR <= RRc;
+	CC <= CCc;
+end
 
 // Bus Control
 HD63701_DSEL8 sAB(
@@ -112,15 +138,17 @@ HD63701_DSEL8 sAB(
 // Update Registers
 reg [4:0] pmcop;
 always @( posedge CLK ) begin
-		  if (pmcop==`mcPSH) rS <= rSp-16'h1;
-	else if (pmcop==`mcPUL) rS <= rSp+16'h1;
-	else rS <= rSp;
+	if (clkren) begin
+			  if (pmcop==`mcPSH) rS <= rSp-16'h1;
+		else if (pmcop==`mcPUL) rS <= rSp+16'h1;
+		else rS <= rSp;
+	end
 end
 
 wire noCCop = (mcop!=`mcLDV)&(mcop!=`mcLDN)&(mcop!=`mcPSH)&(mcop!=`mcPUL)&(mcop!=`mcAPC)&(mcop!=`mcTST)&(~fncu);
 wire noCCrg = (mcr2!=`mcrC )&(mcr2!=`mcrS )&(mcr2!=`mcrP )&(mcr0!=`mcrC );
 
-always @( negedge CLK or posedge RST ) begin
+always @( posedge CLK or posedge RST ) begin
 	if (RST) begin
 		pmcop <= 0;
 		vect <= 0;
@@ -130,7 +158,7 @@ always @( negedge CLK or posedge RST ) begin
 		rC   <= 6'b010000;
 		DO   <= 0;
 	end
-	else begin
+	else if (clkfen) begin
 		if ((mcr2!=`mcrP)&(mcpi==`pcI)) rP <= rP+16'h1;
 		if (noCCrg & noCCop) rC <= {CC[5],rC[4],CC[3:0]};
 		if (mcr2!=`mcrS) rSp <= rS;
@@ -164,7 +192,13 @@ always @( negedge CLK or posedge RST ) begin
 	end
 end
 
-assign RW = !CLK & ((mcr2==`mcrN)|(mcr2==`mcrM)) & (~mcnw);
+reg clk_st = 0;
+always @( posedge CLK ) begin
+	if (clkren) clk_st <= 1'b1;
+	else if (clkfen) clk_st <= 0;
+end
+
+assign RW = !clk_st & ((mcr2==`mcrN)|(mcr2==`mcrM)) & (~mcnw);
 
 assign inte = ~rC[4];
 
@@ -235,4 +269,3 @@ assign o =
 			16'h0 ;
 
 endmodule
-
