@@ -14,7 +14,7 @@ module HD63701V0_M6
 
  output        RW, // CS2
  output [15:0] AD, //  AS ? {PO4,PO3}
- output [7:0]  DO, // ~AS ? {PO3}
+ output reg [7:0]  DO, // ~AS ? {PO3}
  input [7:0]   DI, //       {PI3}
 
  input [7:0]   PI4, //
@@ -35,7 +35,7 @@ wire [7:0] PO3;
 wire [7:0] PO4;
 
 // Multiplex PO3 and PO4 onto external AD port in mode 7
-assign AD = (PO2I[7:5] == 3'b111)?{ PO4, PO3 }:ADI;
+assign AD = (PO2I[7:5] == 3'b111)?{ PO4, PO3 }:ADI_ff;
 
 // Built-In Instruction ROM - TODO: include mode (POI[7:5]) here
 wire en_birom = (ADI[15:12]==4'b1111);			// $F000-$FFFF
@@ -47,12 +47,18 @@ MCU_BIROM irom( CLKx2, ADI[11:0], biromd );
 wire		  en_biram;
 wire [7:0] biramd;
 HD63701_BIRAM biram( CLKx2, ADI, RW, DO, en_biram, biramd );
+reg en_biramd_ff;
+always @( posedge CLKx2 ) begin
+	en_biramd_ff <= en_biram;
+end
 
 
 // Built-In I/O Ports
 wire		  en_biio;
 wire [7:0] biiod;
-HD63701_IOPort iopt( RST, CLKx2, clkren, ADI, RW, DO, en_biio, biiod, PI1, PI2, DI, PI4, PO1, PO2I, PO3, PO4 );
+reg [7:0] iopt_pi1;
+always @( posedge CLKx2 ) iopt_pi1 <= PI1;
+HD63701_IOPort iopt( RST, CLKx2, clkren, ADI_ff, RW, DO, en_biio, biiod, iopt_pi1, PI2, DI, PI4, PO1, PO2I, PO3, PO4 );
 
 
 // Built-In Serial Communication Hardware
@@ -61,14 +67,14 @@ wire		  txd;
 wire		  te;
 wire		  en_bisci;
 wire [7:0] biscid;
-HD63701_SCI sci( RST, CLKx2, clkren, ADI, RW, DO, PI2[3], txd, te, irq2_sci, en_bisci, biscid );
+HD63701_SCI sci( RST, CLKx2, clkren, ADI_ff, RW, DO, PI2[3], txd, te, irq2_sci, en_bisci, biscid );
 
 
 // Built-In Timer
 wire		  irq2_tim;
 wire		  en_bitim;
 wire [7:0] bitimd;
-HD63701_Timer timer( RST, CLKx2, clkren, clkfen, ADI, RW, DO, irq2_tim, en_bitim, bitimd );
+HD63701_Timer timer( RST, CLKx2, clkren, clkfen, ADI_ff, RW, DO, irq2_tim, en_bitim, bitimd );
 
 
 // Built-In Devices Data Selector
@@ -77,7 +83,7 @@ HD63701_BIDSEL bidsel
 (
  biddi,
  en_birom, biromd,
- en_biram, biramd,
+ en_biramd_ff, biramd,
  en_biio , biiod,
  en_bisci, biscid,
  en_bitim, bitimd,
@@ -85,12 +91,16 @@ HD63701_BIDSEL bidsel
  );
 
 // Processor Core
+wire [7:0] core_DO;
 HD63701_Core core
   (
    .CLKx2(CLKx2),.clkfen(clkfen),.RST(RST),
    .NMI(NMI),.IRQ(IRQ),.IRQ2_TIM(irq2_tim),.IRQ2_SCI(irq2_sci),
-   .RW(RW),.AD(ADI),.DO(DO),.DI(biddi)
+   .RW(RW),.AD(ADI),.DO(core_DO),.DI(biddi)
    );
+reg [15:0] ADI_ff;
+always @( posedge CLKx2 ) ADI_ff <= ADI;
+always @( posedge CLKx2 ) DO <= core_DO;
 
 endmodule
 

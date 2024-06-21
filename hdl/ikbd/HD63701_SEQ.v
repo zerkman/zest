@@ -8,6 +8,8 @@
 module HD63701_SEQ
 (
 	input						CLK,
+	input						clkren,
+	input						clkfen,
 	input						RST,
 
 	input						NMI,
@@ -25,12 +27,12 @@ module HD63701_SEQ
 );
 
 `define MC_SEI {`mcSCB,   `bfI    ,`mcrC,`mcpN,`amPC,`pcN}
-`define MC_YLD {`mcNOP,`mcrn,`mcrn,`mcrn,`mcpK,`amPC,`pcN} 
+`define MC_YLD {`mcNOP,`mcrn,`mcrn,`mcrn,`mcpK,`amPC,`pcN}
 
 reg [7:0]   opcode;
 reg `mcwidth mcode;
 reg  mcside;
-   
+
 
 
 wire bIRQ  = IRQ & inte;
@@ -51,7 +53,7 @@ always @( posedge CLK or posedge RST ) begin
 		mcode  <= 0;
 		mcside <= 0;
 	end
-	else begin
+	else if (clkren) begin
 
 
 		case (PHASE)
@@ -73,7 +75,7 @@ always @( posedge CLK or posedge RST ) begin
 					end
 
 		// Interrupt (TRAP/IRQ/NMI/SWI/WAI)
-		`phINTR:  mcside <= 1; 
+		`phINTR:  mcside <= 1;
 		`phINTR8: begin
 						mcside <= 0;
 						if (vect==`vaWAI) begin
@@ -111,9 +113,9 @@ end
 
 // Update Phase
 wire [2:0] mcph = mcout[6:4];
-always @( negedge CLK or posedge RST ) begin
+always @( posedge CLK or posedge RST ) begin
 	if (RST) PHASE <= 0;
-	else begin
+	else if (clkfen) begin
 		case (mcph)
 			`mcpN: PHASE <= PHASE+6'h1;
 			`mcp0: PHASE <=`phEXEC;
@@ -128,11 +130,10 @@ end
 
 // Output MicroCode
 wire `mcwidth mcoder;
-HD63701_MCROM mcr( CLK, PHASE, (PHASE==`phEXEC) ? DI : opcode, mcoder );
+HD63701_MCROM mcr( CLK, clkren, PHASE, (PHASE==`phEXEC) ? DI : opcode, mcoder );
 assign mcout = mcside ? mcoder : mcode;
 
 assign fncu = ( opcode[7:4]==4'h2)|
 				  ((opcode[7:4]==4'h3)&(opcode[3:0]!=4'hD));
 
 endmodule
-
