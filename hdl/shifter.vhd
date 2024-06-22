@@ -204,18 +204,22 @@ begin
 end process;
 
 -- output RGB pixels
+process(res,pixel,monopal)
+begin
+	if res(1) = '1' then
+		mono <= pixel(0) xor monopal;
+		rgb <= (others => '0');
+	else
+		mono <= '0';
+		rgb <= palette(to_integer(unsigned(pixel)));
+	end if;
+end process;
+
 process(clk)
 	variable vir : pxregs_t;
 begin
 	if rising_edge(clk) then
 		if enpxck = '1' then
-			if res(1) = '1' then
-				mono <= pixel(0) xor monopal;
-				rgb <= (others => '0');
-			else
-				mono <= '0';
-				rgb <= palette(to_integer(unsigned(pixel)));
-			end if;
 
 			vir := ir;
 			if LOAD = '1' and load1 = '0' then

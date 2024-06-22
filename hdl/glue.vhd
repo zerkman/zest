@@ -729,7 +729,7 @@ begin
 	elsif rising_edge(clk) then
 		if en2fck = '1' then
 			hdec <= hdec + 1;
-			if mono = '1' or hdec = 114 then
+			if hdec = 114 then
 				hblank <= '0';
 			end if;
 			if cpal = '1' and hdec = 9 then
