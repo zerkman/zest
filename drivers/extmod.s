@@ -73,6 +73,10 @@ post_opnwk:
 	and.b	$ffff8260.w,d0	; get screen mode
 	move	d0,d1
 
+	move.l	$462.w,a0	; _vbclock
+wtvbl:	cmp.l	$462.w,a0	; wait for new VBL
+	beq.s	wtvbl
+
 	bset	#2,d0
 	move.b	d0,$ffff8260.w	; enable extended mode
 
@@ -170,6 +174,10 @@ install_super:
 	rts
 
 _is1:
+	move.l	$462.w,a0	; _vbclock
+i1wvbl:	cmp.l	$462.w,a0	; wait for new VBL
+	beq.s	i1wvbl
+
 	bset.b	#2,$ffff8260.w	; test enabling extended mode
 	btst.b	#2,$ffff8260.w	; test if mode is activated
 	bne.s	_is2		; don't install if mode is not activated
@@ -239,7 +247,7 @@ cconws:
 
 	section data
 hello_txt:	dc.b	13,10
-		dc.b	27,"p- zeST extended screen modes v0.1 -",27,"q",13,10
+		dc.b	27,"p- zeST extended screen modes v0.2 -",27,"q",13,10
 		dc.b	"by Fran",$87,"ois Galea",13,10,0
 hires_txt:	dc.b	"does not work in high resolution!",13,10,0
 noextmod_txt:	dc.b	"extended modes are disabled!",13,10,0
