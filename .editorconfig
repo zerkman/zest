@@ -22,3 +22,7 @@ indent_size = 8
 [*.{c,h}]
 indent_style = space
 indent_size = 2
+
+[*.s]
+indent_style = tab
+indent_size = 8
