@@ -102,8 +102,7 @@ begin
 	if resetn = '0' then
 		monopal <= '0';
 		res_ff <= "00";
-	end if;
-	if rising_edge(clk) then
+	elsif rising_edge(clk) then
 		if en8ck = '1' then
 			if CSn = '0' and RWn = '0' then
 				-- write

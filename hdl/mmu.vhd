@@ -84,7 +84,7 @@ architecture behavioral of mmu is
 begin
 
 	al <= iA(7 downto 1) & '1';
-	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (iA(23 downto 18) <= mem_top or iA(23 downto 22) /= "00"))) else '0';
+	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (unsigned(iA(23 downto 18)) <= unsigned(mem_top) or iA(23 downto 22) /= "00"))) else '0';
 	mode_bus <= mode_bus_1 or mode_bus_2;
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
@@ -100,7 +100,7 @@ begin
 		ram_R <= '0';
 		ram_W <= '0';
 		if mode_load = '1' and delay_bus = '0' then
-			if video_ptr(23 downto 18) <= mem_top then
+			if unsigned(video_ptr(23 downto 18)) <= unsigned(mem_top) then
 				-- get shifter data
 				ram_A <= video_ptr;
 				ram_DS <= "11";
