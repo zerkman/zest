@@ -48,7 +48,7 @@ end dma_controller;
 
 architecture behavioral of dma_controller is
 	type buf_t is array (0 to 15) of std_logic_vector(15 downto 0);
-	signal buf		: buf_t;
+	signal buff		: buf_t;
 	signal buf_bi	: unsigned(2 downto 0);		-- index for bus operations (word index)
 	signal buf_di	: unsigned(3 downto 0);		-- index for controller operations (byte index)
 	signal buf_wl	: std_logic;				-- buffer line to write to
@@ -195,7 +195,7 @@ begin
 					null;
 				when start =>
 					if dma_w = '0' then
-						dma_d <= buf(to_integer(not buf_wl & buf_bi));
+						dma_d <= buff(to_integer(not buf_wl & buf_bi));
 					end if;
 					bus_st <= running;
 				when running =>
@@ -216,7 +216,7 @@ begin
 						end if;
 					end if;
 				when running_w =>
-					buf(to_integer(buf_wl & buf_bi)) <= iD;
+					buff(to_integer(buf_wl & buf_bi)) <= iD;
 					bus_st <= running_r;
 					buf_bi <= buf_bi + 1;
 					if buf_bi + 1 = 0 then
@@ -226,7 +226,7 @@ begin
 				when running_r =>
 					if iRDY = '1' then
 						if dma_w = '0' then
-							dma_d <= buf(to_integer(not buf_wl & buf_bi));
+							dma_d <= buff(to_integer(not buf_wl & buf_bi));
 						end if;
 						bus_st <= running;
 					end if;
@@ -257,9 +257,9 @@ begin
 								-- write to fdc
 								scrwn <= '0';
 								if buf_di(0) = '0' then
-									socd <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(15 downto 8);
+									socd <= buff(to_integer(not buf_wl & buf_di(3 downto 1)))(15 downto 8);
 								else
-									socd <= buf(to_integer(not buf_wl & buf_di(3 downto 1)))(7 downto 0);
+									socd <= buff(to_integer(not buf_wl & buf_di(3 downto 1)))(7 downto 0);
 								end if;
 								dc_st <= run_inc;
 							else
@@ -267,9 +267,9 @@ begin
 								if HDRQ = '1' then
 									-- read from acsi
 									if buf_di(0) = '0' then
-										buf(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
+										buff(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
 									else
-										buf(to_integer(buf_wl & buf_di(3 downto 1)))(7 downto 0) <= iCD;
+										buff(to_integer(buf_wl & buf_di(3 downto 1)))(7 downto 0) <= iCD;
 									end if;
 									dc_st <= run_inc;
 								else
@@ -281,9 +281,9 @@ begin
 					end if;
 				when run_read =>
 					if buf_di(0) = '0' then
-						buf(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
+						buff(to_integer(buf_wl & buf_di(3 downto 1)))(15 downto 8) <= iCD;
 					else
-						buf(to_integer(buf_wl & buf_di(3 downto 1)))(7 downto 0) <= iCD;
+						buff(to_integer(buf_wl & buf_di(3 downto 1)))(7 downto 0) <= iCD;
 					end if;
 					dc_st <= run_inc;
 				when run_inc =>
