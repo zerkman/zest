@@ -228,7 +228,7 @@ begin
 		dev_w_strb => dev_w_strb
 	);
 
-	config: entity configurator port map (
+	cfg: entity configurator port map (
 		clk => clk,
 		resetn => resetn,
 		bridge_addr => dev_addr(CFG_ADDR_WIDTH-1 downto DATA_WIDTH_BITS-3),

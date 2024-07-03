@@ -72,7 +72,7 @@ architecture rtl of acsi_drive is
 	signal r_data		: r_data_t;
 	signal r_data_idx	: integer range 0 to 1;
 
-	signal reg			: std_logic_vector(8 downto 0);
+	signal cmd			: std_logic_vector(8 downto 0);
 	signal status		: std_logic_vector(7 downto 0);
 	signal csn1			: std_logic;
 	signal init_dma_rd	: std_logic;
@@ -129,7 +129,7 @@ begin
 	end process;
 	bridge_r_data <= r_data(r_data_idx);
 	r_data(1) <= ram_dout1;
-	r_data(0) <= (31 downto 9 => '0') & reg;
+	r_data(0) <= (31 downto 9 => '0') & cmd ;
 	ram_addr1 <= bridge_addr(ADDR_MSB downto ADDR_LSB);
 	ram_din1 <= bridge_w_data;
 	ram_wsb1 <= bridge_w_strb;
@@ -145,7 +145,7 @@ begin
 	begin
 		if resetn = '0' then
 			csn1 <= '1';
-			reg <= (others => '1');
+			cmd <= (others => '1');
 			status <= x"00";
 			sintn <= '1';
 			rdhs <= x"00";
@@ -162,7 +162,7 @@ begin
 			if csn = '0' and csn1 = '1' then
 				if rwn = '0' then
 					-- we received a byte from the DMA host
-					reg <= a1 & w_d;
+					cmd <= a1 & w_d;
 					hs_hostintr <= '1';
 				else
 					rdhs <= status;
