@@ -97,8 +97,6 @@ architecture behavioral of mc68901 is
 	signal csn1		: std_logic;
 	signal siackn	: std_logic_vector(2 downto 0);
 
-	type prescale_t is array(1 to 7) of integer;
-	signal prescale	: prescale_t := (2,5,8,25,32,50,100);
 	signal xtldiv	: std_logic;
 
 	type cntarray_t is array(0 to 3) of std_logic_vector(7 downto 0);
@@ -133,6 +131,21 @@ architecture behavioral of mc68901 is
 
 	signal sod		: std_logic_vector(7 downto 0);
 	signal ii1		: std_logic_vector(7 downto 0);
+
+	-- prescale values
+	function prescale(v : std_logic_vector(2 downto 0)) return integer is
+	begin
+		case v is
+			when "000" => return 0;
+			when "001" => return 2;
+			when "010" => return 5;
+			when "011" => return 8;
+			when "100" => return 25;
+			when "101" => return 32;
+			when "110" => return 50;
+			when others => return 100;
+		end case;
+	end function;
 
 	-- priority encoder. Return the index of the highest set bit
 	function priority(v : std_logic_vector(15 downto 0))
@@ -238,7 +251,7 @@ begin
 					if tacr(3) = '0' or (tacr = "1000" and tai1(tai1'high) /= tai1(tai1'high-1) and tai = aer(4)) then
 						if tapc = 1 or tacr = "1000" then
 							if tacr /= "1000" then
-								tapc <= prescale(to_integer(unsigned(tacr(2 downto 0))));
+								tapc <= prescale(tacr(2 downto 0));
 							end if;
 							if tamc = x"01" then
 								tamc <= unsigned(tadr);
@@ -267,7 +280,7 @@ begin
 					if tbcr(3) = '0' or (tbcr = "1000" and tbi1(tbi1'high) /= tbi1(tbi1'high-1) and tbi = aer(3)) then
 						if tbpc = 1 or tbcr = "1000" then
 							if tbcr /= "1000" then
-								tbpc <= prescale(to_integer(unsigned(tbcr(2 downto 0))));
+								tbpc <= prescale(tbcr(2 downto 0));
 							end if;
 							if tbmc = x"01" then
 								tbmc <= unsigned(tbdr);
@@ -289,7 +302,7 @@ begin
 				if tcdcr(5 downto 3) /= "000" then
 					-- Decrement counters in delay mode
 					if tcpc = 1 then
-						tcpc <= prescale(to_integer(unsigned(tcdcr(5 downto 3))));
+						tcpc <= prescale(tcdcr(5 downto 3));
 						if tcmc = x"01" then
 							tcmc <= unsigned(tcdr);
 							tcto <= not tcto;
@@ -309,7 +322,7 @@ begin
 				if tcdcr(2 downto 0) /= "000" then
 					-- Decrement counters in delay mode
 					if tdpc = 1 then
-						tdpc <= prescale(to_integer(unsigned(tcdcr(2 downto 0))));
+						tdpc <= prescale(tcdcr(2 downto 0));
 						if tdmc = x"01" then
 							tdmc <= unsigned(tddr);
 							tdto <= not tdto;
@@ -413,7 +426,7 @@ begin
 								if id(3 downto 0) = "0000" then
 									tapc <= 1;
 								elsif tacr = "0000" and id(3 downto 0) /= "1000" then
-									tapc <= prescale(to_integer(unsigned(id(2 downto 0))));
+									tapc <= prescale(id(2 downto 0));
 								end if;
 							when x"1b" =>
 								tbcr <= id(3 downto 0);
@@ -424,15 +437,15 @@ begin
 								if id(3 downto 0) = "0000" then
 									tbpc <= 1;
 								elsif tbcr = "0000" and id(3 downto 0) /= "1000" then
-									tbpc <= prescale(to_integer(unsigned(id(2 downto 0))));
+									tbpc <= prescale(id(2 downto 0));
 								end if;
 							when x"1d" =>
 								tcdcr <= id(6 downto 4) & id(2 downto 0);
 								if tcdcr(5 downto 3) = "000" and id(6 downto 4) /= "000" then
-									tcpc <= prescale(to_integer(unsigned(id(6 downto 4))));
+									tcpc <= prescale(id(6 downto 4));
 								end if;
 								if tcdcr(2 downto 0) = "000" and id(2 downto 0) /= "000" then
-									tdpc <= prescale(to_integer(unsigned(id(2 downto 0))));
+									tdpc <= prescale(id(2 downto 0));
 								end if;
 							when x"1f" =>
 								tadr <= id;
