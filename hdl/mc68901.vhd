@@ -124,8 +124,8 @@ architecture behavioral of mc68901 is
 
 	signal sirqn	: std_logic;
 	signal intv		: std_logic_vector(15 downto 0);
-	signal ipl		: std_logic_vector(3 downto 0);
-	signal isr_ipl	: std_logic_vector(3 downto 0);
+	signal ipl		: unsigned(3 downto 0);
+	signal isr_ipl	: unsigned(3 downto 0);
 	signal dtackn_irq	: std_logic;
 	signal dtackn_reg	: std_logic;
 
@@ -149,11 +149,11 @@ architecture behavioral of mc68901 is
 
 	-- priority encoder. Return the index of the highest set bit
 	function priority(v : std_logic_vector(15 downto 0))
-		return std_logic_vector is
+		return unsigned is
 	begin
 		for i in v'range loop
 			if v(i) = '1' then
-				return std_logic_vector(to_unsigned(i,4));
+				return to_unsigned(i,4);
 			end if;
 		end loop;
 		return "0000";
@@ -491,7 +491,7 @@ begin
 				if sirqn = '0' and iackn = '0' and siackn(0) = '0' and dsn = '0' then
 					-- begin interrupt acknowledge cycle
 					dtackn_irq <= '0';
-					sod <= vr(7 downto 4) & ipl;
+					sod <= vr(7 downto 4) & std_logic_vector(ipl);
 					if ipl(3) = '1' then
 						ipra(to_integer(unsigned(ipl(2 downto 0)))) <= '0';
 					else
