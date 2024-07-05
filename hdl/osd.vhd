@@ -381,6 +381,9 @@ architecture arch_imp of on_screen_display is
 
 begin
 
+	ram_din2 <= (others => '0');
+	ram_wsb2 <= (others => '0');
+	ram_we2 <= '0';
 	ram: entity ram_tdp
 		generic map (
 			DATA_WIDTH => 2**DATA_WIDTH_BITS,

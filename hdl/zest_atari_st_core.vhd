@@ -200,6 +200,7 @@ begin
 	in_reg0(11 downto 2) <= (others => '0');
 	in_reg0(1) <= acsi_intr;
 	in_reg0(0) <= fdd_drq;
+	in_reg1 <= (others => '0');
 
 	datax: for i in 0 to N_OUTPUTS-1 generate
 		dev_r_datax((2**DATA_WIDTH_BITS)*(i+1)-1 downto (2**DATA_WIDTH_BITS)*i) <= dev_r_data(i);
