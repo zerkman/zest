@@ -15,9 +15,10 @@ for target in $TARGETS ; do
 done
 cp ../zest.cfg release
 if [ ! -f release/rom.img ] ; then
-    wget https://sourceforge.net/projects/emutos/files/emutos/$EMUTOS_VERSION/emutos-256k-$EMUTOS_VERSION.zip
-    unzip -p emutos-256k-$EMUTOS_VERSION.zip emutos-256k-$EMUTOS_VERSION/etos256uk.img > release/rom.img
-    rm emutos-256k-$EMUTOS_VERSION.zip
+    if [ ! -f src/emutos-256k-$EMUTOS_VERSION.zip ] ; then
+        wget -P src https://sourceforge.net/projects/emutos/files/emutos/$EMUTOS_VERSION/emutos-256k-$EMUTOS_VERSION.zip
+    fi
+    unzip -p src/emutos-256k-$EMUTOS_VERSION.zip emutos-256k-$EMUTOS_VERSION/etos256uk.img > release/rom.img
 fi
 
 mkdir -p release/drivers
