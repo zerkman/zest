@@ -220,7 +220,7 @@ begin
 				end if;
 			end if;
 
-			if cnt = 2 and sde = '1' then
+			if cnt = 2 and sde = '1' and video_ptr(23 downto 22) = "00" then
 				mode_load <= '1';
 			end if;
 			if cnt = 0 then
