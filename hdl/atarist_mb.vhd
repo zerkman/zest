@@ -186,7 +186,6 @@ architecture structure of atarist_mb is
 	signal st_hsync		: std_logic;
 	signal blankn		: std_logic;
 	signal sde			: std_logic;
-	signal cfg_highmem	: std_logic;
 
 	signal mmu_RAMn		: std_logic;
 	signal mmu_DMAn		: std_logic;
@@ -307,8 +306,6 @@ begin
 	ram_W_DONE <= w_done;
 	ram_oD <= od;
 	id <= ram_iD;
-
-	cfg_highmem <= mem_top(5) or mem_top(4);
 
 	stbus:entity atarist_bus port map(
 		cpu_d => cpu_oD,
@@ -466,7 +463,7 @@ begin
 		vid_hsync => hsync,
 		vid_de => de,
 		wakestate => wakestate,
-		cfg_highmem => cfg_highmem,
+		cfg_memtop => mem_top(5 downto 3),
 		cfg_extmod => cfg_extmod,
 		cfg_romsize => cfg_romsize
 	);
