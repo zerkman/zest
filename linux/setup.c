@@ -71,10 +71,10 @@ static unsigned long read_u16(const unsigned char *p) {
   return a<<8 | b;
 }
 
-static void setup_cfg(int reset) {
-  static const int mem_cfg[] = {0,1,3,7,9,15,55};
-  static const int ws_cfg[] = {2,3,1,0};
-  int cfg = reset;
+static void setup_cfg(unsigned int reset) {
+  static const unsigned int mem_cfg[] = {0,1,3,7,9,15,31,55};
+  static const unsigned int ws_cfg[] = {2,3,1,0};
+  unsigned int cfg = reset;
   cfg |= config.mono?4:0;
   cfg |= mem_cfg[config.mem_size]<<4;
   if (sound_mute==0)
