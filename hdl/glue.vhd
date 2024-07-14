@@ -127,7 +127,7 @@ entity glue is
 		vid_de	    : out std_logic;
 
 		wakestate   : in std_logic_vector(1 downto 0);
-		cfg_highmem	: in std_logic;
+		cfg_memtop	: in std_logic_vector(2 downto 0);
 		cfg_extmod  : in std_logic;
 		cfg_romsize : in std_logic_vector(1 downto 0)
 	);
@@ -391,7 +391,7 @@ begin
 		end if;
 	end if;
 end process;
-process(FC,iA,iASn,iUDSn,iLDSn,iRWn,rwn_ff)
+process(FC,iA,iASn,iUDSn,iLDSn,iRWn,rwn_ff,cfg_romsize,cfg_memtop)
 begin
 	sram <= '1';
 	DEVn <= '1';
@@ -418,7 +418,7 @@ begin
 			elsif unsigned(iA&'0') < x"800" and unsigned(iA&'0') >= 8 and FC(2) = '1' then
 				-- protected ram access (supervisor mode only)
 				sram <= '0';
-			elsif unsigned(iA&'0') >= x"800" and (iA(23 downto 22) = "00" or cfg_highmem = '1') then
+			elsif unsigned(iA&'0') >= x"800" and (iA(23 downto 22) = "00" or (cfg_memtop(2 downto 1) /= "00" and unsigned(iA(23 downto 21)) <= unsigned(cfg_memtop))) then
 				-- ram access
 				sram <= '0';
 			end if;
