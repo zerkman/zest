@@ -64,7 +64,13 @@ entity mmu is
 end mmu;
 
 architecture behavioral of mmu is
-	signal memcfg			: std_logic_vector(3 downto 0);
+	-- ST RAM management simulation
+	signal ramcfg			: std_logic_vector(3 downto 0);	-- physical RAM, 2x2 bits: 00:128k 01:512k 10:2M 11:unused
+	signal memcfg			: std_logic_vector(3 downto 0);	-- MMU config ($ff8001), 2x2 bits
+	signal memcfg_top		: unsigned(23 downto 0);
+	signal log_adr			: std_logic_vector(23 downto 1);
+	signal bank0_size		: unsigned(23 downto 1);
+
 	signal cnt				: unsigned(1 downto 0);
 	signal screen_adr		: std_logic_vector(23 downto 8);
 	signal video_ptr		: std_logic_vector(23 downto 1);
@@ -81,28 +87,143 @@ architecture behavioral of mmu is
 	signal sde				: std_logic;
 	signal loadn			: std_logic;
 
+	-- tells whether there is actual memory at given address
+	impure function memory_present(a: in std_logic_vector(23 downto 1)) return boolean is
+	begin
+		if a(23 downto 22) /= "00" then
+			-- for extended memory (from +4M up to 14M), address verification is done in GLUE (bus error)
+			return true;
+		end if;
+		if unsigned(a) < bank0_size then
+			return true;
+		end if;
+		if ramcfg(1 downto 0) /= "11" and unsigned(a) < memcfg_top then
+			return true;
+		end if;
+		return false;
+	end function;
+
 begin
 
 	al <= iA(7 downto 1) & '1';
-	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and (unsigned(iA(23 downto 18)) <= unsigned(mem_top) or iA(23 downto 22) /= "00"))) else '0';
+	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and memory_present(iA))) else '0';
 	mode_bus <= mode_bus_1 or mode_bus_2;
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
 	RDATn <= (DMAn and RAMn) or not iRWn or delay_loadn;
 	CMPCSn <= '0' when cmpcsn_en = '1' and iA(23 downto 6) & "000000" = x"ff8240" and iUDSn = '0' and iASn = '0' else '1';
 
+	-- Typical ram config depending on size
+	process(mem_top)
+		variable ramsz : integer range 0 to 63;
+	begin
+		ramsz := to_integer(unsigned(mem_top));
+		if ramsz = 0 then
+			-- 256 kB
+			ramcfg <= "0000";
+		elsif ramsz = 1 then
+			-- 512 kB
+			ramcfg <= "0111";
+		elsif ramsz <= 3 then
+			-- 1 MB
+			ramcfg <= "0101";
+		elsif ramsz <= 7 then
+			-- 2 MB
+			ramcfg <= "1011";
+		elsif ramsz <= 9 then
+			-- 2.5 MB
+			ramcfg <= "1001";
+		else
+			ramcfg <= "1010";
+		end if;
+	end process;
+
+	-- maximum address in configured RAM
+	process(memcfg)
+	begin
+		if memcfg = "0000" then
+			memcfg_top <= x"040000";	-- 256k
+		elsif memcfg = "0001" or memcfg = "0100" then
+			memcfg_top <= x"0a0000";	-- 512k+128k
+		elsif memcfg = "0101" then
+			memcfg_top <= x"100000";	-- 1M
+		elsif memcfg = "1000" or memcfg = "0010" then
+			memcfg_top <= x"220000";	-- 2M+128k
+		elsif memcfg = "1001" or memcfg = "0110" then
+			memcfg_top <= x"280000";	-- 2M+512k
+		else
+			memcfg_top <= x"400000";	-- 4M
+		end if;
+	end process;
+
+	-- Bank 0 size = Bank 1 offset (in words)
+	process(memcfg)
+	begin
+		case memcfg(3 downto 2) is
+			when "00" => bank0_size <= (17 => '1', others => '0');
+			when "01" => bank0_size <= (19 => '1', others => '0');
+			when "10" => bank0_size <= (21 => '1', others => '0');
+			when others => bank0_size <= (others => '0');
+		end case;
+	end process;
+
+	-- logical to physical address conversion
+	process(log_adr,bank0_size,memcfg,ramcfg)
+		variable addr : unsigned(23 downto 1);
+		variable bank : integer range 0 to 1;
+		variable bank_memcfg : std_logic_vector(1 downto 0);
+		variable bank_ramcfg : std_logic_vector(1 downto 0);
+	begin
+		addr := unsigned(log_adr);
+		if addr < 16#400000# then
+			-- values for bank 0
+			bank := 0;
+			if unsigned(log_adr) >= bank0_size then
+				-- bank 1
+				bank := 1;
+				addr := addr - bank0_size;
+			end if;
+			-- convert to address in 2M space
+			if bank = 0 then
+				bank_memcfg := memcfg(3 downto 2);
+			else
+				bank_memcfg := memcfg(1 downto 0);
+			end if;
+			case bank_memcfg is
+				when "00" => addr := "00000" & addr(16 downto 9) & "00" & addr(8 downto 1);
+				when "01" => addr := "0000" & addr(18 downto 10) & "0" & addr(9 downto 1);
+				when others => addr := addr;
+			end case;
+			-- convert to address in host space
+			if bank = 0 then
+				bank_ramcfg := ramcfg(3 downto 2);
+			else
+				bank_ramcfg := ramcfg(1 downto 0);
+			end if;
+			case bank_ramcfg is
+				when "00" => addr := "00000" & addr(18 downto 11) & "00" & addr(8 downto 1);
+				when "01" => addr := "0000" & addr(19 downto 11) & "0" & addr(9 downto 1);
+				when others => addr := addr;
+			end case;
+			if bank = 1 then
+				addr := addr + 16#100000#;
+			end if;
+		end if;
+		ram_A <= std_logic_vector(addr);
+	end process;
+
 	-- RAM access control
-	process(mode_load,delay_bus,delay_loadn,video_ptr,mode_bus,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
+	process(mode_load,delay_bus,delay_loadn,bank0_size,ramcfg,memcfg_top,video_ptr,mode_bus,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
 	begin
 		LATCH <= '1';
-		ram_A <= (others => '0');
+		log_adr <= (others => '0');
 		ram_DS <= "00";
 		ram_R <= '0';
 		ram_W <= '0';
 		if mode_load = '1' and delay_bus = '0' then
-			if unsigned(video_ptr(23 downto 18)) <= unsigned(mem_top) then
+			if memory_present(video_ptr) then
 				-- get shifter data
-				ram_A <= video_ptr;
+				log_adr <= video_ptr;
 				ram_DS <= "11";
 				ram_R <= '1';
 				ram_W <= '0';
@@ -110,12 +231,12 @@ begin
 		elsif mode_bus = '1' and delay_loadn = '0' then
 			-- valid ST RAM/ROM address
 			if RAMn = '0' then
-				ram_A <= iA;
+				log_adr <= iA;
 				ram_DS <= not (iUDSn,iLDSn);
 				ram_R <= iRWn;
 				ram_W <= iRWn nor (iUDSn and iLDSn);
 			elsif DMAn = '0' then
-				ram_A <= dma_ptr;
+				log_adr <= dma_ptr;
 				ram_DS <= "11";
 				ram_R <= iRWn;
 				ram_W <= not iRWn;
