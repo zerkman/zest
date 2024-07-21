@@ -70,6 +70,8 @@ architecture behavioral of mmu is
 	signal memcfg_top		: unsigned(23 downto 0);
 	signal log_adr			: std_logic_vector(23 downto 1);
 	signal bank0_size		: unsigned(23 downto 1);
+	signal present_bus		: std_logic;
+	signal present_video	: std_logic;
 
 	signal cnt				: unsigned(1 downto 0);
 	signal screen_adr		: std_logic_vector(23 downto 8);
@@ -88,25 +90,27 @@ architecture behavioral of mmu is
 	signal loadn			: std_logic;
 
 	-- tells whether there is actual memory at given address
-	impure function memory_present(a: in std_logic_vector(23 downto 1)) return boolean is
+	impure function memory_present(a: in std_logic_vector(23 downto 1)) return std_logic is
 	begin
 		if a(23 downto 22) /= "00" then
 			-- for extended memory (from +4M up to 14M), address verification is done in GLUE (bus error)
-			return true;
+			return '1';
 		end if;
 		if unsigned(a) < bank0_size then
-			return true;
+			return '1';
 		end if;
 		if ramcfg(1 downto 0) /= "11" and unsigned(a) < memcfg_top then
-			return true;
+			return '1';
 		end if;
-		return false;
+		return '0';
 	end function;
 
 begin
 
 	al <= iA(7 downto 1) & '1';
-	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and memory_present(iA))) else '0';
+	present_bus <= memory_present(iA);
+	present_video <= memory_present(video_ptr);
+	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and present_bus = '1')) else '0';
 	mode_bus <= mode_bus_1 or mode_bus_2;
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
@@ -213,7 +217,7 @@ begin
 	end process;
 
 	-- RAM access control
-	process(mode_load,delay_bus,delay_loadn,bank0_size,ramcfg,memcfg_top,video_ptr,mode_bus,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
+	process(mode_load,delay_bus,delay_loadn,present_video,video_ptr,mode_bus,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
 	begin
 		LATCH <= '1';
 		log_adr <= (others => '0');
@@ -221,7 +225,7 @@ begin
 		ram_R <= '0';
 		ram_W <= '0';
 		if mode_load = '1' and delay_bus = '0' then
-			if memory_present(video_ptr) then
+			if present_video = '1' then
 				-- get shifter data
 				log_adr <= video_ptr;
 				ram_DS <= "11";
@@ -341,7 +345,7 @@ begin
 				end if;
 			end if;
 
-			if cnt = 2 and sde = '1' and video_ptr(23 downto 22) = "00" then
+			if cnt = 2 and sde = '1' and (video_ptr(23 downto 22) = "00" or unsigned(video_ptr(23 downto 18)) <= unsigned(mem_top)) then
 				mode_load <= '1';
 			end if;
 			if cnt = 0 then
