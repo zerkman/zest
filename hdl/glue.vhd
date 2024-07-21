@@ -230,8 +230,6 @@ HSYNC <= shsync;
 VPAn <= vpa_irqn and vpa_acia;
 oDTACKn <= sdtackn;
 oRDY <= sdma;
-DMAn <= sdma;
-RAMn <= sram;
 
 ia16 <= iA(15 downto 1) & '0';
 ias <= not iASn;
@@ -246,6 +244,17 @@ mono_i <= iD(1) when mdesel = '1' and iRWn = '0' and iUDSn = '0' else mono_ff;
 pal_i <= iD(1) when syncsel = '1' and iRWn = '0' and iUDSn = '0' else pal_ff;
 mono <= mono_i;
 pal <= pal_ff;
+
+process(clk,resetn)
+begin
+	if resetn = '0' then
+		DMAn <= '1';
+		RAMn <= '1';
+	elsif rising_edge(clk) then
+		DMAn <= sdma;
+		RAMn <= sram;
+	end if;
+end process;
 
 -- mfp access
 process(idev,iA,iASn)
