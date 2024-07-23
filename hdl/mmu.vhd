@@ -111,11 +111,21 @@ begin
 	present_bus <= memory_present(iA);
 	present_video <= memory_present(video_ptr);
 	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and present_bus = '1')) else '0';
-	mode_bus <= mode_bus_1 or mode_bus_2;
+	-- mode_bus <= mode_bus_1 or mode_bus_2;
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
 	RDATn <= (DMAn and RAMn) or not iRWn or delay_loadn;
 	CMPCSn <= '0' when cmpcsn_en = '1' and iA(23 downto 6) & "000000" = x"ff8240" and iUDSn = '0' and iASn = '0' else '1';
+
+	process(clk,resetn)
+	begin
+		if resetn = '0' then
+			mode_bus <= '0';
+		elsif rising_edge(clk) then
+			mode_bus <= mode_bus_1 or mode_bus_2;
+		end if;
+	end process;
+
 
 	-- Typical ram config depending on size
 	process(mem_top)
@@ -194,8 +204,8 @@ begin
 				bank_memcfg := memcfg(1 downto 0);
 			end if;
 			case bank_memcfg is
-				when "00" => addr := "00000" & addr(16 downto 9) & "00" & addr(8 downto 1);
-				when "01" => addr := "0000" & addr(18 downto 10) & "0" & addr(9 downto 1);
+				when "00" => addr := "00011" & addr(16 downto 9) & "11" & addr(8 downto 1);
+				when "01" => addr := "0001" & addr(18 downto 10) & "1" & addr(9 downto 1);
 				when others => addr := addr;
 			end case;
 			-- convert to address in host space
