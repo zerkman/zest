@@ -189,7 +189,7 @@ begin
 		variable bank_ramcfg : std_logic_vector(1 downto 0);
 	begin
 		addr := unsigned(log_adr);
-		if addr < 16#400000# then
+		if addr >= 8 and addr < 16#400000# then
 			-- values for bank 0
 			bank := 0;
 			if unsigned(log_adr) >= bank0_size then
