@@ -69,6 +69,7 @@ architecture behavioral of mmu is
 	signal memcfg			: std_logic_vector(3 downto 0);	-- MMU config ($ff8001), 2x2 bits
 	signal memcfg_top		: unsigned(23 downto 0);
 	signal log_adr			: std_logic_vector(23 downto 1);
+	signal phys_adr			: std_logic_vector(23 downto 1);
 	signal bank0_size		: unsigned(23 downto 1);
 	signal present_bus		: std_logic;
 	signal present_video	: std_logic;
@@ -78,11 +79,11 @@ architecture behavioral of mmu is
 	signal video_ptr		: std_logic_vector(23 downto 1);
 	signal dma_ptr			: std_logic_vector(23 downto 1);
 	signal al				: std_logic_vector(7 downto 0);
-	signal delay_loadn		: std_logic;
-	signal delay_bus		: std_logic;
-	signal mode_bus			: std_logic;
+	signal mode_bus_0		: std_logic;
 	signal mode_bus_1		: std_logic;
-	signal mode_bus_2		: std_logic;
+	signal mode_bus			: std_logic;
+	signal mode_load_0		: std_logic;
+	signal mode_load_1		: std_logic;
 	signal mode_load		: std_logic;
 	signal cmpcsn_en		: std_logic;
 	signal sdtackn			: std_logic;
@@ -99,7 +100,7 @@ architecture behavioral of mmu is
 		if unsigned(a) < bank0_size then
 			return '1';
 		end if;
-		if ramcfg(1 downto 0) /= "11" and unsigned(a) < memcfg_top then
+		if ramcfg(1 downto 0) /= "11" and unsigned(a) < memcfg_top(23 downto 1) then
 			return '1';
 		end if;
 		return '0';
@@ -110,22 +111,10 @@ begin
 	al <= iA(7 downto 1) & '1';
 	present_bus <= memory_present(iA);
 	present_video <= memory_present(video_ptr);
-	mode_bus_1 <= '1' when cnt = 1 and (DMAn = '0' or (RAMn = '0' and present_bus = '1')) else '0';
-	-- mode_bus <= mode_bus_1 or mode_bus_2;
 	DTACKn <= sdtackn;
 	DCYCn <= loadn;
-	RDATn <= (DMAn and RAMn) or not iRWn or delay_loadn;
+	RDATn <= (DMAn and RAMn) or not iRWn;
 	CMPCSn <= '0' when cmpcsn_en = '1' and iA(23 downto 6) & "000000" = x"ff8240" and iUDSn = '0' and iASn = '0' else '1';
-
-	process(clk,resetn)
-	begin
-		if resetn = '0' then
-			mode_bus <= '0';
-		elsif rising_edge(clk) then
-			mode_bus <= mode_bus_1 or mode_bus_2;
-		end if;
-	end process;
-
 
 	-- Typical ram config depending on size
 	process(mem_top)
@@ -223,39 +212,88 @@ begin
 				addr := addr + 16#100000#;
 			end if;
 		end if;
-		ram_A <= std_logic_vector(addr);
+		phys_adr <= std_logic_vector(addr);
 	end process;
 
 	-- RAM access control
-	process(mode_load,delay_bus,delay_loadn,present_video,video_ptr,mode_bus,iA,iUDSn,iLDSn,iRWn,RAMn,DMAn,dma_ptr)
+	process(cnt,DMAn,RAMn,iRWn,present_bus,en8fck,mode_bus,sde,video_ptr,mem_top,present_video,video_ptr,iA,dma_ptr)
 	begin
-		LATCH <= '1';
+		mode_bus_0 <= '0';
+		mode_bus_1 <= '0';
+		mode_load_0 <= '0';
+		mode_load_1 <= '0';
 		log_adr <= (others => '0');
-		ram_DS <= "00";
-		ram_R <= '0';
-		ram_W <= '0';
-		if mode_load = '1' and delay_bus = '0' then
-			if present_video = '1' then
-				-- get shifter data
-				log_adr <= video_ptr;
-				ram_DS <= "11";
-				ram_R <= '1';
-				ram_W <= '0';
-			end if;
-		elsif mode_bus = '1' and delay_loadn = '0' then
+		if (cnt = 1 and (DMAn = '0' or (RAMn = '0' and iRWn = '1' and present_bus = '1')))
+		or ((cnt = 1 or cnt = 2) and RAMn = '0' and iRWn = '0' and present_bus = '1') then
+			mode_bus_1 <= '1';
 			-- valid ST RAM/ROM address
 			if RAMn = '0' then
 				log_adr <= iA;
-				ram_DS <= not (iUDSn,iLDSn);
-				ram_R <= iRWn;
-				ram_W <= iRWn nor (iUDSn and iLDSn);
 			elsif DMAn = '0' then
 				log_adr <= dma_ptr;
-				ram_DS <= "11";
-				ram_R <= iRWn;
-				ram_W <= not iRWn;
 			end if;
-			LATCH <= not iRWn;
+		end if;
+		if cnt = 2 and en8fck = '1' then
+			mode_bus_0 <= '1';
+		end if;
+		if ((en8fck = '1' and cnt = 2 and mode_bus = '0') or cnt = 3) and sde = '1' and (video_ptr(23 downto 22) = "00" or unsigned(video_ptr(23 downto 18)) <= unsigned(mem_top)) then
+			mode_load_1 <= '1';
+			if present_video = '1' then
+				-- get shifter data
+				log_adr <= video_ptr;
+			end if;
+		end if;
+		if en8fck = '1' and cnt = 0 then
+			mode_load_0 <= '1';
+		end if;
+	end process;
+
+	process(clk,resetn)
+	begin
+		if resetn = '0' then
+			mode_bus <= '0';
+			mode_load <= '0';
+			LATCH <= '1';
+			ram_A <= (others => '0');
+			ram_DS <= "00";
+			ram_R <= '0';
+			ram_W <= '0';
+		elsif rising_edge(clk) then
+			if mode_bus_0 = '1' then
+				mode_bus <= '0';
+				ram_A <= (others => '0');
+				ram_DS <= "00";
+				ram_R <= '0';
+				ram_W <= '0';
+				LATCH <= '1';
+			elsif mode_load_0 = '1' then
+				mode_load <= '0';
+				ram_A <= (others => '0');
+				ram_DS <= "00";
+				ram_R <= '0';
+			elsif mode_bus_1 = '1' then
+				mode_bus <= '1';
+				-- valid ST RAM/ROM address
+				ram_A <= phys_adr;
+				if RAMn = '0' then
+					ram_DS <= not (iUDSn,iLDSn);
+					ram_R <= iRWn;
+					ram_W <= iRWn nor (iUDSn and iLDSn);
+				elsif DMAn = '0' then
+					ram_DS <= "11";
+					ram_R <= iRWn;
+					ram_W <= not iRWn;
+				end if;
+				LATCH <= not iRWn;
+			elsif mode_load_1 = '1' then
+				mode_load <= '1';
+				if present_video = '1' then
+					-- get shifter data
+					ram_A <= phys_adr;
+					ram_DS <= "11";
+					ram_R <= '1';
+				end if;
+			end if;
 		end if;
 	end process;
 
@@ -263,12 +301,9 @@ begin
 	process(clk,resetn)
 	begin
 	if resetn = '0' then
-		delay_loadn <= '0';
-		delay_bus <= '0';
 		sdtackn <= '1';
 		cnt <= "00";
 		oD <= x"ff";
-		mode_load <= '0';
 		screen_adr <= (others => '0');
 		video_ptr <= (others => '0');
 		memcfg <= (others => '0');
@@ -276,10 +311,7 @@ begin
 		sde <= '0';
 		loadn <= '1';
 		cmpcsn_en <= '0';
-		mode_bus_2 <= '0';
 	elsif rising_edge(clk) then
-		delay_loadn <= '0';
-		delay_bus <= '0';
 		if en8rck = '1' then
 			if (RAMn = '0' or DEVn = '0') and cnt = 2 then
 				sdtackn <= '0';
@@ -293,7 +325,6 @@ begin
 		elsif en8fck = '1' then
 			cnt <= cnt + 1;
 			oD <= x"ff";
-			mode_bus_2 <= mode_bus_1;
 
 			if VSYNC = '0' then
 				video_ptr <= screen_adr & "0000000";
@@ -355,16 +386,7 @@ begin
 				end if;
 			end if;
 
-			if cnt = 2 and sde = '1' and (video_ptr(23 downto 22) = "00" or unsigned(video_ptr(23 downto 18)) <= unsigned(mem_top)) then
-				mode_load <= '1';
-			end if;
-			if cnt = 0 then
-				mode_load <= '0';
-			end if;
-
-
-			if mode_bus_2 = '1' then
-				delay_bus <= '1';
+			if mode_bus = '1' then
 				if DMAn = '0' then
 					dma_ptr <= std_logic_vector(unsigned(dma_ptr)+1);
 				end if;
@@ -375,7 +397,6 @@ begin
 			end if;
 			if loadn = '0' then
 				loadn <= '1';
-				delay_loadn <= '1';
 				video_ptr <= std_logic_vector(unsigned(video_ptr)+1);
 			end if;
 			if cnt = 1 then
