@@ -386,7 +386,7 @@ begin
 				end if;
 			end if;
 
-			if mode_bus = '1' then
+			if cnt = 2 and mode_bus = '1' then
 				if DMAn = '0' then
 					dma_ptr <= std_logic_vector(unsigned(dma_ptr)+1);
 				end if;
