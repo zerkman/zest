@@ -78,6 +78,13 @@ static int handler(void* user, const char* section, const char* name, const char
     } else {
       pconfig->wakestate = ws;
     }
+  } else if (MATCH("main", "shifter_wakestate")) {
+    int ws = atoi(value);
+    if (ws<0 || ws>1) {
+      printf("invalid shifter wakestate value `%d`\n",ws);
+    } else {
+      pconfig->shifter_wakestate = ws;
+    }
   } else if (MATCH("main","rom_file")) {
     if (value) pconfig->rom_file = strdup(value);
   } else if (MATCH("floppy","flopimg_dir")) {
@@ -106,6 +113,7 @@ void config_load(const char *filename) {
   config.extended_video_modes = 0;
   config.mem_size = CFG_1M;
   config.wakestate = 3;
+  config.shifter_wakestate = 0;
   config.rom_file = NULL;
   config.flopimg_dir = NULL;
   config.floppy_a = NULL;

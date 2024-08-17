@@ -38,6 +38,7 @@ typedef struct {
   int extended_video_modes;					// 1:hardware fullscreen enabled, 0:disabled
   enum cfg_mem_size mem_size;       // memory size
   int wakestate;                    // wakestate (1-4)
+  int shifter_wakestate;            // shifter wakestate (0-1)
   const char *rom_file;             // ROM file, full path
 
   // floppy
