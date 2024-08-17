@@ -84,6 +84,7 @@ static void setup_cfg(unsigned int reset) {
   cfg |= config.extended_video_modes<<17;
   cfg |= ws_cfg[config.wakestate-1]<<18;
   cfg |= cfg_romsize<<20;
+  cfg |= config.shifter_wakestate<<22;
   parmreg[0] = cfg;
 }
 

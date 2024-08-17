@@ -31,6 +31,7 @@ entity atarist_mb is
 		monomon : in std_logic;
 		mem_top	: in std_logic_vector(5 downto 0);
 		wakestate : in std_logic_vector(1 downto 0);
+		shifter_ws : in std_logic;
 		cfg_extmod : in std_logic;
 		cfg_romsize : in std_logic_vector(1 downto 0);
 
@@ -130,6 +131,7 @@ architecture structure of atarist_mb is
 	signal en16fck		: std_logic;
 	signal en8rck		: std_logic;
 	signal en8fck		: std_logic;
+	signal en8shiftck	: std_logic;
 	signal en4rck		: std_logic;
 	signal en4fck		: std_logic;
 	signal en2rck		: std_logic;
@@ -517,10 +519,11 @@ begin
 
 	ram_iD <= bus_D;
 
+	en8shiftck <= en8fck when shifter_ws = '0' else en8rck;
 	shift:entity shifter port map (
 		clk => clk,
 		resetn => resetn,
-		en8ck => en8fck,
+		en8ck => en8shiftck,
 		en16ck => en16fck,
 		en32ck => en32ck,
 		CSn => shifter_CSn,
