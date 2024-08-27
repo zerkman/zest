@@ -489,37 +489,17 @@ static int handle_ram_change(int value)
   }
 }
 
-static int buttonclick_change_ram_size_0(ZuiWidget* obj) {
-  return handle_ram_change(0);
-}
+static int buttonclick_change_ram_size_0(ZuiWidget* obj) { return handle_ram_change(0); }
+static int buttonclick_change_ram_size_1(ZuiWidget* obj) { return handle_ram_change(1); }
+static int buttonclick_change_ram_size_2(ZuiWidget* obj) { return handle_ram_change(2); }
+static int buttonclick_change_ram_size_3(ZuiWidget* obj) { return handle_ram_change(3); }
+static int buttonclick_change_ram_size_4(ZuiWidget* obj) { return handle_ram_change(4); }
+static int buttonclick_change_ram_size_5(ZuiWidget* obj) { return handle_ram_change(5); }
+static int buttonclick_change_ram_size_6(ZuiWidget* obj) { return handle_ram_change(6); }
+static int buttonclick_change_ram_size_7(ZuiWidget* obj) { return handle_ram_change(7); }
 
-static int buttonclick_change_ram_size_1(ZuiWidget* obj) {
-  return handle_ram_change(1);
-}
-
-static int buttonclick_change_ram_size_2(ZuiWidget* obj) {
-  return handle_ram_change(2);
-}
-
-static int buttonclick_change_ram_size_3(ZuiWidget* obj) {
-  return handle_ram_change(3);
-}
-
-static int buttonclick_change_ram_size_4(ZuiWidget* obj) {
-  return handle_ram_change(4);
-}
-
-static int buttonclick_change_ram_size_5(ZuiWidget* obj) {
-  return handle_ram_change(5);
-}
-
-static int buttonclick_change_ram_size_6(ZuiWidget* obj) {
-  return handle_ram_change(6);
-}
-
-static int buttonclick_change_ram_size_7(ZuiWidget* obj) {
-  return handle_ram_change(7);
-}
+static int buttonclick_sws0(ZuiWidget* obj) { set_shifter_wakestate(0); return UI_KEEP_FORM_OPEN; }
+static int buttonclick_sws1(ZuiWidget* obj) { set_shifter_wakestate(1); return UI_KEEP_FORM_OPEN; }
 
 ZuiWidget * menu_form(void) {
   ZuiWidget * form=zui_panel(0,0,XCHARS,YCHARS);
@@ -533,9 +513,10 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,5,"Select TOS image",buttonclick_select_tos));
   zui_add_child(form,zui_button(1,6,"Eject A",buttonclick_eject_floppy_a));
   zui_add_child(form,zui_button(10,6,"Eject B",buttonclick_eject_floppy_b));
-  zui_add_child(form,zui_text(1,8,"RAM size:"));
+
   int bg_ram[8]={1,1,1,1,1,1,1,1};
   bg_ram[config.mem_size] = 3;
+  zui_add_child(form,zui_text(1,8,"RAM size:"));
   zui_add_child(form,zui_button_ext(12,8,"256k" ,buttonclick_change_ram_size_0,0,bg_ram[0],2,3));
   zui_add_child(form,zui_button_ext(17,8,"512k" ,buttonclick_change_ram_size_1,0,bg_ram[1],2,3));
   zui_add_child(form,zui_button_ext(22,8,"1Mb"  ,buttonclick_change_ram_size_2,0,bg_ram[2],2,3));
@@ -544,17 +525,24 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button_ext(36,8,"4Mb"  ,buttonclick_change_ram_size_5,0,bg_ram[5],2,3));
   zui_add_child(form,zui_button_ext(40,8,"8Mb"  ,buttonclick_change_ram_size_6,0,bg_ram[6],2,3));
   zui_add_child(form,zui_button_ext(44,8,"14Mb" ,buttonclick_change_ram_size_7,0,bg_ram[7],2,3));
+
   int ws = get_wakestate();
   int bg_wakestate[4]={1,1,1,1};
   bg_wakestate[ws-1]=3;
-  zui_add_child(form,zui_text(1,9,"Wakestates:"));
+  zui_add_child(form,zui_text(1,9,"Wakestate:"));
   zui_add_child(form,zui_button_ext(13,9,"WS1",buttonclick_ws1,0,bg_wakestate[0],2,3));
   zui_add_child(form,zui_button_ext(17,9,"WS2",buttonclick_ws2,0,bg_wakestate[1],2,3));
   zui_add_child(form,zui_button_ext(21,9,"WS3",buttonclick_ws3,0,bg_wakestate[2],2,3));
   zui_add_child(form,zui_button_ext(25,9,"WS4",buttonclick_ws4,0,bg_wakestate[3],2,3));
+
+	int sws = config.shifter_wakestate;
+  zui_add_child(form,zui_text(1,10,"Shifter wakestate:"));
+  zui_add_child(form,zui_button_ext(22,10,"SWS0",buttonclick_sws0,0,sws==0?3:1,2,3));
+  zui_add_child(form,zui_button_ext(27,10,"SWS1",buttonclick_sws1,0,sws==1?3:1,2,3));
+
   int bg_extended=config.extended_video_modes*2+1;
-  zui_add_child(form,zui_button_ext(1,10,"Extended video modes",buttonclick_extended_modes,0,bg_extended,2,3));
-  zui_add_child(form,zui_button(1,11,"Exit menu",buttonclick_exit_menu));
+  zui_add_child(form,zui_button_ext(1,11,"Extended video modes",buttonclick_extended_modes,0,bg_extended,2,3));
+  zui_add_child(form,zui_button(1,13,"Exit menu",buttonclick_exit_menu));
   return form;
 }
 
