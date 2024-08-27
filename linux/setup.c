@@ -142,6 +142,11 @@ void set_wakestate(int ws) {
   setup_cfg(3);
 }
 
+void set_shifter_wakestate(int ws) {
+  config.shifter_wakestate = ws;
+  setup_cfg(3);
+}
+
 void set_extended() {
   setup_cfg(3);
 }

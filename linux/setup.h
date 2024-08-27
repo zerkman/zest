@@ -28,6 +28,9 @@ void warm_reset();
 // Set wakestate (ws=1-4)
 void set_wakestate(int ws);
 
+// Set wakestate (ws=0-1)
+void set_shifter_wakestate(int ws);
+
 // Get current wakestate (1-4)
 int get_wakestate(void);
 
@@ -52,4 +55,3 @@ void set_sound_mute(int x);
 
 
 #endif
-
