@@ -476,22 +476,15 @@ static int buttonclick_extended_modes(ZuiWidget* obj) {
   return UI_KEEP_FORM_OPEN;
 }
 
-int selected_ram_size=0;
 static int handle_ram_change(int value)
 {
-  if (selected_ram_size == value)
-  {
-    if (config.mem_size != value) {
-      // User clicked on RAM size that's different that what's running,
-      // so we assume they want a memory re-config. Change RAM size and force cold boot.
-      config.mem_size = value;
-      cold_reset();
-      return UI_CLOSE_FORM;
-    } else {
-      return UI_KEEP_FORM_OPEN;
-    }
+  if (config.mem_size != value) {
+    // User clicked on RAM size that's different that what's running,
+    // so we assume they want a memory re-config. Change RAM size and force cold boot.
+    config.mem_size = value;
+    cold_reset();
+    return UI_CLOSE_FORM;
   } else {
-    selected_ram_size = value;
     return UI_KEEP_FORM_OPEN;
   }
 }
@@ -520,6 +513,14 @@ static int buttonclick_change_ram_size_5(ZuiWidget* obj) {
   return handle_ram_change(5);
 }
 
+static int buttonclick_change_ram_size_6(ZuiWidget* obj) {
+  return handle_ram_change(6);
+}
+
+static int buttonclick_change_ram_size_7(ZuiWidget* obj) {
+  return handle_ram_change(7);
+}
+
 ZuiWidget * menu_form(void) {
   ZuiWidget * form=zui_panel(0,0,XCHARS,YCHARS);
   //zui_add_child(form,zui_text(0,0,"~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3 ~=[,,_,,]:3"));
@@ -533,14 +534,16 @@ ZuiWidget * menu_form(void) {
   zui_add_child(form,zui_button(1,6,"Eject A",buttonclick_eject_floppy_a));
   zui_add_child(form,zui_button(10,6,"Eject B",buttonclick_eject_floppy_b));
   zui_add_child(form,zui_text(1,8,"RAM size:"));
-  int bg_ram[6]={1,1,1,1,1,1};
-  bg_ram[selected_ram_size] = 3;
+  int bg_ram[8]={1,1,1,1,1,1,1,1};
+  bg_ram[config.mem_size] = 3;
   zui_add_child(form,zui_button_ext(12,8,"256k" ,buttonclick_change_ram_size_0,0,bg_ram[0],2,3));
   zui_add_child(form,zui_button_ext(17,8,"512k" ,buttonclick_change_ram_size_1,0,bg_ram[1],2,3));
   zui_add_child(form,zui_button_ext(22,8,"1Mb"  ,buttonclick_change_ram_size_2,0,bg_ram[2],2,3));
   zui_add_child(form,zui_button_ext(26,8,"2Mb"  ,buttonclick_change_ram_size_3,0,bg_ram[3],2,3));
   zui_add_child(form,zui_button_ext(30,8,"2.5Mb",buttonclick_change_ram_size_4,0,bg_ram[4],2,3));
   zui_add_child(form,zui_button_ext(36,8,"4Mb"  ,buttonclick_change_ram_size_5,0,bg_ram[5],2,3));
+  zui_add_child(form,zui_button_ext(40,8,"8Mb"  ,buttonclick_change_ram_size_6,0,bg_ram[6],2,3));
+  zui_add_child(form,zui_button_ext(44,8,"14Mb" ,buttonclick_change_ram_size_7,0,bg_ram[7],2,3));
   int ws = get_wakestate();
   int bg_wakestate[4]={1,1,1,1};
   bg_wakestate[ws-1]=3;
@@ -640,7 +643,6 @@ void menu(void) {
 
   ZuiWidget *form;
   int retval=UI_KEEP_FORM_OPEN;
-  selected_ram_size = config.mem_size;
 
   while (retval==UI_KEEP_FORM_OPEN)
   {
