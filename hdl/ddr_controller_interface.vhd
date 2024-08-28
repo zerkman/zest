@@ -172,7 +172,7 @@ architecture implementation of ddr_controller_interface is
 		variable depth	: integer := bit_depth;
 		variable count	: integer := 1;
 	begin
-		for clogb2 in 1 to bit_depth loop	-- Works for up to 32 bit integers
+		for i in 1 to bit_depth loop	-- Works for up to 32 bit integers
 			if (bit_depth <= 2) then
 				count := 1;
 			else
