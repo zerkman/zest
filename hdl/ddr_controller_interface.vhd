@@ -173,10 +173,10 @@ architecture implementation of ddr_controller_interface is
 		variable count	: integer := 1;
 	begin
 		for i in 1 to bit_depth loop	-- Works for up to 32 bit integers
-			if (bit_depth <= 2) then
+			if bit_depth <= 2 then
 				count := 1;
 			else
-				if(depth <= 1) then
+				if depth <= 1 then
 					count := count;
 				else
 					depth := depth / 2;
@@ -271,18 +271,14 @@ begin
 	-- Detection of transaction request
 	----------------------
 
-	process(M_AXI_ACLK)
+	process(M_AXI_ACLK,M_AXI_ARESETN)
 	begin
-		if rising_edge(M_AXI_ACLK) then
-			init_read_ff <= init_read_ff;
-			init_write_ff <= init_write_ff;
-			if M_AXI_ARESETN = '0' then
-				init_read_ff <= '0';
-				init_write_ff <= '0';
-			else
-				init_read_ff <= r;
-				init_write_ff <= w;
-			end if;
+		if M_AXI_ARESETN = '0' then
+			init_read_ff <= '0';
+			init_write_ff <= '0';
+		elsif rising_edge(M_AXI_ACLK) then
+			init_read_ff <= r;
+			init_write_ff <= w;
 		end if;
 	end process;
 
@@ -296,65 +292,57 @@ begin
 	axi_awvalid <= M_AXI_ARESETN and (init_write or axi_awvalid_ff) and not axi_wvalid;
 	wdone <= (axi_bready and M_AXI_BVALID) or (init_write_ff and wdone_ff);
 
-	process(M_AXI_ACLK)
+	process(M_AXI_ACLK,M_AXI_ARESETN)
 	begin
-		if rising_edge(M_AXI_ACLK) then
-			if (M_AXI_ARESETN = '0') then
-				axi_awvalid_ff <= '0';
+		if M_AXI_ARESETN = '0' then
+			axi_awvalid_ff <= '0';
+			axi_wvalid <= '0';
+			axi_wlast <= '0';
+			axi_bready <= '0';
+			axi_wdata <= (others => '0');
+			axi_wstrb <= (others => '0');
+			write_resp_error <= '0';
+			wdone_ff <= '0';
+		elsif rising_edge(M_AXI_ACLK) then
+			axi_awvalid_ff <= axi_awvalid;
+			wdone_ff <= wdone;
+			if axi_awvalid = '1' and M_AXI_AWREADY = '1' then
+				-- send data
+				axi_wvalid <= '1';
+				axi_wlast <= '1';
+				-- enforce big endian writes
+				if a(1) = '0' then
+					-- address ends with 00
+					axi_wdata(31 downto 16) <= x"0000";
+					axi_wdata(15 downto 8) <= w_d(7 downto 0);
+					axi_wdata(7 downto 0) <= w_d(15 downto 8);
+					axi_wstrb(3 downto 2) <= "00";
+					axi_wstrb(1) <= ds(0);
+					axi_wstrb(0) <= ds(1);
+				else
+					-- address ends with 10
+					axi_wdata(31 downto 24) <= w_d(7 downto 0);
+					axi_wdata(23 downto 16) <= w_d(15 downto 8);
+					axi_wdata(15 downto 0) <= x"0000";
+					axi_wstrb(3) <= ds(0);
+					axi_wstrb(2) <= ds(1);
+					axi_wstrb(1 downto 0) <= "00";
+				end if;
+			end if;
+			if axi_wvalid = '1' and M_AXI_WREADY = '1' then
+				-- data received, now we wait for response
 				axi_wvalid <= '0';
 				axi_wlast <= '0';
-				axi_bready <= '0';
+				axi_bready <= '1';
 				axi_wdata <= (others => '0');
 				axi_wstrb <= (others => '0');
-				write_resp_error <= '0';
-				wdone_ff <= '0';
-			else
-				axi_awvalid_ff <= axi_awvalid;
-				axi_wvalid <= axi_wvalid;
-				axi_wlast <= axi_wlast;
-				axi_bready <= axi_bready;
-				axi_wdata <= axi_wdata;
-				axi_wstrb <= axi_wstrb;
-				write_resp_error <= write_resp_error;
-				wdone_ff <= wdone;
-				if axi_awvalid = '1' and M_AXI_AWREADY = '1' then
-					-- send data
-					axi_wvalid <= '1';
-					axi_wlast <= '1';
-					-- enforce big endian writes
-					if a(1) = '0' then
-						-- address ends with 00
-						axi_wdata(31 downto 16) <= x"0000";
-						axi_wdata(15 downto 8) <= w_d(7 downto 0);
-						axi_wdata(7 downto 0) <= w_d(15 downto 8);
-						axi_wstrb(3 downto 2) <= "00";
-						axi_wstrb(1) <= ds(0);
-						axi_wstrb(0) <= ds(1);
-					else
-						-- address ends with 10
-						axi_wdata(31 downto 24) <= w_d(7 downto 0);
-						axi_wdata(23 downto 16) <= w_d(15 downto 8);
-						axi_wdata(15 downto 0) <= x"0000";
-						axi_wstrb(3) <= ds(0);
-						axi_wstrb(2) <= ds(1);
-						axi_wstrb(1 downto 0) <= "00";
-					end if;
+			end if;
+			if axi_bready = '1' and M_AXI_BVALID = '1' then
+				-- write response received
+				if M_AXI_BRESP(1) = '1' then
+					write_resp_error <= '1';
 				end if;
-				if axi_wvalid = '1' and M_AXI_WREADY = '1' then
-					-- data received, now we wait for response
-					axi_wvalid <= '0';
-					axi_wlast <= '0';
-					axi_bready <= '1';
-					axi_wdata <= (others => '0');
-					axi_wstrb <= (others => '0');
-				end if;
-				if axi_bready = '1' and M_AXI_BVALID = '1' then
-					-- write response received
-					if M_AXI_BRESP(1) = '1' then
-						write_resp_error <= '1';
-					end if;
-					axi_bready <= '0';
-				end if;
+				axi_bready <= '0';
 			end if;
 		end if;
 	end process;
@@ -373,32 +361,28 @@ begin
 	rdata(15 downto 8) <= (7 downto 0 => ds_rd(1)) and ((M_AXI_RDATA(7 downto 0) and (7 downto 0 => not a1_rd)) or (M_AXI_RDATA(23 downto 16) and (7 downto 0 => a1_rd)));
 	rdata(7 downto 0) <= (7 downto 0 => ds_rd(0)) and ((M_AXI_RDATA(15 downto 8) and (7 downto 0 => not a1_rd)) or (M_AXI_RDATA(31 downto 24) and (7 downto 0 => a1_rd)));
 
-	process(M_AXI_ACLK)
+	process(M_AXI_ACLK,M_AXI_ARESETN)
 	begin
-		if rising_edge(M_AXI_ACLK) then
-			if (M_AXI_ARESETN = '0') then
-				axi_arvalid_ff <= '0';
+		if M_AXI_ARESETN = '0' then
+			axi_arvalid_ff <= '0';
+			axi_rready <= '0';
+			rdata_ff <= (others => '1');
+			rdone_ff <= '0';
+			ds_rd <= "00";
+			a1_rd <= '0';
+		elsif rising_edge(M_AXI_ACLK) then
+			axi_arvalid_ff <= axi_arvalid;
+			rdone_ff <= rdone;
+			if axi_arvalid = '1' and M_AXI_ARREADY = '1' then
+				axi_rready <= '1';
+			end if;
+			if axi_rready = '1' and M_AXI_RVALID = '1' then
+				rdata_ff <= rdata;
 				axi_rready <= '0';
-				rdata_ff <= (others => '1');
-				rdone_ff <= '0';
-				ds_rd <= "00";
-				a1_rd <= '0';
-			else
-				axi_arvalid_ff <= axi_arvalid;
-				axi_rready <= axi_rready;
-				rdone_ff <= rdone;
-				rdata_ff <= rdata_ff;
-				if axi_arvalid = '1' and M_AXI_ARREADY = '1' then
-					axi_rready <= '1';
-				end if;
-				if axi_rready = '1' and M_AXI_RVALID = '1' then
-					rdata_ff <= rdata;
-					axi_rready <= '0';
-				end if;
-				if init_read = '1' then
-					ds_rd <= ds;
-					a1_rd <= a(1);
-				end if;
+			end if;
+			if init_read = '1' then
+				ds_rd <= ds;
+				a1_rd <= a(1);
 			end if;
 		end if;
 	end process;
