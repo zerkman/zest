@@ -18,6 +18,91 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+entity cache_block is
+	generic (
+		DATA_WIDTH : integer := 32;
+		ADDR_WIDTH : integer := 10
+	);
+	port (
+		clk  : in std_logic;
+		addr : in std_logic_vector(ADDR_WIDTH-1 downto 0);
+		din  : in std_logic_vector(DATA_WIDTH-1 downto 0);
+		dout : out std_logic_vector(DATA_WIDTH-1 downto 0);
+		en   : in std_logic;
+		we   : in std_logic
+	);
+end cache_block;
+
+architecture behavioral of cache_block is
+	type mem_t is array (2**ADDR_WIDTH-1 downto 0) of std_logic_vector(DATA_WIDTH-1 downto 0);
+	signal mem : mem_t;
+
+begin
+
+process(clk)
+begin
+	if rising_edge(clk) then
+		if en = '1' then
+			if we = '1' then
+				mem(to_integer(unsigned(addr))) <= din;
+				dout <= din;
+			else
+				dout <= mem(to_integer(unsigned(addr)));
+			end if;
+		end if;
+	end if;
+end process;
+
+end architecture;
+
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+library work;
+use work.all;
+
+entity cache_mem is
+	generic (
+		ADDR_WIDTH : integer := 10
+	);
+	port (
+		clk  : in std_logic;
+		addr : in std_logic_vector(ADDR_WIDTH-1 downto 0);
+		din  : in std_logic_vector(288-1 downto 0);
+		dout : out std_logic_vector(288-1 downto 0);
+		en   : in std_logic;
+		we   : in std_logic
+	);
+end cache_mem;
+
+architecture behavioral of cache_mem is
+begin
+	mem: for i in 0 to 7 generate
+		blk: entity cache_block generic map (
+			DATA_WIDTH => 36,
+			ADDR_WIDTH => ADDR_WIDTH
+		)
+		port map (
+			clk => clk,
+			addr => addr,
+			din => din(i*36+35 downto i*36),
+			dout => dout(i*36+35 downto i*36),
+			en => en,
+			we => we
+		);
+	end generate;
+end architecture;
+
+
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+library work;
+use work.all;
+
 entity ddr_controller_interface is
 	generic (
 		-- Users to add parameters here
@@ -28,7 +113,7 @@ entity ddr_controller_interface is
 		-- Base address of targeted slave
 		-- C_M_TARGET_SLAVE_BASE_ADDR	: std_logic_vector	:= x"40000000";
 		-- Burst Length. Supports 1, 2, 4, 8, 16, 32, 64, 128, 256 burst lengths
-		C_M_AXI_BURST_LEN	: integer	:= 1;
+		-- C_M_AXI_BURST_LEN	: integer	:= 8;
 		-- Thread ID Width
 		C_M_AXI_ID_WIDTH	: integer	:= 6;
 		-- Width of Address Bus
@@ -163,6 +248,25 @@ entity ddr_controller_interface is
 end ddr_controller_interface;
 
 architecture implementation of ddr_controller_interface is
+	-- cache signals
+	type cline_state_t is (EMPTY,VALID,RES1,RES2);
+	type rd_state_t is (INIT,CLEAR,IDLE,READ_CACHE1,READ_CACHE2,READ_BURST1,READ_BURST2,READ_BURST3,READ_HIT,WRITE_CACHE1,WRITE_CACHE2,WRITE_END);
+	constant C_ADDR_WIDTH : integer := 9;
+	signal c_addr	: std_logic_vector(C_ADDR_WIDTH-1 downto 0);
+	signal c_en		: std_logic;
+	signal c_we		: std_logic;
+	signal c_iline	: std_logic_vector(288-1 downto 0);
+	signal c_oline	: std_logic_vector(288-1 downto 0);
+	-- line ID = address[C_ADDR_WIDTH+5-1:5]
+	-- line format:
+	-- - bits 0-255 : line data
+	-- - 32-5-C_ADDR_WIDTH next bits : address
+	-- - topmost 2 bits : line state
+	signal rd_state		: rd_state_t;
+	signal line_state	: cline_state_t;
+	signal line_addr	: std_logic_vector(31 downto C_ADDR_WIDTH+5);
+	signal r_idx		: integer range 0 to 15;
+	signal r_burst_cnt	: integer range 0 to 7;
 
 
 	-- function called clogb2 that returns an integer which has the
@@ -199,33 +303,31 @@ architecture implementation of ddr_controller_interface is
 	signal axi_bready	: std_logic;
 	signal axi_araddr	: std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
 	signal axi_arvalid	: std_logic;
-	signal axi_arvalid_ff	: std_logic;
 	signal axi_rready	: std_logic;
 
-	signal init_read_ff		: std_logic;
-	signal init_read		: std_logic;
-	signal init_write_ff	: std_logic;
-	signal init_write		: std_logic;
-	signal write_resp_error	: std_logic;
-
 	signal rdata	: std_logic_vector(15 downto 0);
-	signal rdata_ff	: std_logic_vector(15 downto 0);
-	signal rod		: std_logic_vector(15 downto 0);
-	signal rdone	: std_logic;
-	signal rdone_ff	: std_logic;
-	signal wdone	: std_logic;
-	signal wdone_ff	: std_logic;
-	signal ds_rd	: std_logic_vector(1 downto 0);
-	signal a1_rd	: std_logic;
 
 begin
+	-- cache memory
+	cache: entity cache_mem generic map (
+			ADDR_WIDTH => C_ADDR_WIDTH
+		)
+		port map (
+			clk => M_AXI_ACLK,
+			addr => c_addr,
+			din => c_iline,
+			dout => c_oline,
+			en => c_en,
+			we => c_we
+		);
+
 
 	--I/O Connections. Write Address (AW)
 	M_AXI_AWID	<= (others => '0');
 	--The AXI address is a concatenation of the target base address + active offset range
 	M_AXI_AWADDR	<= std_logic_vector(unsigned(axi_awaddr)+OFFSET);
 	--Burst LENgth is number of transaction beats, minus 1
-	M_AXI_AWLEN	<= std_logic_vector( to_unsigned(C_M_AXI_BURST_LEN - 1, 4) );
+	M_AXI_AWLEN	<= std_logic_vector(to_unsigned(0,4));
 	--Size should be C_M_AXI_DATA_WIDTH, in 2^SIZE bytes, otherwise narrow bursts are used
 	M_AXI_AWSIZE	<= std_logic_vector( to_unsigned(clogb2((C_M_AXI_DATA_WIDTH/8)-1), 3) );
 	--INCR burst type is usually used, except for keyhole bursts
@@ -249,7 +351,7 @@ begin
 	M_AXI_ARID	<= (others => '0');
 	M_AXI_ARADDR	<= std_logic_vector(unsigned(axi_araddr)+OFFSET);
 	--Burst LENgth is number of transaction beats, minus 1
-	M_AXI_ARLEN	<= std_logic_vector( to_unsigned(C_M_AXI_BURST_LEN - 1, 4) );
+	M_AXI_ARLEN	<= std_logic_vector(to_unsigned(7,4));
 	--Size should be C_M_AXI_DATA_WIDTH, in 2^n bytes, otherwise narrow bursts are used
 	M_AXI_ARSIZE	<= std_logic_vector( to_unsigned( clogb2((C_M_AXI_DATA_WIDTH/8)-1),3 ));
 	--INCR burst type is usually used, except for keyhole bursts
@@ -261,129 +363,167 @@ begin
 	M_AXI_ARVALID	<= axi_arvalid;
 	--Read and Read Response (R)
 	M_AXI_RREADY	<= axi_rready;
-	-- transfer done status
-	w_done <= wdone;
-	r_done <= rdone_ff;
-	r_d <= rod;
-	ERROR <= write_resp_error;
 
-	----------------------
-	-- Detection of transaction request
-	----------------------
+	ERROR <= '0';
 
-	process(M_AXI_ACLK,M_AXI_ARESETN)
-	begin
-		if M_AXI_ARESETN = '0' then
-			init_read_ff <= '0';
-			init_write_ff <= '0';
-		elsif rising_edge(M_AXI_ACLK) then
-			init_read_ff <= r;
-			init_write_ff <= w;
-		end if;
-	end process;
+	------------------------------
+	-- State machine for read and write channels
+	------------------------------
 
-	----------------------
-	-- Write Channels
-	----------------------
-
-	init_write <= (not init_write_ff) and w and not axi_awvalid_ff and not axi_wvalid;
-	axi_awaddr(31 downto 2) <= a(31 downto 2);
-	axi_awaddr(1 downto 0) <= "00";
-	axi_awvalid <= M_AXI_ARESETN and (init_write or axi_awvalid_ff) and not axi_wvalid;
-	wdone <= (axi_bready and M_AXI_BVALID) or (init_write_ff and wdone_ff);
+	line_state <= cline_state_t'val(to_integer(unsigned(c_oline(288-1 downto 288-2))));
+	line_addr <= c_oline(256+32-C_ADDR_WIDTH-5-1 downto 256);
+	r_d <= rdata(7 downto 0) & rdata(15 downto 8);
+	r_idx <= to_integer(unsigned(a(4 downto 1)));
 
 	process(M_AXI_ACLK,M_AXI_ARESETN)
 	begin
 		if M_AXI_ARESETN = '0' then
-			axi_awvalid_ff <= '0';
+			axi_rready <= '0';
+			rd_state <= INIT;
+			c_iline <= (others => '0');
+			c_addr <= (others => '0');
+			c_en <= '0';
+			c_we <= '0';
+			rdata <= (others => '0');
+			r_done <= '0';
+			r_burst_cnt <= 0;
 			axi_wvalid <= '0';
 			axi_wlast <= '0';
 			axi_bready <= '0';
 			axi_wdata <= (others => '0');
 			axi_wstrb <= (others => '0');
-			write_resp_error <= '0';
-			wdone_ff <= '0';
+			axi_awaddr <= (others => '0');
+			axi_awvalid <= '0';
+			w_done <= '0';
 		elsif rising_edge(M_AXI_ACLK) then
-			axi_awvalid_ff <= axi_awvalid;
-			wdone_ff <= wdone;
-			if axi_awvalid = '1' and M_AXI_AWREADY = '1' then
-				-- send data
-				axi_wvalid <= '1';
-				axi_wlast <= '1';
-				-- enforce big endian writes
-				if a(1) = '0' then
-					-- address ends with 00
-					axi_wdata(31 downto 16) <= x"0000";
-					axi_wdata(15 downto 8) <= w_d(7 downto 0);
-					axi_wdata(7 downto 0) <= w_d(15 downto 8);
-					axi_wstrb(3 downto 2) <= "00";
-					axi_wstrb(1) <= ds(0);
-					axi_wstrb(0) <= ds(1);
-				else
-					-- address ends with 10
-					axi_wdata(31 downto 24) <= w_d(7 downto 0);
-					axi_wdata(23 downto 16) <= w_d(15 downto 8);
-					axi_wdata(15 downto 0) <= x"0000";
-					axi_wstrb(3) <= ds(0);
-					axi_wstrb(2) <= ds(1);
-					axi_wstrb(1 downto 0) <= "00";
-				end if;
-			end if;
-			if axi_wvalid = '1' and M_AXI_WREADY = '1' then
-				-- data received, now we wait for response
-				axi_wvalid <= '0';
-				axi_wlast <= '0';
-				axi_bready <= '1';
-				axi_wdata <= (others => '0');
-				axi_wstrb <= (others => '0');
-			end if;
-			if axi_bready = '1' and M_AXI_BVALID = '1' then
-				-- write response received
-				if M_AXI_BRESP(1) = '1' then
-					write_resp_error <= '1';
-				end if;
-				axi_bready <= '0';
-			end if;
-		end if;
-	end process;
+			case rd_state is
+				when INIT =>
+					c_en <= '1';
+					c_we <= '1';
+					rd_state <= CLEAR;
+				when CLEAR =>
+					if unsigned(c_addr) /= 2**C_ADDR_WIDTH-1 then
+						c_addr <= std_logic_vector(unsigned(c_addr) + 1);
+					else
+						c_en <= '0';
+						c_we <= '0';
+						c_addr <= (others => '0');
+						rd_state <= IDLE;
+					end if;
+				when IDLE =>
+					if r = '1' or w = '1' then
+						c_addr <= a(C_ADDR_WIDTH+5-1 downto 5);
+						c_en <= '1';
+						if r = '1' then
+							rd_state <= READ_CACHE1;
+						else
+							rd_state <= WRITE_CACHE1;
+						end if;
+					end if;
+				when READ_CACHE1 =>
+					c_addr <= (others => '0');
+					c_en <= '0';
+					rd_state <= READ_CACHE2;
+				when READ_CACHE2 =>
+					if line_state = VALID and line_addr = a(31 downto C_ADDR_WIDTH+5) then
+						rdata <= c_oline((r_idx+1)*16-1 downto r_idx*16);
+						r_done <= '1';
+						rd_state <= READ_HIT;
+					else
+						axi_araddr <= a(31 downto 5) & "00000";
+						axi_arvalid <= '1';
+						axi_rready <= '1';
+						r_burst_cnt <= 0;
+						rd_state <= READ_BURST1;
+					end if;
+				when READ_BURST1 =>
+					if M_AXI_ARREADY = '1' then
+						axi_arvalid <= '0';
+					end if;
+					if M_AXI_RVALID = '1' then
+						c_iline(255 downto 0) <= M_AXI_RDATA & c_iline(255 downto 32);
+						if r_burst_cnt = 7 then
+							c_iline(288-1 downto 288-2) <= std_logic_vector(to_unsigned(cline_state_t'pos(VALID),2));
+							c_iline(256+32-C_ADDR_WIDTH-5-1 downto 256) <= a(31 downto C_ADDR_WIDTH+5);
+							c_addr <= a(C_ADDR_WIDTH+5-1 downto 5);
+							c_en <= '1';
+							c_we <= '1';
+							axi_rready <= '0';
+							rd_state <= READ_BURST2;
+						else
+							r_burst_cnt <= r_burst_cnt + 1;
+						end if;
+					end if;
+				when READ_BURST2 =>
+					c_addr <= (others => '0');
+					c_en <= '0';
+					c_we <= '0';
+					rd_state <= READ_BURST3;
+				when READ_BURST3 =>
+					rdata <= c_oline((r_idx+1)*16-1 downto r_idx*16);
+					r_done <= '1';
+					rd_state <= READ_HIT;
+				when READ_HIT =>
+					if r = '0' then
+						rdata <= (others => '0');
+						r_done <= '0';
+						rd_state <= IDLE;
+					end if;
+				when WRITE_CACHE1 =>
+					c_addr <= (others => '0');
+					c_en <= '0';
+					rd_state <= WRITE_CACHE2;
+				when WRITE_CACHE2 =>
+					if line_state = VALID and line_addr = a(31 downto C_ADDR_WIDTH+5) then
+						c_iline <= c_oline;
+						if ds(1) = '1' then
+							c_iline(r_idx*16+7 downto r_idx*16) <= w_d(15 downto 8);
+						end if;
+						if ds(0) = '1' then
+							c_iline(r_idx*16+15 downto r_idx*16+8) <= w_d(7 downto 0);
+						end if;
+						c_addr <= a(C_ADDR_WIDTH+5-1 downto 5);
+						c_en <= '1';
+						c_we <= '1';
+					end if;
+					axi_awaddr <= a(31 downto 2) & "00";
+					axi_awvalid <= '1';
+					axi_wdata <= w_d(7 downto 0) & w_d(15 downto 8) & w_d(7 downto 0) & w_d(15 downto 8);
+					if a(1) = '0' then
+						axi_wstrb <= "00" & ds(0) & ds(1);
+					else
+						axi_wstrb <= ds(0) & ds(1) & "00";
+					end if;
+					axi_wlast <= '1';
+					axi_wvalid <= '1';
+					axi_bready <= '1';
+					w_done <= '1';
+					rd_state <= WRITE_END;
+				when WRITE_END =>
+					c_addr <= (others => '0');
+					c_en <= '0';
+					c_we <= '0';
+					if w = '0' then
+						w_done <= '0';
+					end if;
+					if M_AXI_AWREADY = '1' then
+						axi_awaddr <= (others => '0');
+						axi_awvalid <= '0';
+					end if;
+					if M_AXI_WREADY = '1' then
+						axi_wdata <= (others => '0');
+						axi_wstrb <= "0000";
+						axi_wlast <= '0';
+						axi_wvalid <= '0';
+					end if;
+					if M_AXI_BVALID = '1' then
+						axi_bready <= '0';
+					end if;
+					if w = '0' and (M_AXI_AWREADY = '1' or axi_awvalid = '0') and (M_AXI_WREADY = '1' or axi_wvalid = '0') and (M_AXI_BVALID = '1' or axi_bready = '0') then
+						rd_state <= IDLE;
+					end if;
+			end case;
 
-
-	------------------------------
-	-- Read Channels
-	------------------------------
-	init_read <= (not init_read_ff) and r and not axi_arvalid_ff;
-	axi_araddr(31 downto 2) <= a(31 downto 2);
-	axi_araddr(1 downto 0) <= "00";
-	axi_arvalid <= M_AXI_ARESETN and (init_read or axi_arvalid_ff) and not axi_rready;
-	rdone <= (axi_rready and M_AXI_RVALID) or (r and rdone_ff);
-	rod <= rdata_ff;
-
-	rdata(15 downto 8) <= (7 downto 0 => ds_rd(1)) and ((M_AXI_RDATA(7 downto 0) and (7 downto 0 => not a1_rd)) or (M_AXI_RDATA(23 downto 16) and (7 downto 0 => a1_rd)));
-	rdata(7 downto 0) <= (7 downto 0 => ds_rd(0)) and ((M_AXI_RDATA(15 downto 8) and (7 downto 0 => not a1_rd)) or (M_AXI_RDATA(31 downto 24) and (7 downto 0 => a1_rd)));
-
-	process(M_AXI_ACLK,M_AXI_ARESETN)
-	begin
-		if M_AXI_ARESETN = '0' then
-			axi_arvalid_ff <= '0';
-			axi_rready <= '0';
-			rdata_ff <= (others => '1');
-			rdone_ff <= '0';
-			ds_rd <= "00";
-			a1_rd <= '0';
-		elsif rising_edge(M_AXI_ACLK) then
-			axi_arvalid_ff <= axi_arvalid;
-			rdone_ff <= rdone;
-			if axi_arvalid = '1' and M_AXI_ARREADY = '1' then
-				axi_rready <= '1';
-			end if;
-			if axi_rready = '1' and M_AXI_RVALID = '1' then
-				rdata_ff <= rdata;
-				axi_rready <= '0';
-			end if;
-			if init_read = '1' then
-				ds_rd <= ds;
-				a1_rd <= a(1);
-			end if;
 		end if;
 	end process;
 
