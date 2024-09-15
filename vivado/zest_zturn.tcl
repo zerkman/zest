@@ -21,7 +21,7 @@ proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
  "[file normalize "$origin_dir/hdl/bridge_host.vhd"]"\
- "[file normalize "$origin_dir/hdl/ddr_controller_interface.vhd"]"\
+ "[file normalize "$origin_dir/hdl/memory_if_axi.vhd"]"\
  "[file normalize "$origin_dir/hdl/ikbd/HD63701.v"]"\
  "[file normalize "$origin_dir/hdl/ikbd/HD63701_ALU.v"]"\
  "[file normalize "$origin_dir/hdl/ikbd/HD63701_CORE.v"]"\
@@ -181,7 +181,7 @@ if {[string equal [get_filesets -quiet sources_1] ""]} {
 set obj [get_filesets sources_1]
 set files [list \
  [file normalize "${origin_dir}/hdl/configurator.vhd"] \
- [file normalize "${origin_dir}/hdl/ddr_controller_interface.vhd"] \
+ [file normalize "${origin_dir}/hdl/memory_if_axi.vhd"] \
  [file normalize "${origin_dir}/hdl/ram_tdp.vhd"] \
  [file normalize "${origin_dir}/hdl/osd.vhd"] \
  [file normalize "${origin_dir}/hdl/ikbd/HD63701.v"] \
@@ -231,7 +231,7 @@ set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
 
-set file "$origin_dir/hdl/ddr_controller_interface.vhd"
+set file "$origin_dir/hdl/memory_if_axi.vhd"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "VHDL" -objects $file_obj
@@ -453,8 +453,8 @@ set obj [get_filesets utils_1]
 
 
 # Adding sources referenced in BDs, if not already added
-if { [get_files ddr_controller_interface.vhd] == "" } {
-  import_files -quiet -fileset sources_1 ../hdl/ddr_controller_interface.vhd
+if { [get_files memory_if_axi.vhd] == "" } {
+  import_files -quiet -fileset sources_1 ../hdl/memory_if_axi.vhd
 }
 if { [get_files bridge_host.vhd] == "" } {
   import_files -quiet -fileset sources_1 ../hdl/bridge_host.vhd
@@ -465,7 +465,7 @@ if { [get_files bridge_host.vhd] == "" } {
 proc cr_bd_ps_domain { parentCell } {
 # The design that will be created by this Tcl proc contains the following
 # module references:
-# bridge_host, ddr_controller_interface
+# bridge_host, memory_if_axi
 
 
 
@@ -512,7 +512,7 @@ proc cr_bd_ps_domain { parentCell } {
   if { $bCheckModules == 1 } {
      set list_check_mods "\
   bridge_host\
-  ddr_controller_interface\
+  memory_if_axi\
   "
 
    set list_mods_missing ""
@@ -626,13 +626,13 @@ proc cr_bd_ps_domain { parentCell } {
    CONFIG.USE_RESET {false} \
  ] $clk_wiz_0
 
-  # Create instance: ddr_controller_inter_0, and set properties
-  set block_name ddr_controller_interface
-  set block_cell_name ddr_controller_inter_0
-  if { [catch {set ddr_controller_inter_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+  # Create instance: memory_if_axi_0, and set properties
+  set block_name memory_if_axi
+  set block_cell_name memory_if_axi_0
+  if { [catch {set memory_if_axi_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
      catch {common::send_gid_msg -ssname BD::TCL -id 2095 -severity "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
      return 1
-   } elseif { $ddr_controller_inter_0 eq "" } {
+   } elseif { $memory_if_axi_0 eq "" } {
      catch {common::send_gid_msg -ssname BD::TCL -id 2096 -severity "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
      return 1
    }
@@ -1150,7 +1150,7 @@ proc cr_bd_ps_domain { parentCell } {
  ] $ps7_0_axi_periph
 
   # Create interface connections
-  connect_bd_intf_net -intf_net ddr_controller_inter_0_M_AXI [get_bd_intf_pins ddr_controller_inter_0/M_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]
+  connect_bd_intf_net -intf_net memory_if_axi_0_M_AXI [get_bd_intf_pins memory_if_axi_0/M_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]
   connect_bd_intf_net -intf_net processing_system7_0_DDR [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7_0/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_FIXED_IO [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7_0/FIXED_IO]
   connect_bd_intf_net -intf_net processing_system7_0_IIC_0 [get_bd_intf_ports IIC_0] [get_bd_intf_pins processing_system7_0/IIC_0]
@@ -1158,11 +1158,11 @@ proc cr_bd_ps_domain { parentCell } {
   connect_bd_intf_net -intf_net ps7_0_axi_periph_M00_AXI [get_bd_intf_pins bridge_host_0/s_axi] [get_bd_intf_pins ps7_0_axi_periph/M00_AXI]
 
   # Create port connections
-  connect_bd_net -net A_0_1 [get_bd_ports ram_a] [get_bd_pins ddr_controller_inter_0/a]
-  connect_bd_net -net DS_0_1 [get_bd_ports ram_ds] [get_bd_pins ddr_controller_inter_0/ds]
+  connect_bd_net -net A_0_1 [get_bd_ports ram_a] [get_bd_pins memory_if_axi_0/a]
+  connect_bd_net -net DS_0_1 [get_bd_ports ram_ds] [get_bd_pins memory_if_axi_0/ds]
   connect_bd_net -net IRQ_F2P_0_1 [get_bd_ports irq_f2p] [get_bd_pins processing_system7_0/IRQ_F2P]
-  connect_bd_net -net R_0_1 [get_bd_ports ram_r] [get_bd_pins ddr_controller_inter_0/r]
-  connect_bd_net -net W_0_1 [get_bd_ports ram_w] [get_bd_pins ddr_controller_inter_0/w]
+  connect_bd_net -net R_0_1 [get_bd_ports ram_r] [get_bd_pins memory_if_axi_0/r]
+  connect_bd_net -net W_0_1 [get_bd_ports ram_w] [get_bd_pins memory_if_axi_0/w]
   connect_bd_net -net bridge_host_0_bridge_addr [get_bd_ports bridge_addr] [get_bd_pins bridge_host_0/bridge_addr]
   connect_bd_net -net bridge_host_0_bridge_r [get_bd_ports bridge_r] [get_bd_pins bridge_host_0/bridge_r]
   connect_bd_net -net bridge_host_0_bridge_w [get_bd_ports bridge_w] [get_bd_pins bridge_host_0/bridge_w]
@@ -1170,17 +1170,17 @@ proc cr_bd_ps_domain { parentCell } {
   connect_bd_net -net bridge_host_0_bridge_w_strb [get_bd_ports bridge_w_strb] [get_bd_pins bridge_host_0/bridge_w_strb]
   connect_bd_net -net bridge_r_data_0_1 [get_bd_ports bridge_r_data] [get_bd_pins bridge_host_0/bridge_r_data]
   connect_bd_net -net clk_wiz_0_clk_out1 [get_bd_ports vid_clk] [get_bd_pins clk_wiz_0/clk_out1]
-  connect_bd_net -net ddr_controller_inter_0_ERROR [get_bd_ports ram_error] [get_bd_pins ddr_controller_inter_0/ERROR]
-  connect_bd_net -net ddr_controller_inter_0_R_DONE [get_bd_ports ram_r_done] [get_bd_pins ddr_controller_inter_0/r_done]
-  connect_bd_net -net ddr_controller_inter_0_W_DONE [get_bd_ports ram_w_done] [get_bd_pins ddr_controller_inter_0/w_done]
-  connect_bd_net -net ddr_controller_inter_0_r_d [get_bd_ports ram_r_d] [get_bd_pins ddr_controller_inter_0/r_d]
-  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins bridge_host_0/s_axi_aresetn] [get_bd_pins ddr_controller_inter_0/M_AXI_ARESETN] [get_bd_pins proc_sys_reset_0/peripheral_aresetn] [get_bd_pins ps7_0_axi_periph/ARESETN] [get_bd_pins ps7_0_axi_periph/M00_ARESETN] [get_bd_pins ps7_0_axi_periph/S00_ARESETN]
-  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_ports clk] [get_bd_pins bridge_host_0/s_axi_aclk] [get_bd_pins clk_wiz_0/clk_in1] [get_bd_pins ddr_controller_inter_0/M_AXI_ACLK] [get_bd_pins proc_sys_reset_0/slowest_sync_clk] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins ps7_0_axi_periph/ACLK] [get_bd_pins ps7_0_axi_periph/M00_ACLK] [get_bd_pins ps7_0_axi_periph/S00_ACLK]
+  connect_bd_net -net memory_if_axi_0_ERROR [get_bd_ports ram_error] [get_bd_pins memory_if_axi_0/ERROR]
+  connect_bd_net -net memory_if_axi_0_R_DONE [get_bd_ports ram_r_done] [get_bd_pins memory_if_axi_0/r_done]
+  connect_bd_net -net memory_if_axi_0_W_DONE [get_bd_ports ram_w_done] [get_bd_pins memory_if_axi_0/w_done]
+  connect_bd_net -net memory_if_axi_0_r_d [get_bd_ports ram_r_d] [get_bd_pins memory_if_axi_0/r_d]
+  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins bridge_host_0/s_axi_aresetn] [get_bd_pins memory_if_axi_0/M_AXI_ARESETN] [get_bd_pins proc_sys_reset_0/peripheral_aresetn] [get_bd_pins ps7_0_axi_periph/ARESETN] [get_bd_pins ps7_0_axi_periph/M00_ARESETN] [get_bd_pins ps7_0_axi_periph/S00_ARESETN]
+  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_ports clk] [get_bd_pins bridge_host_0/s_axi_aclk] [get_bd_pins clk_wiz_0/clk_in1] [get_bd_pins memory_if_axi_0/M_AXI_ACLK] [get_bd_pins proc_sys_reset_0/slowest_sync_clk] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins ps7_0_axi_periph/ACLK] [get_bd_pins ps7_0_axi_periph/M00_ACLK] [get_bd_pins ps7_0_axi_periph/S00_ACLK]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N [get_bd_ports resetn] [get_bd_pins proc_sys_reset_0/ext_reset_in] [get_bd_pins processing_system7_0/FCLK_RESET0_N]
-  connect_bd_net -net w_d_0_1 [get_bd_ports ram_w_d] [get_bd_pins ddr_controller_inter_0/w_d]
+  connect_bd_net -net w_d_0_1 [get_bd_ports ram_w_d] [get_bd_pins memory_if_axi_0/w_d]
 
   # Create address segments
-  assign_bd_address -offset 0x00000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces ddr_controller_inter_0/M_AXI] [get_bd_addr_segs processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM] -force
+  assign_bd_address -offset 0x00000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces memory_if_axi_0/M_AXI] [get_bd_addr_segs processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM] -force
   assign_bd_address -offset 0x43C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs bridge_host_0/s_axi/reg0] -force
 
 

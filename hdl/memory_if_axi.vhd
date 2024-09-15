@@ -1,4 +1,4 @@
--- ddr_controller_interface.vhd - Memory interface for the Zynq-7000's integrated DDR controller
+-- memory_if_axi.vhd - Memory interface for the Zynq-7000's integrated DDR controller
 --
 -- Copyright (c) 2020-2024 Francois Galea <fgalea at free.fr>
 -- This program is free software: you can redistribute it and/or modify
@@ -103,7 +103,7 @@ use ieee.numeric_std.all;
 library work;
 use work.all;
 
-entity ddr_controller_interface is
+entity memory_if_axi is
 	generic (
 		-- Users to add parameters here
 
@@ -245,9 +245,9 @@ entity ddr_controller_interface is
 		-- accept the read data and response information.
 		M_AXI_RREADY	: out std_logic
 	);
-end ddr_controller_interface;
+end memory_if_axi;
 
-architecture implementation of ddr_controller_interface is
+architecture implementation of memory_if_axi is
 	-- cache signals
 	type cline_state_t is (EMPTY,VALID,RES1,RES2);
 	type rd_state_t is (INIT,CLEAR,IDLE,READ_CACHE1,READ_CACHE2,READ_BURST1,READ_BURST2,READ_BURST3,READ_HIT,WRITE_CACHE1,WRITE_CACHE2,WRITE_END);
