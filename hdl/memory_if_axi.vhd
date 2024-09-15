@@ -145,105 +145,105 @@ entity memory_if_axi is
 		-- Asserts when ERROR is detected
 		ERROR	: out std_logic;
 		-- Global Clock Signal.
-		M_AXI_ACLK	: in std_logic;
+		m_axi_aclk	: in std_logic;
 		-- Global Reset Singal. This Signal is Active Low
-		M_AXI_ARESETN	: in std_logic;
+		m_axi_aresetn	: in std_logic;
 		-- Master Interface Write Address ID
-		M_AXI_AWID	: out std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
+		m_axi_awid	: out std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
 		-- Master Interface Write Address
-		M_AXI_AWADDR	: out std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
+		m_axi_awaddr	: out std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
 		-- Burst length. The burst length gives the exact number of transfers in a burst
-		M_AXI_AWLEN	: out std_logic_vector(3 downto 0);
+		m_axi_awlen	: out std_logic_vector(3 downto 0);
 		-- Burst size. This signal indicates the size of each transfer in the burst
-		M_AXI_AWSIZE	: out std_logic_vector(2 downto 0);
+		m_axi_awsize	: out std_logic_vector(2 downto 0);
 		-- Burst type. The burst type and the size information,
 		-- determine how the address for each transfer within the burst is calculated.
-		M_AXI_AWBURST	: out std_logic_vector(1 downto 0);
+		m_axi_awburst	: out std_logic_vector(1 downto 0);
 		-- Lock type. Provides additional information about the
 		-- atomic characteristics of the transfer.
-		M_AXI_AWLOCK	: out std_logic_vector(1 downto 0);
+		m_axi_awlock	: out std_logic_vector(1 downto 0);
 		-- Memory type. This signal indicates how transactions
 		-- are required to progress through a system.
-		M_AXI_AWCACHE	: out std_logic_vector(3 downto 0);
+		m_axi_awcache	: out std_logic_vector(3 downto 0);
 		-- Protection type. This signal indicates the privilege
 		-- and security level of the transaction, and whether
 		-- the transaction is a data access or an instruction access.
-		M_AXI_AWPROT	: out std_logic_vector(2 downto 0);
+		m_axi_awprot	: out std_logic_vector(2 downto 0);
 		-- Write address valid. This signal indicates that
 		-- the channel is signaling valid write address and control information.
-		M_AXI_AWVALID	: out std_logic;
+		m_axi_awvalid	: out std_logic;
 		-- Write address ready. This signal indicates that
 		-- the slave is ready to accept an address and associated control signals
-		M_AXI_AWREADY	: in std_logic;
+		m_axi_awready	: in std_logic;
 		-- Master Interface Write Data ID
-		M_AXI_WID	: out std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
+		m_axi_wid	: out std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
 		-- Master Interface Write Data.
-		M_AXI_WDATA	: out std_logic_vector(C_M_AXI_DATA_WIDTH-1 downto 0);
+		m_axi_wdata	: out std_logic_vector(C_M_AXI_DATA_WIDTH-1 downto 0);
 		-- Write strobes. This signal indicates which byte
 		-- lanes hold valid data. There is one write strobe
 		-- bit for each eight bits of the write data bus.
-		M_AXI_WSTRB	: out std_logic_vector(C_M_AXI_DATA_WIDTH/8-1 downto 0);
+		m_axi_wstrb	: out std_logic_vector(C_M_AXI_DATA_WIDTH/8-1 downto 0);
 		-- Write last. This signal indicates the last transfer in a write burst.
-		M_AXI_WLAST	: out std_logic;
+		m_axi_wlast	: out std_logic;
 		-- Write valid. This signal indicates that valid write
 		-- data and strobes are available
-		M_AXI_WVALID	: out std_logic;
+		m_axi_wvalid	: out std_logic;
 		-- Write ready. This signal indicates that the slave
 		-- can accept the write data.
-		M_AXI_WREADY	: in std_logic;
+		m_axi_wready	: in std_logic;
 		-- Master Interface Write Response.
-		M_AXI_BID	: in std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
+		m_axi_bid	: in std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
 		-- Write response. This signal indicates the status of the write transaction.
-		M_AXI_BRESP	: in std_logic_vector(1 downto 0);
+		m_axi_bresp	: in std_logic_vector(1 downto 0);
 		-- Write response valid. This signal indicates that the
 		-- channel is signaling a valid write response.
-		M_AXI_BVALID	: in std_logic;
+		m_axi_bvalid	: in std_logic;
 		-- Response ready. This signal indicates that the master
 		-- can accept a write response.
-		M_AXI_BREADY	: out std_logic;
+		m_axi_bready	: out std_logic;
 		-- Master Interface Read Address.
-		M_AXI_ARID	: out std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
+		m_axi_arid	: out std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
 		-- Read address. This signal indicates the initial
 		-- address of a read burst transaction.
-		M_AXI_ARADDR	: out std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
+		m_axi_araddr	: out std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
 		-- Burst length. The burst length gives the exact number of transfers in a burst
-		M_AXI_ARLEN	: out std_logic_vector(3 downto 0);
+		m_axi_arlen	: out std_logic_vector(3 downto 0);
 		-- Burst size. This signal indicates the size of each transfer in the burst
-		M_AXI_ARSIZE	: out std_logic_vector(2 downto 0);
+		m_axi_arsize	: out std_logic_vector(2 downto 0);
 		-- Burst type. The burst type and the size information,
 		-- determine how the address for each transfer within the burst is calculated.
-		M_AXI_ARBURST	: out std_logic_vector(1 downto 0);
+		m_axi_arburst	: out std_logic_vector(1 downto 0);
 		-- Lock type. Provides additional information about the
 		-- atomic characteristics of the transfer.
-		M_AXI_ARLOCK	: out std_logic_vector(1 downto 0);
+		m_axi_arlock	: out std_logic_vector(1 downto 0);
 		-- Memory type. This signal indicates how transactions
 		-- are required to progress through a system.
-		M_AXI_ARCACHE	: out std_logic_vector(3 downto 0);
+		m_axi_arcache	: out std_logic_vector(3 downto 0);
 		-- Protection type. This signal indicates the privilege
 		-- and security level of the transaction, and whether
 		-- the transaction is a data access or an instruction access.
-		M_AXI_ARPROT	: out std_logic_vector(2 downto 0);
+		m_axi_arprot	: out std_logic_vector(2 downto 0);
 		-- Write address valid. This signal indicates that
 		-- the channel is signaling valid read address and control information
-		M_AXI_ARVALID	: out std_logic;
+		m_axi_arvalid	: out std_logic;
 		-- Read address ready. This signal indicates that
 		-- the slave is ready to accept an address and associated control signals
-		M_AXI_ARREADY	: in std_logic;
+		m_axi_arready	: in std_logic;
 		-- Read ID tag. This signal is the identification tag
 		-- for the read data group of signals generated by the slave.
-		M_AXI_RID	: in std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
+		m_axi_rid	: in std_logic_vector(C_M_AXI_ID_WIDTH-1 downto 0);
 		-- Master Read Data
-		M_AXI_RDATA	: in std_logic_vector(C_M_AXI_DATA_WIDTH-1 downto 0);
+		m_axi_rdata	: in std_logic_vector(C_M_AXI_DATA_WIDTH-1 downto 0);
 		-- Read response. This signal indicates the status of the read transfer
-		M_AXI_RRESP	: in std_logic_vector(1 downto 0);
+		m_axi_rresp	: in std_logic_vector(1 downto 0);
 		-- Read last. This signal indicates the last transfer in a read burst
-		M_AXI_RLAST	: in std_logic;
+		m_axi_rlast	: in std_logic;
 		-- Read valid. This signal indicates that the channel
 		-- is signaling the required read data.
-		M_AXI_RVALID	: in std_logic;
+		m_axi_rvalid	: in std_logic;
 		-- Read ready. This signal indicates that the master can
 		-- accept the read data and response information.
-		M_AXI_RREADY	: out std_logic
+		m_axi_rready	: out std_logic
 	);
 end memory_if_axi;
 
@@ -313,7 +313,7 @@ begin
 			ADDR_WIDTH => C_ADDR_WIDTH
 		)
 		port map (
-			clk => M_AXI_ACLK,
+			clk => m_axi_aclk,
 			addr => c_addr,
 			din => c_iline,
 			dout => c_oline,
@@ -323,46 +323,46 @@ begin
 
 
 	--I/O Connections. Write Address (AW)
-	M_AXI_AWID	<= (others => '0');
+	m_axi_awid	<= (others => '0');
 	--The AXI address is a concatenation of the target base address + active offset range
-	M_AXI_AWADDR	<= std_logic_vector(unsigned(axi_awaddr)+OFFSET);
+	m_axi_awaddr	<= std_logic_vector(unsigned(axi_awaddr)+OFFSET);
 	--Burst LENgth is number of transaction beats, minus 1
-	M_AXI_AWLEN	<= std_logic_vector(to_unsigned(0,4));
+	m_axi_awlen	<= std_logic_vector(to_unsigned(0,4));
 	--Size should be C_M_AXI_DATA_WIDTH, in 2^SIZE bytes, otherwise narrow bursts are used
-	M_AXI_AWSIZE	<= std_logic_vector( to_unsigned(clogb2((C_M_AXI_DATA_WIDTH/8)-1), 3) );
+	m_axi_awsize	<= std_logic_vector( to_unsigned(clogb2((C_M_AXI_DATA_WIDTH/8)-1), 3) );
 	--INCR burst type is usually used, except for keyhole bursts
-	M_AXI_AWBURST	<= "01";
-	M_AXI_AWLOCK	<= "00";
+	m_axi_awburst	<= "01";
+	m_axi_awlock	<= "00";
 	--Update value to 4'b0011 if coherent accesses to be used via the Zynq ACP port. Not Allocated, Modifiable, not Bufferable. Not Bufferable since this example is meant to test memory, not intermediate cache.
-	M_AXI_AWCACHE	<= "0010";
-	M_AXI_AWPROT	<= "000";
-	M_AXI_AWVALID	<= axi_awvalid;
+	m_axi_awcache	<= "0010";
+	m_axi_awprot	<= "000";
+	m_axi_awvalid	<= axi_awvalid;
 	--I/O Connections. Write Data (W)
-	M_AXI_WID	<= (others => '0');
+	m_axi_wid	<= (others => '0');
 	--Write Data(W)
-	M_AXI_WDATA	<= axi_wdata;
+	m_axi_wdata	<= axi_wdata;
 	--All bursts are complete and aligned in this example
-	M_AXI_WSTRB	<= axi_wstrb;
-	M_AXI_WLAST	<= axi_wlast;
-	M_AXI_WVALID	<= axi_wvalid;
+	m_axi_wstrb	<= axi_wstrb;
+	m_axi_wlast	<= axi_wlast;
+	m_axi_wvalid	<= axi_wvalid;
 	--Write Response (B)
-	M_AXI_BREADY	<= axi_bready;
+	m_axi_bready	<= axi_bready;
 	--Read Address (AR)
-	M_AXI_ARID	<= (others => '0');
-	M_AXI_ARADDR	<= std_logic_vector(unsigned(axi_araddr)+OFFSET);
+	m_axi_arid	<= (others => '0');
+	m_axi_araddr	<= std_logic_vector(unsigned(axi_araddr)+OFFSET);
 	--Burst LENgth is number of transaction beats, minus 1
-	M_AXI_ARLEN	<= std_logic_vector(to_unsigned(7,4));
+	m_axi_arlen	<= std_logic_vector(to_unsigned(7,4));
 	--Size should be C_M_AXI_DATA_WIDTH, in 2^n bytes, otherwise narrow bursts are used
-	M_AXI_ARSIZE	<= std_logic_vector( to_unsigned( clogb2((C_M_AXI_DATA_WIDTH/8)-1),3 ));
+	m_axi_arsize	<= std_logic_vector( to_unsigned( clogb2((C_M_AXI_DATA_WIDTH/8)-1),3 ));
 	--INCR burst type is usually used, except for keyhole bursts
-	M_AXI_ARBURST	<= "01";
-	M_AXI_ARLOCK	<= "00";
+	m_axi_arburst	<= "01";
+	m_axi_arlock	<= "00";
 	--Update value to 4'b0011 if coherent accesses to be used via the Zynq ACP port. Not Allocated, Modifiable, not Bufferable. Not Bufferable since this example is meant to test memory, not intermediate cache.
-	M_AXI_ARCACHE	<= "0010";
-	M_AXI_ARPROT	<= "000";
-	M_AXI_ARVALID	<= axi_arvalid;
+	m_axi_arcache	<= "0010";
+	m_axi_arprot	<= "000";
+	m_axi_arvalid	<= axi_arvalid;
 	--Read and Read Response (R)
-	M_AXI_RREADY	<= axi_rready;
+	m_axi_rready	<= axi_rready;
 
 	ERROR <= '0';
 
@@ -375,9 +375,9 @@ begin
 	r_d <= rdata(7 downto 0) & rdata(15 downto 8);
 	r_idx <= to_integer(unsigned(a(4 downto 1)));
 
-	process(M_AXI_ACLK,M_AXI_ARESETN)
+	process(m_axi_aclk,m_axi_aresetn)
 	begin
-		if M_AXI_ARESETN = '0' then
+		if m_axi_aresetn = '0' then
 			axi_rready <= '0';
 			rd_state <= INIT;
 			c_iline <= (others => '0');
@@ -395,7 +395,7 @@ begin
 			axi_awaddr <= (others => '0');
 			axi_awvalid <= '0';
 			w_done <= '0';
-		elsif rising_edge(M_AXI_ACLK) then
+		elsif rising_edge(m_axi_aclk) then
 			case rd_state is
 				when INIT =>
 					c_en <= '1';
@@ -437,11 +437,11 @@ begin
 						rd_state <= READ_BURST1;
 					end if;
 				when READ_BURST1 =>
-					if M_AXI_ARREADY = '1' then
+					if m_axi_arready = '1' then
 						axi_arvalid <= '0';
 					end if;
-					if M_AXI_RVALID = '1' then
-						c_iline(255 downto 0) <= M_AXI_RDATA & c_iline(255 downto 32);
+					if m_axi_rvalid = '1' then
+						c_iline(255 downto 0) <= m_axi_rdata & c_iline(255 downto 32);
 						if r_burst_cnt = 7 then
 							c_iline(288-1 downto 288-2) <= std_logic_vector(to_unsigned(cline_state_t'pos(VALID),2));
 							c_iline(256+32-C_ADDR_WIDTH-5-1 downto 256) <= a(31 downto C_ADDR_WIDTH+5);
@@ -506,20 +506,20 @@ begin
 					if w = '0' then
 						w_done <= '0';
 					end if;
-					if M_AXI_AWREADY = '1' then
+					if m_axi_awready = '1' then
 						axi_awaddr <= (others => '0');
 						axi_awvalid <= '0';
 					end if;
-					if M_AXI_WREADY = '1' then
+					if m_axi_wready = '1' then
 						axi_wdata <= (others => '0');
 						axi_wstrb <= "0000";
 						axi_wlast <= '0';
 						axi_wvalid <= '0';
 					end if;
-					if M_AXI_BVALID = '1' then
+					if m_axi_bvalid = '1' then
 						axi_bready <= '0';
 					end if;
-					if w = '0' and (M_AXI_AWREADY = '1' or axi_awvalid = '0') and (M_AXI_WREADY = '1' or axi_wvalid = '0') and (M_AXI_BVALID = '1' or axi_bready = '0') then
+					if w = '0' and (m_axi_awready = '1' or axi_awvalid = '0') and (m_axi_wready = '1' or axi_wvalid = '0') and (m_axi_bvalid = '1' or axi_bready = '0') then
 						rd_state <= IDLE;
 					end if;
 			end case;
