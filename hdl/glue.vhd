@@ -106,6 +106,7 @@ entity glue is
 		RAMn        : out std_logic;
 		DMAn        : out std_logic;
 		DEVn        : out std_logic;
+		rom_r       : out std_logic;
 
 		BRn         : out std_logic;
 		BGn         : in std_logic;
@@ -164,6 +165,7 @@ architecture behavioral of glue is
 	signal dma_cnt	: unsigned(2 downto 0);
 	signal sdma		: std_logic;
 	signal sram		: std_logic;
+	signal srom		: std_logic;
 	signal mmuct	: unsigned(1 downto 0);
 	signal idtackff	: std_logic;
 
@@ -250,9 +252,11 @@ begin
 	if resetn = '0' then
 		DMAn <= '1';
 		RAMn <= '1';
+		rom_r <= '0';
 	elsif rising_edge(clk) then
 		DMAn <= sdma;
 		RAMn <= sram;
+		rom_r <= srom;
 	end if;
 end process;
 
@@ -347,6 +351,10 @@ begin
 				ymdtackn <= '0';
 			end if;
 		end if;
+		if srom = '1' then
+			-- assert DTACKn for ROM access
+			sdtackn <= '0';
+		end if;
 		if idev = '1' and iASn = '0' and iUDSn = '0' and iRWn = '0' then
 			if ia16 = x"8606" then
 				dma_w <= iD(0);
@@ -403,6 +411,7 @@ end process;
 process(FC,iA,iASn,iUDSn,iLDSn,iRWn,rwn_ff,cfg_romsize,cfg_memtop)
 begin
 	sram <= '1';
+	srom <= '0';
 	DEVn <= '1';
 	if FC /= "111" and iASn = '0' then
 		if iA(23 downto 15) = "111111111" then
@@ -420,10 +429,10 @@ begin
 			or (unsigned(iA(23 downto 16)) >= x"e0" and unsigned(iA(23 downto 16)) <= x"ef" and cfg_romsize = "11"))
 			and iRWn = '1' then
 				-- rom access
-				sram <= '0';
+				srom <= '1';
 			elsif unsigned(iA&'0') < 8 and iRWn = '1' and FC(2) = '1' then
 				-- rom access
-				sram <= '0';
+				srom <= '1';
 			elsif unsigned(iA&'0') < x"800" and unsigned(iA&'0') >= 8 and FC(2) = '1' then
 				-- protected ram access (supervisor mode only)
 				sram <= '0';

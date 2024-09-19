@@ -129,7 +129,6 @@ entity mem_if_axi is
 		r		: in std_logic_vector(NUM_PORTS-1 downto 0);
 		-- data strobe (for each byte of the data bus)
 		ds		: in std_logic_vector(NUM_PORTS*4-1 downto 0);
-
 		-- Write done signal
 		w_done	: out std_logic_vector(NUM_PORTS-1 downto 0);
 		-- Read done signal
@@ -243,13 +242,15 @@ end mem_if_axi;
 architecture implementation of mem_if_axi is
 	-- cache signals
 	type cline_state_t is (EMPTY,VALID,RES1,RES2);
-	type rd_state_t is (INIT,CLEAR,IDLE,READ_CACHE1,READ_CACHE2,READ_BURST1,READ_BURST2,READ_BURST3,READ_HIT,WRITE_CACHE1,WRITE_CACHE2,WRITE_END);
+	type rd_state_t is (INIT,CLEAR,IDLE,READ_CACHE1,READ_CACHE2,READ_BURST1,READ_BURST2,READ_BURST3,WRITE_CACHE1,WRITE_CACHE2,WRITE_END);
 	constant C_ADDR_WIDTH : integer := 9;
 	signal c_addr	: std_logic_vector(C_ADDR_WIDTH-1 downto 0);
 	signal c_en		: std_logic;
 	signal c_we		: std_logic;
 	signal c_iline	: std_logic_vector(288-1 downto 0);
 	signal c_oline	: std_logic_vector(288-1 downto 0);
+	signal ir_done	: std_logic_vector(NUM_PORTS-1 downto 0);
+	signal r_wait	: std_logic_vector(NUM_PORTS-1 downto 0);
 	-- line ID = address[C_ADDR_WIDTH+5-1:5]
 	-- line format:
 	-- - bits 0-255 : line data
@@ -319,6 +320,8 @@ begin
 	pt_a <= a(32*pt_id+31 downto 32*pt_id);
 	pt_w_d <= w_d(32*pt_id+31 downto 32*pt_id);
 	pt_ds <= ds(4*pt_id+3 downto 4*pt_id);
+	r_done <= ir_done;
+	r_wait <= r and not ir_done;
 
 	--I/O Connections. Write Address (AW)
 	m_axi_awid	<= (others => '0');
@@ -370,10 +373,10 @@ begin
 
 	line_state <= cline_state_t'val(to_integer(unsigned(c_oline(288-1 downto 288-2))));
 	line_addr <= c_oline(256+32-C_ADDR_WIDTH-5-1 downto 256);
-	r_idx <= to_integer(unsigned(a(4 downto 2)));
+	r_idx <= to_integer(unsigned(pt_a(4 downto 2)));
 
 	process(m_axi_aclk,m_axi_aresetn)
-		variable pid : integer range 0 to NUM_PORTS-1;
+		variable pid  : integer range 0 to NUM_PORTS-1;
 	begin
 		if m_axi_aresetn = '0' then
 			axi_rready <= '0';
@@ -383,7 +386,7 @@ begin
 			c_en <= '0';
 			c_we <= '0';
 			r_d <= (others => '0');
-			r_done <= (others => '0');
+			ir_done <= (others => '0');
 			r_burst_cnt <= 0;
 			axi_wvalid <= '0';
 			axi_wlast <= '0';
@@ -410,17 +413,23 @@ begin
 						rd_state <= IDLE;
 					end if;
 				when IDLE =>
-					if r /= (NUM_PORTS-1 downto 0 => '0') or w /= (NUM_PORTS-1 downto 0 => '0') then
+					for i in 0 to NUM_PORTS-1 loop
+						if ir_done(i) = '1' and r(i) = '0' then
+							r_d(i*32+31 downto i*32) <= (others => '0');
+							ir_done(i) <= '0';
+						end if;
+					end loop;
+					if r_wait /= (NUM_PORTS-1 downto 0 => '0') or w /= (NUM_PORTS-1 downto 0 => '0') then
 						pid := 0;
 						for i in 0 to NUM_PORTS-1 loop
-							if r(i) = '1' or w(i) = '1' then
+							if r_wait(i) = '1' or w(i) = '1' then
 								pid := i;
 							end if;
 						end loop;
 						pt_id <= pid;
 						c_addr <= a(pid*32+C_ADDR_WIDTH+5-1 downto pid*32+5);
 						c_en <= '1';
-						if r(pid) = '1' then
+						if r_wait(pid) = '1' then
 							rd_state <= READ_CACHE1;
 						else
 							rd_state <= WRITE_CACHE1;
@@ -431,10 +440,10 @@ begin
 					c_en <= '0';
 					rd_state <= READ_CACHE2;
 				when READ_CACHE2 =>
-					if line_state = VALID and line_addr = a(31 downto C_ADDR_WIDTH+5) then
+					if line_state = VALID and line_addr = pt_a(31 downto C_ADDR_WIDTH+5) then
 						r_d(pt_id*32+31 downto pt_id*32) <= c_oline(r_idx*32+31 downto r_idx*32);
-						r_done(pt_id) <= '1';
-						rd_state <= READ_HIT;
+						ir_done(pt_id) <= '1';
+						rd_state <= IDLE;
 					else
 						axi_araddr <= pt_a(31 downto 5) & "00000";
 						axi_arvalid <= '1';
@@ -467,14 +476,8 @@ begin
 					rd_state <= READ_BURST3;
 				when READ_BURST3 =>
 					r_d(pt_id*32+31 downto pt_id*32) <= c_oline(r_idx*32+31 downto r_idx*32);
-					r_done(pt_id) <= '1';
-					rd_state <= READ_HIT;
-				when READ_HIT =>
-					if r(pt_id) = '0' then
-						r_d <= (others => '0');
-						r_done(pt_id) <= '0';
-						rd_state <= IDLE;
-					end if;
+					ir_done(pt_id) <= '1';
+					rd_state <= IDLE;
 				when WRITE_CACHE1 =>
 					c_addr <= (others => '0');
 					c_en <= '0';
@@ -562,11 +565,19 @@ entity memory_if_axi is
 		ram_r	: in std_logic;
 		-- data strobe (for each byte of the data bus)
 		ram_ds	: in std_logic_vector(1 downto 0);
-
 		-- Write done signal
 		ram_w_done	: out std_logic;
 		-- Read done signal
 		ram_r_done	: out std_logic;
+
+		-- address
+		rom_a	: in std_logic_vector(31 downto 0);
+		-- read data
+		rom_r_d	: out std_logic_vector(15 downto 0);
+		-- initiate read transaction
+		rom_r	: in std_logic;
+		-- Read done signal
+		rom_r_done	: out std_logic;
 
 		-- Asserts when ERROR is detected
 		ERROR	: out std_logic;
@@ -676,13 +687,15 @@ end memory_if_axi;
 architecture implementation of memory_if_axi is
 	-- RAM address offset
 	constant OFFSET		: unsigned(31 downto 0)	:= x"10000000";
-	constant NUM_PORTS	: integer := 1;
+	constant NUM_PORTS	: integer := 2;
 
-	signal ram32_a		: std_logic_vector(31 downto 0);
 	signal ram32_ds		: std_logic_vector(3 downto 0);
 	signal ram32_wd		: std_logic_vector(31 downto 0);
 	signal ram32_rd		: std_logic_vector(31 downto 0);
-	signal a1			: std_logic;
+	signal ram_a1		: std_logic;
+
+	signal rom32_rd		: std_logic_vector(31 downto 0);
+	signal rom_a1		: std_logic;
 
 	signal a			: std_logic_vector(NUM_PORTS*32-1 downto 0);
 	signal r_d			: std_logic_vector(NUM_PORTS*32-1 downto 0);
@@ -694,11 +707,10 @@ architecture implementation of memory_if_axi is
 	signal w_done		: std_logic_vector(NUM_PORTS-1 downto 0);
 
 begin
-	ram32_a <= ram_a(31 downto 2) & "00";
-	ram32_wd <= ram_w_d(7 downto 0) & ram_w_d(15 downto 8) & ram_w_d(7 downto 0) & ram_w_d(15 downto 8);
 
 	-- RAM port
-	a(31 downto 0) <= ram32_a;
+	ram32_wd <= ram_w_d(7 downto 0) & ram_w_d(15 downto 8) & ram_w_d(7 downto 0) & ram_w_d(15 downto 8);
+	a(31 downto 0) <= ram_a(31 downto 2) & "00";
 	w_d(31 downto 0) <= ram32_wd;
 	ram32_rd <= r_d(31 downto 0);
 	ds(3 downto 0) <= ram32_ds;
@@ -707,9 +719,18 @@ begin
 	ram_r_done <= r_done(0);
 	ram_w_done <= w_done(0);
 
-	process(a1,ram_ds,ram32_rd)
+	-- ROM port
+	a(63 downto 32) <= rom_a(31 downto 2) & "00";
+	w_d(63 downto 32) <= (others => '0');
+	rom32_rd <= r_d(63 downto 32);
+	ds(7 downto 4) <= (others => '0');
+	r(1) <= rom_r;
+	w(1) <= '0';
+	rom_r_done <= r_done(1);
+
+	process(ram_a1,ram_ds,ram32_rd)
 	begin
-		if a1 = '1' then
+		if ram_a1 = '1' then
 			ram32_ds <= ram_ds(0) & ram_ds(1) & "00";
 			ram_r_d <= ram32_rd(23 downto 16) & ram32_rd(31 downto 24);
 		else
@@ -718,12 +739,23 @@ begin
 		end if;
 	end process;
 
+	process(rom_a1,rom32_rd)
+	begin
+		if rom_a1 = '1' then
+			rom_r_d <= rom32_rd(23 downto 16) & rom32_rd(31 downto 24);
+		else
+			rom_r_d <= rom32_rd(7 downto 0) & rom32_rd(15 downto 8);
+		end if;
+	end process;
+
 	process(m_axi_aclk,m_axi_aresetn)
 	begin
 		if m_axi_aresetn = '0' then
-			a1 <= '0';
+			ram_a1 <= '0';
+			rom_a1 <= '0';
 		elsif rising_edge(m_axi_aclk) then
-			a1 <= ram_a(1);
+			ram_a1 <= ram_a(1);
+			rom_a1 <= rom_a(1);
 		end if;
 	end process;
 
