@@ -23,64 +23,69 @@ use work.all;
 
 entity atarist_mb is
 	port (
-		clk : in std_logic;
-		resetn : in std_logic;
+		clk				: in std_logic;
+		resetn			: in std_logic;
 
-		clken : out std_logic;
-		clken_error : out std_logic;
-		monomon : in std_logic;
-		mem_top	: in std_logic_vector(5 downto 0);
-		wakestate : in std_logic_vector(1 downto 0);
-		shifter_ws : in std_logic;
-		cfg_extmod : in std_logic;
-		cfg_romsize : in std_logic_vector(1 downto 0);
+		clken			: out std_logic;
+		clken_error		: out std_logic;
+		monomon			: in std_logic;
+		mem_top			: in std_logic_vector(5 downto 0);
+		wakestate		: in std_logic_vector(1 downto 0);
+		shifter_ws		: in std_logic;
+		cfg_extmod		: in std_logic;
+		cfg_romsize		: in std_logic_vector(1 downto 0);
 
-		pclken : out std_logic;
-		de : out std_logic;
-		hsync : out std_logic;
-		vsync : out std_logic;
-		rgb : out std_logic_vector(8 downto 0);
+		pclken			: out std_logic;
+		de				: out std_logic;
+		hsync			: out std_logic;
+		vsync			: out std_logic;
+		rgb				: out std_logic_vector(8 downto 0);
 
-		sound_vol : in std_logic_vector(4 downto 0);
-		sound_clk : out std_logic;
-		sound : out std_logic_vector(15 downto 0);
+		sound_vol		: in std_logic_vector(4 downto 0);
+		sound_clk		: out std_logic;
+		sound			: out std_logic_vector(15 downto 0);
 
-		ikbd_clkren : out std_logic;
-		ikbd_clkfen : out std_logic;
-		ikbd_rx : in std_logic;
-		ikbd_tx : out std_logic;
+		ikbd_clkren		: out std_logic;
+		ikbd_clkfen		: out std_logic;
+		ikbd_rx			: in std_logic;
+		ikbd_tx			: out std_logic;
 
-		fdd_read_datan : in std_logic;
-		fdd_side0 : out std_logic;
-		fdd_indexn : in std_logic;
-		fdd_drv0_select : out std_logic;
-		fdd_drv1_select : out std_logic;
-		fdd_motor_on : out std_logic;
-		fdd_direction : out std_logic;
-		fdd_step : out std_logic;
-		fdd_write_data : out std_logic;
-		fdd_write_gate : out std_logic;
-		fdd_track0n : in std_logic;
-		fdd_write_protn : in std_logic;
+		fdd_read_datan	: in std_logic;
+		fdd_side0		: out std_logic;
+		fdd_indexn		: in std_logic;
+		fdd_drv0_select	: out std_logic;
+		fdd_drv1_select	: out std_logic;
+		fdd_motor_on	: out std_logic;
+		fdd_direction	: out std_logic;
+		fdd_step		: out std_logic;
+		fdd_write_data	: out std_logic;
+		fdd_write_gate	: out std_logic;
+		fdd_track0n		: in std_logic;
+		fdd_write_protn	: in std_logic;
 
-		dma_resetn : out std_logic;
-		dma_rwn : out std_logic;
-		dma_csn : out std_logic;
-		dma_a1 : out std_logic;
-		dma_intn : in std_logic;
-		dma_drq : in std_logic;
-		dma_ackn : out std_logic;
-		dma_rd : in std_logic_vector(7 downto 0);
-		dma_wd : out std_logic_vector(7 downto 0);
+		dma_resetn		: out std_logic;
+		dma_rwn			: out std_logic;
+		dma_csn			: out std_logic;
+		dma_a1			: out std_logic;
+		dma_intn		: in std_logic;
+		dma_drq			: in std_logic;
+		dma_ackn		: out std_logic;
+		dma_rd			: in std_logic_vector(7 downto 0);
+		dma_wd			: out std_logic_vector(7 downto 0);
 
-		a : out std_logic_vector(23 downto 1);
-		ds : out std_logic_vector(1 downto 0);
-		r : out std_logic;
-		r_done : in std_logic;
-		w : out std_logic;
-		w_done : in std_logic;
-		od : in std_logic_vector(15 downto 0);
-		id : out std_logic_vector(15 downto 0)
+		ram_a			: out std_logic_vector(23 downto 1);
+		ram_ds			: out std_logic_vector(1 downto 0);
+		ram_r			: out std_logic;
+		ram_r_done		: in std_logic;
+		ram_w			: out std_logic;
+		ram_w_done		: in std_logic;
+		ram_r_d			: in std_logic_vector(15 downto 0);
+		ram_w_d			: out std_logic_vector(15 downto 0);
+
+		rom_a			: out std_logic_vector(23 downto 1);
+		rom_r			: out std_logic;
+		rom_r_done		: in std_logic;
+		rom_r_d			: in std_logic_vector(15 downto 0)
 	);
 end atarist_mb;
 
@@ -204,15 +209,10 @@ architecture structure of atarist_mb is
 	signal RDATn		: std_logic;
 	signal LATCH		: std_logic;
 
-	signal ram_A		: std_logic_vector(23 downto 1);
-	signal ram_iD		: std_logic_vector(15 downto 0);
-	signal ram_oD		: std_logic_vector(15 downto 0);
-	signal ram_W		: std_logic;
-	signal ram_R		: std_logic;
-	signal ram_DS		: std_logic_vector(1 downto 0);
-	signal ram_W_DONE	: std_logic;
-	signal ram_R_DONE	: std_logic;
+	signal s_ram_w		: std_logic;
+	signal s_ram_r		: std_logic;
 	signal ram_ws		: std_logic;
+	signal s_rom_r		: std_logic;
 
 	signal shifter_CSn	: std_logic;
 	signal shifter_RWn	: std_logic;
@@ -301,22 +301,20 @@ begin
 	ikbd_clkfen <= en2fck;
 	sound_clk <= ck48;
 
-	a <= ram_A;
-	ds <= ram_DS;
-	r <= ram_R;
-	ram_R_DONE <= r_done;
-	w <= ram_W;
-	ram_W_DONE <= w_done;
-	ram_oD <= od;
-	id <= ram_iD;
+	ram_r <= s_ram_r;
+	ram_w <= s_ram_w;
+	rom_r <= s_rom_r;
+	rom_a <= bus_a(23 downto 1);
 
 	stbus:entity atarist_bus port map(
 		cpu_d => cpu_oD,
 		cpu_e => cpu_RWn,
 		shifter_od => shifter_oD,
 		shifter_e => shifter_CSn,
-		ram_d => ram_oD,
+		ram_d => ram_r_d,
 		ram_e => RDATn,
+		rom_d => rom_r_d,
+		rom_e => s_rom_r,
 		ram_latch => LATCH,
 		mfp_d => mfp_oD,
 		mmu_d => mmu_oD,
@@ -398,9 +396,9 @@ begin
 		);
 	enNC1 <= clken_video;
 	enNC2 <= clken_bus and clken_dma;
-	clken_bus <= ((not ram_R or ram_R_DONE) and (not (ram_W or ram_ws) or ram_W_DONE) and not clken_busdly) or bus_DTACKn or clken_bus2;
-	clken_video <= load or not ram_R or ram_R_DONE;
-	clken_dma <= ((not ram_R or ram_R_DONE) and (not ram_ws or ram_W_DONE)) or mmu_DMAn;
+	clken_bus <= ((not s_rom_r or rom_r_done) and (not s_ram_r or ram_r_done) and (not (s_ram_w or ram_ws) or ram_w_done) and not clken_busdly) or bus_DTACKn or clken_bus2;
+	clken_video <= load or not s_ram_r or ram_r_done;
+	clken_dma <= ((not s_ram_r or ram_r_done) and (not ram_ws or ram_w_done)) or mmu_dman;
 
 	process(clk,reset)
 	begin
@@ -408,7 +406,7 @@ begin
 			ram_ws <= '0';
 			clken_busdly <= '1';
 		elsif rising_edge(clk) then
-			ram_ws <= ram_W;
+			ram_ws <= s_ram_w;
 			clken_busdly <= en8rck;
 		end if;
 	end process;
@@ -453,6 +451,7 @@ begin
 		RAMn => mmu_RAMn,
 		DMAn => mmu_DMAn,
 		DEVn => mmu_DEVn,
+		rom_r => s_rom_r,
 		BRn => cpu_BRn,
 		BGn => cpu_BGn,
 		BGACKn => cpu_BGACKn,
@@ -511,8 +510,8 @@ begin
 
 		mem_top	=> mem_top,
 		ram_A => ram_A,
-		ram_W => ram_W,
-		ram_R => ram_R,
+		ram_W => s_ram_w,
+		ram_R => s_ram_r,
 		ram_DS => ram_DS
 	);
 	mmu_iA <= bus_A;
@@ -522,7 +521,7 @@ begin
 	mmu_iUDSn <= bus_UDSn;
 	mmu_iLDSn <= bus_LDSn;
 
-	ram_iD <= bus_D;
+	ram_w_d <= bus_D;
 
 	en8shiftck <= en8fck when shifter_ws = '0' else en8rck;
 	shift:entity shifter port map (

@@ -58,6 +58,12 @@ entity zest_atari_st_core is
 		ram_w_d			: out std_logic_vector(15 downto 0);
 		ram_w_done		: in std_logic;
 
+		-- rom interface signals
+		rom_a			: out std_logic_vector(31 downto 0);
+		rom_r			: out std_logic;
+		rom_r_d			: in std_logic_vector(15 downto 0);
+		rom_r_done		: in std_logic;
+
 		-- video
 		pclk			: in std_logic;		-- independent clock
 		rgb				: out std_logic_vector(23 downto 0);
@@ -134,7 +140,8 @@ architecture structure of zest_atari_st_core is
 	signal host_addr		: std_logic_vector(8 downto 0);
 	signal host_track		: std_logic_vector(7 downto 0);
 
-	signal ram_A_23		: std_logic_vector(23 downto 1);
+	signal ram_a_23		: std_logic_vector(23 downto 1);
+	signal rom_a_23		: std_logic_vector(23 downto 1);
 	signal fdd_drq		: std_logic;
 	signal fdd_ack		: std_logic;
 	signal fdd_derr		: std_logic;
@@ -185,6 +192,7 @@ begin
 
 	dblpix24 <= dblpix(15 downto 11) & "000" & dblpix(10 downto 5) & "00" & dblpix(4 downto 0) & "000";
 	ram_a <= x"00" & ram_a_23 & '0';
+	rom_a <= x"00" & rom_a_23 & '0';
 	monomon <= out_reg0(2);
 	mem_top <= out_reg0(9 downto 4);
 	sound_vol <= out_reg0(14 downto 10);
@@ -320,14 +328,18 @@ begin
 		dma_ackn => dma_ackn,
 		dma_rd => dma_rd,
 		dma_wd => dma_wd,
-		a => ram_a_23,
-		ds => ram_ds,
-		r => ram_r,
-		r_done => ram_r_done,
-		w => ram_w,
-		w_done => ram_w_done,
-		od => ram_r_d,
-		id => ram_w_d
+		ram_a => ram_a_23,
+		ram_ds => ram_ds,
+		ram_r => ram_r,
+		ram_r_done => ram_r_done,
+		ram_w => ram_w,
+		ram_w_done => ram_w_done,
+		ram_r_d => ram_r_d,
+		ram_w_d => ram_w_d,
+		rom_a => rom_a_23,
+		rom_r => rom_r,
+		rom_r_done => rom_r_done,
+		rom_r_d => rom_r_d
 	);
 
 	fdd:entity floppy_drive port map (

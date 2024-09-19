@@ -119,6 +119,10 @@ architecture structure of zest_top is
 			ram_w : in std_logic;
 			ram_w_d : in std_logic_vector(15 downto 0);
 			ram_w_done : out std_logic;
+			rom_a : in std_logic_vector(31 downto 0);
+			rom_r : in std_logic;
+			rom_r_d : out std_logic_vector(15 downto 0);
+			rom_r_done : out std_logic;
 			resetn : out std_logic;
 			vid5_clk : out std_logic;
 			vid_clk : out std_logic
@@ -162,6 +166,10 @@ architecture structure of zest_top is
 	signal ram_w 		: std_logic;
 	signal ram_w_d 		: std_logic_vector(15 downto 0);
 	signal ram_w_done 	: std_logic;
+	signal rom_a 		: std_logic_vector(31 downto 0);
+	signal rom_r 		: std_logic;
+	signal rom_r_d 		: std_logic_vector(15 downto 0);
+	signal rom_r_done 	: std_logic;
 
 	signal pclk			: std_logic;
 	signal p5clk		: std_logic;
@@ -232,6 +240,10 @@ begin
 		ram_w => ram_w,
 		ram_w_d => ram_w_d,
 		ram_w_done => ram_w_done,
+		rom_a => rom_a,
+		rom_r => rom_r,
+		rom_r_d => rom_r_d,
+		rom_r_done => rom_r_done,
 		resetn => resetn,
 		vid5_clk => p5clk,
 		vid_clk => pclk
@@ -258,6 +270,10 @@ begin
 		ram_w => ram_w,
 		ram_w_d => ram_w_d,
 		ram_w_done => ram_w_done,
+		rom_a => rom_a,
+		rom_r => rom_r,
+		rom_r_d => rom_r_d,
+		rom_r_done => rom_r_done,
 
 		pclk => pclk,
 		rgb => rgb,

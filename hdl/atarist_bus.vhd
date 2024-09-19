@@ -26,6 +26,8 @@ entity atarist_bus is
 		shifter_e	: in std_logic;
 		ram_d		: in std_logic_vector(15 downto 0);
 		ram_e		: in std_logic;
+		rom_d		: in std_logic_vector(15 downto 0);
+		rom_e		: in std_logic;
 		ram_latch	: in std_logic;
 		mfp_d		: in std_logic_vector(7 downto 0);
 		mmu_d		: in std_logic_vector(7 downto 0);
@@ -57,6 +59,7 @@ begin
 
 bus_d <= (cpu_d or (15 downto 0 => cpu_e)) and shifter_od
 		and (ram_ds or (15 downto 0 => ram_e or not cpu_e))
+		and (rom_d or (15 downto 0 => not rom_e))
 		and (x"ff" & (mmu_d and mfp_d)) and ("11111" & glue_d & x"ff")
 		and ((acia_ikbd_d or (7 downto 0 => acia_ikbd_e nand cpu_e)) & x"ff")
 		and ((acia_midi_d or (7 downto 0 => acia_midi_e nand cpu_e)) & x"ff")
