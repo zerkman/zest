@@ -130,7 +130,9 @@ architecture behavioral of mc68901 is
 	signal dtackn_reg	: std_logic;
 
 	signal sod		: std_logic_vector(7 downto 0);
+	signal ii0		: std_logic_vector(7 downto 0);
 	signal ii1		: std_logic_vector(7 downto 0);
+	signal trd		: std_logic_vector(7 downto 0);
 
 	-- prescale values
 	function prescale(v : std_logic_vector(2 downto 0)) return integer is
@@ -185,6 +187,8 @@ begin
 	intv <= (ipra and imra) & (iprb and imrb);
 	ipl <= priority(intv);
 	isr_ipl <= priority(isra&isrb);
+	ii0 <= ii xor aer;
+	trd <= ii1 and not ii0 and not ddr;
 
 	process(clk,resetn)
 	begin
@@ -394,17 +398,9 @@ begin
 							when x"07" =>
 								iera <= id;
 								ipra <= ipra and id;
-								if ddr(7) = '0' and iera(7) = '0' and id(7) = '1' and ii(7) = aer(7) then ipra(7) <= '1'; end if;
-								if ddr(6) = '0' and iera(6) = '0' and id(6) = '1' and ii(6) = aer(6) then ipra(6) <= '1'; end if;
 							when x"09" =>
 								ierb <= id;
 								iprb <= iprb and id;
-								if ddr(5) = '0' and ierb(7) = '0' and id(7) = '1' and ii(5) = aer(5) then iprb(7) <= '1'; end if;
-								if ddr(4) = '0' and ierb(6) = '0' and id(6) = '1' and ii(4) = aer(4) then iprb(6) <= '1'; end if;
-								if ddr(3) = '0' and ierb(3) = '0' and id(3) = '1' and ii(3) = aer(3) then iprb(3) <= '1'; end if;
-								if ddr(2) = '0' and ierb(2) = '0' and id(2) = '1' and ii(2) = aer(2) then iprb(2) <= '1'; end if;
-								if ddr(1) = '0' and ierb(1) = '0' and id(1) = '1' and ii(1) = aer(1) then iprb(1) <= '1'; end if;
-								if ddr(0) = '0' and ierb(0) = '0' and id(0) = '1' and ii(0) = aer(0) then iprb(0) <= '1'; end if;
 							when x"0b" => ipra <= ipra and id;
 							when x"0d" => iprb <= iprb and id;
 							when x"0f" => isra <= isra and id;
@@ -478,15 +474,15 @@ begin
 					dtackn_reg <= '0';
 				end if;
 
-				ii1 <= ii;
-				if ddr(7) = '0' and ii(7) /= ii1(7) and ii(7) = aer(7) and iera(7) = '1' then ipra(7) <= '1'; end if;
-				if ddr(6) = '0' and ii(6) /= ii1(6) and ii(6) = aer(6) and iera(6) = '1' then ipra(6) <= '1'; end if;
-				if ddr(5) = '0' and ii(5) /= ii1(5) and ii(5) = aer(5) and ierb(7) = '1' then iprb(7) <= '1'; end if;
-				if ddr(4) = '0' and ii(4) /= ii1(4) and ii(4) = aer(4) and ierb(6) = '1' then iprb(6) <= '1'; end if;
-				if ddr(3) = '0' and ii(3) /= ii1(3) and ii(3) = aer(3) and ierb(3) = '1' then iprb(3) <= '1'; end if;
-				if ddr(2) = '0' and ii(2) /= ii1(2) and ii(2) = aer(2) and ierb(2) = '1' then iprb(2) <= '1'; end if;
-				if ddr(1) = '0' and ii(1) /= ii1(1) and ii(1) = aer(1) and ierb(1) = '1' then iprb(1) <= '1'; end if;
-				if ddr(0) = '0' and ii(0) /= ii1(0) and ii(0) = aer(0) and ierb(0) = '1' then iprb(0) <= '1'; end if;
+				ii1 <= ii0;
+				if trd(7) = '1' and iera(7) = '1' then ipra(7) <= '1'; end if;
+				if trd(6) = '1' and iera(6) = '1' then ipra(6) <= '1'; end if;
+				if trd(5) = '1' and ierb(7) = '1' then iprb(7) <= '1'; end if;
+				if trd(4) = '1' and ierb(6) = '1' then iprb(6) <= '1'; end if;
+				if trd(3) = '1' and ierb(3) = '1' then iprb(3) <= '1'; end if;
+				if trd(2) = '1' and ierb(2) = '1' then iprb(2) <= '1'; end if;
+				if trd(1) = '1' and ierb(1) = '1' then iprb(1) <= '1'; end if;
+				if trd(0) = '1' and ierb(0) = '1' then iprb(0) <= '1'; end if;
 
 				if sirqn = '0' and iackn = '0' and siackn(0) = '0' and dsn = '0' then
 					-- begin interrupt acknowledge cycle
