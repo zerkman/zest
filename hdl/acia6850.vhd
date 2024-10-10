@@ -120,6 +120,7 @@
 --                                    Renamed to acia6850
 --        François Galea 2020-09-05   Removed dependency to ieee.std_logic_unsigned
 --        François Galea 2021-01-16   Changed active clock edge
+--        François Galea 2024-10-10   Fixed IRQ after reset and interrupt enable
 
 library ieee;
   use ieee.std_logic_1164.all;
@@ -708,7 +709,7 @@ begin
     if rising_edge(clk) then
       if rx_rst = '1' then
         RxRdy <= '0';
-        RxReq <= '0';
+        RxReq <= '1';
       elsif RxRd = '1' then
         -- Data was read,
         RxRdy <= '0';                        -- Reset receive full
@@ -879,7 +880,7 @@ begin
     if rising_edge(clk) then
       if tx_rst = '1' then
         TxRdy <= '0';
-        TxReq <= '0';
+        TxReq <= '1';
       elsif TxWr = '1' then
         -- Data was read,
         TxRdy <= '0';                        -- Reset transmit empty
