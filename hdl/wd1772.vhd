@@ -66,7 +66,7 @@ architecture behavioral of wd1772 is
 	signal dat_btc	: unsigned(9 downto 0);		-- byte counter for sector read/write
 	type cmd_t is (
 		idle,idle1,
-		c1_init,c1_wait_ip,c1_a,c1_b,c1_c,c1_step,c1_delay,c1_d,c1_vlp,c1_dtr,c1_dsi,c1_dse,c1_dsl,c1_dc1,c1_dc2,
+		c1_init,c1_warmup,c1_wait_ip,c1_a,c1_b,c1_c,c1_step,c1_delay,c1_d,c1_vlp,c1_dtr,c1_dsi,c1_dse,c1_dsl,c1_dc1,c1_dc2,
 		c2_init,c2_wait_ip,c2_delay,c2_4,c2_1,c2_1dtr,c2_1dsi,c2_1dse,c2_1dsl,c2_1dc1,c2_1dc2,
 		c2_2,c2_2fb,c2_2nb,c2_2crc0,c2_2crc1,c2_5,
 		c2_3,c2_3wt1,c2_3wt2,c2_3wt3,c2_3wr0,c2_3wram,c2_3wrdata,c2_3wrcrc1,c2_3wrcrc2,c2_3wrff,c2_3wrend,
@@ -277,12 +277,18 @@ begin
 				DRQ <= '0';
 				INTRQ <= '0';
 				ipcnt <= x"0";
-				if motor_on = '0' then
-					-- motor on (S7)
-					motor_on <= '1';
-					ipcnt <= x"6";
+				-- extra delay for Type I commands (value taken from Hatari emulator)
+				delaycnt <= to_unsigned(728,delaycnt'length);
+				cmd_st <= c1_warmup;
+			when c1_warmup =>
+				if delaycnt = 0 then
+					if motor_on = '0' then
+						-- motor on (S7)
+						motor_on <= '1';
+						ipcnt <= x"6";
+					end if;
+					cmd_st <= c1_wait_ip;
 				end if;
-				cmd_st <= c1_wait_ip;
 			when c1_wait_ip =>
 				if ipcnt = x"0" then
 					if command(3) = '0' then
