@@ -35,11 +35,19 @@ extern volatile uint32_t *parmreg;
 extern volatile int thr_end;
 
 
-void led_status(int fd,int st) {
+static void led_status(int fd,int st) {
   if (fd>=0) {
     char val = st?'1':'0';
     write(fd,&val,1);
   }
+}
+
+static int joy_emu = 0;
+static int joyemufd = 0;
+
+static void set_joy_emu(int v) {
+  joy_emu = v;
+  led_status(joyemufd,v);
 }
 
 void * thread_ikbd(void * arg) {
@@ -48,8 +56,8 @@ void * thread_ikbd(void * arg) {
   int timeout = 100;
   int tp_x=-1,tp_y=-1;
 
-  int joyemufd = open(JOY_EMU_LED_FILE,O_WRONLY|O_SYNC);
-  int joy_emu = 0;
+  int meta = 0;
+  joyemufd = open(JOY_EMU_LED_FILE,O_WRONLY|O_SYNC);
 
   input_init();
 
@@ -74,6 +82,27 @@ void * thread_ikbd(void * arg) {
           timeout = 0;
           break;
         case EV_KEY:
+          if (evcode==KEY_LEFTMETA || evcode==KEY_RIGHTMETA) {
+            meta = evvalue;
+            break;
+          }
+          if (meta) {
+            // Meta toggles that do not trigger actual keypresses
+            switch (evcode) {
+              case KEY_J:
+                if (evvalue == 1) {
+                  set_joy_emu(!joy_emu);
+                }
+                break;
+              case KEY_ENTER:
+                if (evvalue == 0) {
+                  meta = 0;
+                  menu();
+                }
+                break;
+            }
+            break;
+          }
           key = -1;
           switch (evcode) {
             case KEY_F1:
@@ -108,7 +137,7 @@ void * thread_ikbd(void * arg) {
             case KEY_9: key = 29; break;
             case KEY_MINUS: key = 30; break;
             case KEY_GRAVE: key = 31; break;
-            case KEY_DELETE: key = 32; break;
+            case KEY_DELETE: key = meta?43:32; break;
             case KEY_HOME: key = 33; break;
             case KEY_KP7: key = 34; break;
             case KEY_KP9: key = 35; break;
@@ -182,8 +211,7 @@ void * thread_ikbd(void * arg) {
               break;
             case KEY_NUMLOCK:
               if (evvalue == 1) {
-                joy_emu = !joy_emu;
-                led_status(joyemufd,joy_emu);
+                set_joy_emu(!joy_emu);
               }
               break;
             case KEY_PAGEUP:
