@@ -102,7 +102,8 @@ process(clk,resetn)
 	variable wrq0 : std_logic;
 begin
 	if resetn = '0' then
-		ccnt <= (others => '0');
+		-- Initial disk rotation value allowing "My Socks Are Weapons" demo to boot
+		ccnt <= (18 => '1', others => '0');
 		track0 <= (others => '0');
 		track1 <= (others => '0');
 		data_sr <= (others => '0');
