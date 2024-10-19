@@ -28,9 +28,9 @@ if [ ! -z "$MISSING" ] ; then
 fi
 
 # Check library dependencies
-pkg-config uuid || MISSIN="$MISSING uuid-dev"
-pkg-config gnutls || MISSIN="$MISSING gnutls-dev"
-pkg-config libssl || MISSIN="$MISSING libssl-dev"
+pkg-config uuid || MISSING="$MISSING uuid-dev"
+pkg-config gnutls || MISSING="$MISSING gnutls-dev"
+pkg-config libssl || MISSING="$MISSING libssl-dev"
 # TODO: libtinfo5
 
 if [ ! -z "$MISSING" ] ; then
