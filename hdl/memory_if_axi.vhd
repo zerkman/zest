@@ -415,7 +415,7 @@ begin
 				when IDLE =>
 					for i in 0 to NUM_PORTS-1 loop
 						if ir_done(i) = '1' and r(i) = '0' then
-							r_d(i*32+31 downto i*32) <= (others => '0');
+							-- r_d(i*32+31 downto i*32) <= (others => '0');
 							ir_done(i) <= '0';
 						end if;
 					end loop;
@@ -728,13 +728,20 @@ begin
 	w(1) <= '0';
 	rom_r_done <= r_done(1);
 
-	process(ram_a1,ram_ds,ram32_rd)
+	process(ram_a,ram_ds)
 	begin
-		if ram_a1 = '1' then
+		if ram_a(1) = '1' then
 			ram32_ds <= ram_ds(0) & ram_ds(1) & "00";
-			ram_r_d <= ram32_rd(23 downto 16) & ram32_rd(31 downto 24);
 		else
 			ram32_ds <= "00" & ram_ds(0) & ram_ds(1);
+		end if;
+	end process;
+
+	process(ram_a1,ram32_rd)
+	begin
+		if ram_a1 = '1' then
+			ram_r_d <= ram32_rd(23 downto 16) & ram32_rd(31 downto 24);
+		else
 			ram_r_d <= ram32_rd(7 downto 0) & ram32_rd(15 downto 8);
 		end if;
 	end process;
@@ -754,8 +761,12 @@ begin
 			ram_a1 <= '0';
 			rom_a1 <= '0';
 		elsif rising_edge(m_axi_aclk) then
-			ram_a1 <= ram_a(1);
-			rom_a1 <= rom_a(1);
+			if ram_r = '1' then
+				ram_a1 <= ram_a(1);
+			end if;
+			if rom_r = '1' then
+				rom_a1 <= rom_a(1);
+			end if;
 		end if;
 	end process;
 
