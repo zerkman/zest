@@ -58,7 +58,7 @@ architecture behavioral of wd1772 is
 	signal ds_full	: std_logic;
 	signal ipn_ff	: std_logic;
 	signal DIR		: std_logic;
-	type amd_t is ( init,am1,am2,am3 );
+	type amd_t is ( init,am2,am3 );
 	signal amd_st	: amd_t;
 	signal amd_cnt	: unsigned(1 downto 0);
 	signal byte_cnt	: unsigned(4 downto 0);
@@ -171,14 +171,7 @@ begin
 				-- AM detection state machine
 				case amd_st is
 				when init =>
-					amd_cnt <= to_unsigned(1,amd_cnt'length);
-					amd_st <= am1;
-				when am1 =>
-					if DSR = x"4e" then
-						if amd_cnt > 0 then
-							amd_cnt <= amd_cnt - 1;
-						end if;
-					elsif DSR = x"00" and amd_cnt = 0 then
+					if DSR = x"00" then
 						amd_cnt <= to_unsigned(2,amd_cnt'length);
 						amd_st <= am2;
 					else
