@@ -82,6 +82,7 @@ architecture behavioral of wd1772 is
 	signal wgs		: std_logic;	-- 1 iff writing to disk
 	signal motor_on	: std_logic;
 	signal spin_up	: std_logic;
+	signal esc_f7	: std_logic;	-- F7 escape flag
 begin
 
 	MO <= motor_on;
@@ -131,6 +132,7 @@ begin
 			WD <= '0';
 			motor_on <= '0';
 			spin_up <= '0';
+			esc_f7 <= '0';
 		elsif clken = '1' then
 			ipn_ff <= IPn;
 			-- index pulse detection and counter decrement
@@ -736,6 +738,7 @@ begin
 				motor_on <= '1';	-- motor on
 				DRQ <= '0';
 				ipcnt <= x"0";
+				esc_f7 <= '0';
 				if motor_on = '0' then
 					-- enable spin-up sequence
 					ipcnt <= x"6";
@@ -869,15 +872,19 @@ begin
 				cmd_st <= c3_wrtr_b;
 			when c3_wrtr_b =>
 				cmd_st <= c3_wrtrwb;
-				if DSR = x"f5" then
-					DSR <= x"a1";
-					cmd_st <= c3_wrtrwf5;
-				elsif DSR = x"f6" then
-					DSR <= x"c2";
-				elsif DSR = x"f7" then
-					upd_crc <= '0';
-					DSR <= crc(15 downto 8);
-					cmd_st <= c3_wrtrwcrc;
+				esc_f7 <= '0';
+				if esc_f7 = '0' then
+					if DSR = x"f5" then
+						DSR <= x"a1";
+						cmd_st <= c3_wrtrwf5;
+					elsif DSR = x"f6" then
+						DSR <= x"c2";
+					elsif DSR = x"f7" then
+						esc_f7 <= '1';
+						upd_crc <= '0';
+						DSR <= crc(15 downto 8);
+						cmd_st <= c3_wrtrwcrc;
+					end if;
 				end if;
 			when c3_wrtrwb =>
 				if ds_full = '1' then
