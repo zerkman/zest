@@ -399,7 +399,8 @@ begin
 					status(0) <= '0';	-- reset busy
 					status(4) <= '1';	-- set seek error
 					cmd_st <= idle;
-				elsif amd_dtam = '1' and ds_full = '1' and DSR = x"fe" then
+				elsif amd_dtam = '1' and ds_full = '1' and DSR(7 downto 2) = "111111" then
+					-- DSR value should be 0xfe, but all values between 0xfc and 0xff work
 					-- ID address mark detected
 					cmd_st <= c1_dtr;
 				end if;
@@ -553,11 +554,11 @@ begin
 				upd_crc <= '1';
 				if amd_dtam = '1' and ds_full = '1' then
 					-- Address mark detected and next byte available in DSR
-					if DSR = x"fb" then
+					if DSR = x"fb" or DSR = x"fa" then
 						-- data address mark
 						status(5) <= '0';	-- record type (S5)
 						cmd_st <= c2_2fb;
-					elsif DSR = x"f8" then
+					elsif DSR = x"f8" or DSR = x"f9" then
 						-- deleted data address mark
 						status(5) <= '1';	-- record type (S5)
 						cmd_st <= c2_2fb;
@@ -775,7 +776,8 @@ begin
 					status(0) <= '0';	-- reset busy
 					status(4) <= '1';	-- seek error
 					cmd_st <= idle;
-				elsif amd_dtam = '1' and ds_full = '1' and DSR = x"fe" then
+				elsif amd_dtam = '1' and ds_full = '1' and DSR(7 downto 2) = "111111" then
+					-- DSR value should be 0xfe, but all values between 0xfc and 0xff work
 					-- ID address mark detected
 					cmd_st <= c3_rdad2;
 				end if;
