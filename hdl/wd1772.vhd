@@ -83,6 +83,8 @@ architecture behavioral of wd1772 is
 	signal motor_on	: std_logic;
 	signal spin_up	: std_logic;
 	signal esc_f7	: std_logic;	-- F7 escape flag
+	signal rdt_even	: std_logic;	-- low bit of last read byte (read track)
+	signal rdt_29	: std_logic;	-- read 0x29 after an even byte (read track)
 begin
 
 	MO <= motor_on;
@@ -133,6 +135,8 @@ begin
 			motor_on <= '0';
 			spin_up <= '0';
 			esc_f7 <= '0';
+			rdt_even <= '0';
+			rdt_29 <= '0';
 		elsif clken = '1' then
 			ipn_ff <= IPn;
 			-- index pulse detection and counter decrement
@@ -822,6 +826,16 @@ begin
 						status(2) <= '1';	-- lost data
 					end if;
 					DR <= DSR;
+					-- WD1772 bug: 0x29 0xa1 after an even byte is read as 0x14 0x0b
+					rdt_even <= DSR(0);
+					rdt_29 <= '0';
+					if DSR = x"29" and rdt_even = '0' then
+						rdt_29 <= '1';
+						DR <= x"14";
+					end if;
+					if DSR = x"a1" and rdt_29 = '1' then
+						DR <= x"0b";
+					end if;
 					status(1) <= '1';	-- DRQ
 					DRQ <= '1';
 					if ipcnt = x"0" then
