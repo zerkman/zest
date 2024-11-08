@@ -10,7 +10,7 @@ cp uImage release
 cp rootfs.ub release
 for target in $TARGETS ; do
     mkdir -p release/boards/$target
-    cp $target/BOOT.bin release/boards/$target
+    cp $target/boot.bin release/boards/$target
     cp $target/devicetree.dtb release/boards/$target
 done
 cp ../zest.cfg release
