@@ -20,7 +20,7 @@ the_ROM_image:
     [bootloader]fsbl.elf
     zest_top.bit
     u-boot.elf
-    devicetree.dtb
+    [load=0x800000]devicetree.dtb
 }
 EOF
 $XILINX_PATH/Vitis/$XILINX_VERSION/bin/bootgen -arch zynq -image boot.bif -o boot.bin || exit $?
