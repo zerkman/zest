@@ -12,7 +12,7 @@ target=$1
 
 cd output/$target
 
-rm -f BOOT.bin*
+rm -f boot.bin*
 cat<<EOF > boot.bif
 //arch = zynq; split = false; format = BIN
 the_ROM_image:
@@ -23,7 +23,7 @@ the_ROM_image:
     devicetree.dtb
 }
 EOF
-$XILINX_PATH/Vitis/$XILINX_VERSION/bin/bootgen -arch zynq -image boot.bif -o BOOT.bin || exit $?
+$XILINX_PATH/Vitis/$XILINX_VERSION/bin/bootgen -arch zynq -image boot.bif -o boot.bin || exit $?
 rm boot.bif
 
 # Create the boot file for setting up QSPI on zynqberry and other xc7z010-clg225 based boards

@@ -81,8 +81,8 @@ for target in $TARGETS ; do
         recipes/u-boot.sh $target
     fi
 
-    # BOOT.bin
-    if [ ! -f output/$target/BOOT.bin ] ; then
+    # boot.bin
+    if [ ! -f output/$target/boot.bin ] ; then
         recipes/boot_bin.sh $target
     fi
 
