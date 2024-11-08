@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TARGETS="z7lite_7010 z7lite_7020"
+TARGETS="z7lite_7010 z7lite_7020 zynqberry"
 
 export XILINX_PATH=/opt/Xilinx
 export XILINX_VERSION=2024.1
@@ -54,8 +54,8 @@ if [ ! -f output/uImage ] ; then
 fi
 
 # boot.scr
-if [ ! -f output/$target/boot.scr ] ; then
-    recipes/boot_scr.sh $target
+if [ ! -f output/boot.scr ] ; then
+    recipes/boot_scr.sh
 fi
 
 for target in $TARGETS ; do

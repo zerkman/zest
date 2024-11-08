@@ -1,0 +1,30 @@
+#include "system-top.dts"
+/{
+	usb_phy0: usb_phy@0{
+		compatible = "ulpi-phy";
+		#phy-cells = <0>;
+		reg = <0xe0002000 0x1000>;
+		view-port = <0x170>;
+		drv-vbus;
+	};
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		vin_reserved: vin@10000000 {
+			reg = <0x10000000 0x1000000>;
+		};
+	};
+
+};
+
+&usb0{
+	dr_mode = "host";
+	usb-phy = <&usb_phy0>;
+};
+
+&bridge_host_0{
+	compatible = "generic-uio";
+	interrupt-parent = <&intc>;
+	interrupts = <0 29 4>;
+};
