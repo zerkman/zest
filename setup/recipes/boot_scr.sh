@@ -11,7 +11,7 @@ fi
 cd output
 
 cat<<EOF >boot.cmd
-setenv bootargs console=ttyPS0,921600 rw earlyprintk uio_pdrv_genirq.of_id=generic-uio rootwait
+setenv bootargs init=/usr/bin/zestinit.sh console=ttyPS0,921600 rw earlyprintk uio_pdrv_genirq.of_id=generic-uio rootwait
 fatload mmc 0 0x8000 uImage
 fatload mmc 0 0x900000 rootfs.ub
 bootm 0x8000 0x900000 0x800000
