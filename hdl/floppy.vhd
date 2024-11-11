@@ -54,6 +54,7 @@ entity floppy_drive is
 end floppy_drive;
 
 architecture behavioral of floppy_drive is
+	constant MAX_TRACKS	: integer := 85;
 	constant NBITS		: integer := 128;
 	constant LOGNBITS	: integer := 7;
 	constant LASTNB		: integer := 6250 mod (NBITS/8);
@@ -126,7 +127,7 @@ begin
 			if drv0_select = '0' then
 				step_ff <= step;
 				if step = '1' and step_ff = '0' then
-					if direction = '1' and track0 < 83 then
+					if direction = '1' and track0 < MAX_TRACKS-1 then
 						track0 <= track0 + 1;
 					elsif direction = '0' and track0 > 0 then
 						track0 <= track0 - 1;
@@ -135,7 +136,7 @@ begin
 			elsif drv1_select = '0' then
 				step_ff <= step;
 				if step = '1' and step_ff = '0' then
-					if direction = '1' and track1 < 83 then
+					if direction = '1' and track1 < MAX_TRACKS-1 then
 						track1 <= track1 + 1;
 					elsif direction = '0' and track1 > 0 then
 						track1 <= track1 - 1;
