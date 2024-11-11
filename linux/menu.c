@@ -92,6 +92,8 @@ enum {
 #error Too many characters (XCHARS*YCHARS)
 #endif
 
+int menu_active=0;
+
 static const int file_selector_filename_lines=FSEL_YCHARS-2;
 static FILE_SELECTOR_STATE file_selector_state[FILE_SELECTOR_VIEWS];
 static FILE_SELECTOR_STATE *current_view;
@@ -618,6 +620,7 @@ static const uint8_t gradients[][2][3]={
 uint8_t top_palette[8][3] = {{7,121,222},{ 0,0,0 },{ 0,0,0 },{ 0,0,0 },{ 0,0,0 },{ 0,0,0 },{ 0,0,0 },{20,72,140},};
 
 void menu(void) {
+  menu_active=1;
   uint8_t osd_palette0[8][24];
 
   osd_init();
@@ -655,4 +658,5 @@ void menu(void) {
     zui_run(FSEL_XPOS,FSEL_YPOS,form);
     zui_free(form);
   }
+  menu_active=0;
 }

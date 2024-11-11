@@ -286,6 +286,7 @@ extern uint8_t osd_palette[3][24];
 extern volatile uint32_t *parmreg;
 extern int _xchars;
 extern int _ychars;
+extern int menu_active;
 
 int zui_run(int xpos, int ypos, ZuiWidget *obj) {
   int quit = 0;
@@ -326,12 +327,16 @@ int zui_run(int xpos, int ypos, ZuiWidget *obj) {
     unsigned int track = in>>13&0xff;
     char floppy_osd_info[10];
     if (r) {
-      sprintf(floppy_osd_info,"R T%02d S%d", track>> 1, track&1);
-      osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
+      if (menu_active) {
+        sprintf(floppy_osd_info,"R T%02d S%d", track>> 1, track&1);
+        osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
+      }
     }
     if (w) {
-      sprintf(floppy_osd_info,"W T%02d S%d", track>> 1, track&1);
-      osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
+      if (menu_active) {
+        sprintf(floppy_osd_info,"W T%02d S%d", track>> 1, track&1);
+        osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
+      }
     }
 
     // simulate keyboard events with joystick
