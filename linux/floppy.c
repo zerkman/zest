@@ -56,6 +56,19 @@ void change_floppy(const char *filename, int drive) {
   pthread_mutex_unlock(&mutex);
 }
 
+static unsigned int floppy_r;
+static unsigned int floppy_w;
+static unsigned int floppy_addr;
+static unsigned int floppy_track;
+static unsigned int floppy_drive;
+
+void get_floppy_status(unsigned int *r, unsigned int *w, unsigned int *track, unsigned int *side) {
+  *r = floppy_r;
+  *w = floppy_w;
+  *track = floppy_track>>1;
+  *side = floppy_track&1;
+}
+
 void floppy_interrupt(uint32_t in) {
   static unsigned int oldaddr=2000;
   static uint32_t oldin=0;
@@ -66,30 +79,30 @@ void floppy_interrupt(uint32_t in) {
     int drive;
   } pos_fifo[3] = {0};
 
-  unsigned int r = in>>31;
-  unsigned int w = in>>30&1;
-  unsigned int addr = in>>21&0x1ff;
-  unsigned int track = in>>13&0xff;
-  unsigned int drive = in>>12&1;
+  floppy_r = in>>31;
+  floppy_w = in>>30&1;
+  floppy_addr = in>>21&0x1ff;
+  floppy_track = in>>13&0xff;
+  floppy_drive = in>>12&1;
 
-  if (addr==oldaddr) return;
+  if (floppy_addr==oldaddr) return;
   unsigned int newaddr = oldaddr==390?0:(oldaddr+1);
-  if (oldaddr<=390 && addr!=newaddr) {
-    printf("missed addr, expected=%u, got=%u, oldin=%08x in=%08x\n",newaddr,addr,oldin,in);
+  if (oldaddr<=390 && floppy_addr!=newaddr) {
+    printf("missed addr, expected=%u, got=%u, oldin=%08x in=%08x\n",newaddr,floppy_addr,oldin,in);
     fflush(stdout);
   }
   oldin = in;
-  oldaddr = addr;
+  oldaddr = floppy_addr;
 
   // start a critical section so the image is not changed during access
   pthread_mutex_lock(&mutex);
-  if (r) {
+  if (floppy_r) {
     pos_fifo[2] = pos_fifo[1];
     pos_fifo[1] = pos_fifo[0];
 
-    unsigned int pos = addr*16+16;
-    if (img[drive]) {
-      uint8_t *trkp = flopimg_trackpos(img[drive],track>>1,track&1);
+    unsigned int pos = floppy_addr*16+16;
+    if (img[floppy_drive]) {
+      uint8_t *trkp = flopimg_trackpos(img[floppy_drive],floppy_track>>1,floppy_track&1);
       if (pos>=6250) {
         pos = 0;
       }
@@ -100,9 +113,9 @@ void floppy_interrupt(uint32_t in) {
       pos_fifo[0].p = NULL;
       pos_fifo[0].count = 0;
     }
-    pos_fifo[0].drive = drive;
+    pos_fifo[0].drive = floppy_drive;
 
-    if (w) {
+    if (floppy_w) {
       memcpy(pos_fifo[2].p,(void*)&parmreg[8],pos_fifo[2].count);
       flopimg_writeback(img[pos_fifo[2].drive]);
     }

@@ -25,4 +25,6 @@
 // drive = 0 (drive A) or 1 (drive B)
 void change_floppy(const char *filename, int drive);
 
+void get_floppy_status(unsigned int *r, unsigned int *w, unsigned int *track, unsigned int *side);
+
 #endif

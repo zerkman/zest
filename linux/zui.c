@@ -24,6 +24,7 @@
 #include "zui.h"
 #include "osd.h"
 #include "input.h"
+#include "floppy.h"
 
 // widget types
 #define ZUI_PANEL   1
@@ -283,7 +284,6 @@ int select_focused(int sel) {
 
 extern volatile int thr_end;
 extern uint8_t osd_palette[3][24];
-extern volatile uint32_t *parmreg;
 extern int _xchars;
 extern int _ychars;
 extern int menu_active;
@@ -321,22 +321,12 @@ int zui_run(int xpos, int ypos, ZuiWidget *obj) {
     // TODO: - This is copypasta from thread_floppy()
     //       - This will have "interesting" effects if _xchars is less than 10
     //       - Make this into a special OSD menu in some corner of the screen so it will be always visible?
-    uint32_t in = parmreg[0];
-    unsigned int r = in>>31;
-    unsigned int w = in>>30&1;
-    unsigned int track = in>>13&0xff;
+    unsigned int r,w,track,side;
+    get_floppy_status(&r,&w,&track,&side);
     char floppy_osd_info[10];
-    if (r) {
-      if (menu_active) {
-        sprintf(floppy_osd_info,"R T%02d S%d", track>> 1, track&1);
-        osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
-      }
-    }
-    if (w) {
-      if (menu_active) {
-        sprintf(floppy_osd_info,"W T%02d S%d", track>> 1, track&1);
-        osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
-      }
+    if ((r||w) && menu_active) {
+      sprintf(floppy_osd_info,"%c T%02d S%d", w?'W':'R', track, side);
+      osd_text(floppy_osd_info, _xchars-10, _ychars-1, 3, 0);
     }
 
     // simulate keyboard events with joystick
