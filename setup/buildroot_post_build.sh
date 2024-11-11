@@ -66,8 +66,10 @@ mkdir -p $TARGET/etc/bluetooth/var
 ln -s /etc/bluetooth/var $TARGET/var/lib/bluetooth
 cat <<EOF > $TARGET/etc/bluetooth/main.conf
 [General]
-
 Name = zeST
+
+[Policy]
+AutoEnable=true
 EOF
 
 cp $SRCDIR/linux/zeST $TARGET/usr/bin
