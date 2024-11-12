@@ -473,7 +473,11 @@ begin
 			elsif varcnt > 0 then
 				vs_busy := '1';
 				ram_addr2 <= std_logic_vector(unsigned(ram_addr2)+1);
-				varcnt <= varcnt + 1;
+				if varcnt < 4 then
+					varcnt <= varcnt + 1;
+				else
+					varcnt <= 0;
+				end if;
 				if varcnt = 2 then
 					show <= ram_dout2(0);
 				elsif varcnt = 3 then
@@ -484,7 +488,6 @@ begin
 				elsif varcnt = 4 then
 					xdstart <= to_integer(unsigned(ram_dout2(11 downto 0)));
 					ydstart <= to_integer(unsigned(ram_dout2(27 downto 16)));
-					varcnt <= 0;
 				end if;
 			end if;
 
@@ -508,7 +511,11 @@ begin
 				end if;
 				pxok <= '0';
 			elsif clrcnt > 0 and vs_busy = '0' then
-				clrcnt <= clrcnt + 1;
+				if clrcnt < 8 then
+					clrcnt <= clrcnt + 1;
+				else
+					clrcnt <= 0;
+				end if;
 				ram_addr2 <= std_logic_vector(to_unsigned(clrp,ram_addr2'length));
 				clrp <= clrp + 1;
 				-- big endian read
@@ -538,7 +545,6 @@ begin
 					clrp <= clrp;
 					colr(6)(7 downto 0) <= x(31 downto 24);
 					colr(7) <= x(23 downto 0);
-					clrcnt <= 0;
 				end if;
 			elsif ide = '1' and show = '1' then
 				pxok <= '1';
