@@ -358,7 +358,6 @@ architecture arch_imp of on_screen_display is
 	signal varcnt		: integer range 0 to 4;		-- variable load counter
 	signal show			: std_logic;				-- show/hide the OSD
 	signal xdstart		: integer range 0 to 4095;	-- X display start (nb of pixels from the left border)
-	signal ydstart		: integer range 0 to 4095;	-- Y display start (nb of lines from the top border)
 	signal xchars		: integer range 0 to 127;	-- number of characters per line
 	signal ychars		: integer range 0 to 127;	-- number of lines of characters
 	signal clrcnt		: integer range 0 to 8;		-- colours load counter
@@ -433,8 +432,8 @@ begin
 			s_vsync <= '0';
 			s_hsync <= '0';
 			s_de <= '0';
-			xcnt <= to_signed(-xdstart,xcnt'length);
-			ycnt <= to_signed(-ydstart,ycnt'length);
+			xcnt <= (others => '0');
+			ycnt <= (others => '0');
 			pxok <= '0';
 			intr <= '0';
 			chrp <= chr_offset*2;
@@ -447,7 +446,6 @@ begin
 			varcnt <= 0;
 			show <= '0';
 			xdstart <= 0;
-			ydstart <= 0;
 			xchars <= 0;
 			ychars <= 0;
 			clrp <= clr_offset;
@@ -460,7 +458,6 @@ begin
 			vs_busy := '0';
 
 			if ivsync = '1' and s_vsync = '0' then
-				ycnt <= to_signed(-ydstart,ycnt'length);
 				chrp <= chr_offset*2;
 				clrp <= clr_offset;
 				clrcnt <= 1;
@@ -487,7 +484,7 @@ begin
 					ram_re2 <= '0';
 				elsif varcnt = 4 then
 					xdstart <= to_integer(unsigned(ram_dout2(11 downto 0)));
-					ydstart <= to_integer(unsigned(ram_dout2(27 downto 16)));
+					ycnt <= to_signed(-to_integer(unsigned(ram_dout2(27 downto 16))),ycnt'length);
 				end if;
 			end if;
 
