@@ -43,7 +43,7 @@ end ram_tdp;
 
 architecture behavioral of ram_tdp is
 	type mem_t is array (2**ADDR_WIDTH-1 downto 0) of std_logic_vector(DATA_WIDTH-1 downto 0);
-	signal mem : mem_t;
+	shared variable mem : mem_t;
 
 begin
 
@@ -56,7 +56,7 @@ begin
 		if we1 = '1' then
 			for i in 0 to (DATA_WIDTH/8-1) loop
 				if wsb1(i) = '1' then
-					mem(to_integer(unsigned(addr1)))(i*8+7 downto i*8) <= din1(i*8+7 downto i*8);
+					mem(to_integer(unsigned(addr1)))(i*8+7 downto i*8) := din1(i*8+7 downto i*8);
 				end if;
 			end loop;
 		end if;
@@ -72,7 +72,7 @@ begin
 		if we2 = '1' then
 			for i in 0 to (DATA_WIDTH/8-1) loop
 				if wsb2(i) = '1' then
-					mem(to_integer(unsigned(addr2)))(i*8+7 downto i*8) <= din2(i*8+7 downto i*8);
+					mem(to_integer(unsigned(addr2)))(i*8+7 downto i*8) := din2(i*8+7 downto i*8);
 				end if;
 			end loop;
 		end if;
