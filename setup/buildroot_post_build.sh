@@ -48,7 +48,7 @@ if test ! -f $TARGET/usr/bin/zestinit.sh ; then
 mount -t proc proc /proc
 mount -tvfat -oflush,dirsync,noatime,noexec,nodev,fmask=0133,dmask=0022 /dev/mmcblk0p1 /sdcard
 if [ ! -f /sdcard/overlay.bin ] ; then
-    dd of=/sdcard/overlay.bin bs=1m seek=2 count=0
+    /bin/dd of=/sdcard/overlay.bin bs=1M seek=2 count=0
     /sbin/mke2fs -F /sdcard/overlay.bin
     chmod -w /sdcard/overlay.bin
 fi
