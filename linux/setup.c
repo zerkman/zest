@@ -84,7 +84,7 @@ static void setup_cfg(unsigned int reset) {
   cfg |= config.floppy_b_enable<<17;
   cfg |= config.floppy_b_write_protect<<18;
   cfg |= config.extended_video_modes<<19;
-  cfg |= ws_cfg[config.wakestate-1]<<20;
+  cfg |= ws_cfg[config.wakestate]<<20;
   cfg |= cfg_romsize<<22;
   cfg |= config.shifter_wakestate<<24;
   parmreg[0] = cfg;
@@ -139,22 +139,8 @@ void warm_reset() {
   setup_cfg(3); // |3="end reset"
 }
 
-void set_wakestate(int ws) {
-  config.wakestate = ws;
+void setup_update() {
   setup_cfg(3);
-}
-
-void set_shifter_wakestate(int ws) {
-  config.shifter_wakestate = ws;
-  setup_cfg(3);
-}
-
-void set_extended() {
-  setup_cfg(3);
-}
-
-int get_wakestate(void) {
-  return config.wakestate;
 }
 
 int get_sound_vol(void) {

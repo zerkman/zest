@@ -152,6 +152,8 @@ void menu(void) {
       if (settings()) {
         cold_reset();
         quit = 1;
+      } else {
+        setup_update();
       }
     }
   }
