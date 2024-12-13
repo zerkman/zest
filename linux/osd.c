@@ -117,6 +117,16 @@ void osd_set_palette(const uint32_t palette[4]) {
 // entry format: col_id<<24 | rgb
 // if col_id>=4 no change is done
 void osd_set_palette_changes(const uint32_t *col_chg, int count) {
-  printf("osd_set_palette_changes\n");
-  memcpy((void*)osdreg->colourchg,col_chg+1,(count-1)*sizeof(uint32_t));
+  if (count>0) {
+    // special case for row 0: change the default palette entry
+    uint32_t c0 = col_chg[0];
+    int i = c0>>24;
+    if (i<=3) {
+      osdreg->palette[i][0] = c0>>16;
+      osdreg->palette[i][1] = c0>>8;
+      osdreg->palette[i][2] = c0;
+    }
+    // copy the colour changes for rows>0
+    if (count>1) memcpy((void*)osdreg->colourchg,col_chg+1,(count-1)*sizeof(uint32_t));
+  }
 }
