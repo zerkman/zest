@@ -1,7 +1,7 @@
 /*
- * infomsg.h - Information message display on OSD
+ * misc.c - various utility functions
  *
- * Copyright (c) 2023-2024 Francois Galea <fgalea at free.fr>
+ * Copyright (c) 2024 Francois Galea <fgalea at free.fr>
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -16,18 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifndef __MISC_H__
+#define __MISC_H__
 
-#ifndef __INFOMSG_H__
-#define __INFOMSG_H__
+#include <stdint.h>
 
-void infomsg_display(const char* msg);
+void gradient(uint32_t *palette, int n_values, uint32_t start, uint32_t finish);
 
-void infomsg_hide(void);
-
-void vol_mute(void);
-
-void vol_down(void);
-
-void vol_up(void);
-
-#endif
+#endif // __MISC_H__

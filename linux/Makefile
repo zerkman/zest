@@ -34,25 +34,27 @@ all: $(TARGETS)
 clean:
 	rm -f *.o $(TARGETS)
 
-zeST: setup.o floppy.o floppy_img.o hdd.o ikbd.o sil9022a.o osd.o zui.o menu.o input.o config.o infomsg.o
+zeST: setup.o floppy.o floppy_img.o hdd.o ikbd.o sil9022a.o osd.o menu.o input.o config.o listview.o misc.o font.o
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 setup.o: setup.c config.h setup.h
 
 config.o: config.c config.h
 
-menu.o: menu.c menu.h zui.h setup.h osd.h config.h floppy.h
+menu.o: menu.c menu.h setup.h osd.h config.h floppy.h setup.h
 
 osd.o: osd.c osd.h
-
-zui.o: zui.c zui.h input.h
 
 floppy.o: floppy.c floppy.h floppy_img.h hdd.h config.h
 
 floppy_img.o: floppy_img.c floppy_img.h
 
-ikbd.o: ikbd.c input.h menu.h infomsg.h config.h
+ikbd.o: ikbd.c input.h menu.h config.h
 
-infomsg.o: infomsg.c infomsg.h osd.h setup.h
+listview.o: listview.c listview.h input.h osd.h font.h misc.h
+
+misc.o: misc.c misc.h
+
+font.o: font.c font.h
 
 hdd.o: hdd.c hdd.h config.h

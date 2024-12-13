@@ -37,13 +37,18 @@ EOF
   ln -s ../../usr/bin/zestboot $TARGET/etc/init.d/S99zest
 fi
 
+if test ! -d $TARGET/usr/share/fonts ; then
+    mkdir -p $TARGET/usr/share/fonts
+    cp -a $SRCDIR/setup/extra/fonts/* $TARGET/usr/share/fonts
+fi
+
 if test ! -f $TARGET/usr/bin/zestinit.sh ; then
     cat <<EOF > $TARGET/usr/bin/zestinit.sh
 #/bin/sh
 mount -t proc proc /proc
 mount -tvfat -oflush,dirsync,noatime,noexec,nodev,fmask=0133,dmask=0022 /dev/mmcblk0p1 /sdcard
 if [ ! -f /sdcard/overlay.bin ] ; then
-    dd if=/dev/zero of=/sdcard/overlay.bin bs=1m count=1
+    dd of=/sdcard/overlay.bin bs=1m seek=2 count=0
     /sbin/mke2fs -F /sdcard/overlay.bin
     chmod -w /sdcard/overlay.bin
 fi
@@ -72,4 +77,4 @@ Name = zeST
 AutoEnable=true
 EOF
 
-cp $SRCDIR/linux/zeST $TARGET/usr/bin
+cp -a $SRCDIR/linux/zeST $TARGET/usr/bin

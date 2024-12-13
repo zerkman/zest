@@ -25,6 +25,7 @@
 
 #include "config.h"
 
+static const char *config_file = NULL;
 ZestConfig config;
 
 
@@ -43,12 +44,13 @@ static int truefalse(const char *x) {
   return 0;
 }
 
+static const char *memsize_values[] = {"256K","512K","1M","2M","2.5M","4M","8M","14M"};
+
 // interpret string str as a memory size setting
 static int memorysize(const char *x) {
-  static const char *values[] = {"256k","512k","1m","2m","2.5m","4m","8m","14m"};
   int i;
-  for (i=0;i<sizeof(values)/sizeof(values[0]);++i) {
-    if (strcasecmp(x,values[i])==0)
+  for (i=0;i<sizeof(memsize_values)/sizeof(memsize_values[0]);++i) {
+    if (strcasecmp(x,memsize_values[i])==0)
       return i;
   }
 
@@ -76,7 +78,7 @@ static int handler(void* user, const char* section, const char* name, const char
     if (ws<1 || ws>4) {
       printf("invalid wakestate value `%d`\n",ws);
     } else {
-      pconfig->wakestate = ws;
+      pconfig->wakestate = ws-1;
     }
   } else if (MATCH("main", "shifter_wakestate")) {
     int ws = atoi(value);
@@ -91,10 +93,14 @@ static int handler(void* user, const char* section, const char* name, const char
     if (value) pconfig->flopimg_dir = strdup(value);
   } else if (MATCH("floppy","floppy_a")) {
     if (value) pconfig->floppy_a = strdup(value);
+  } else if (MATCH("floppy","floppy_a_enable")) {
+    if (value) pconfig->floppy_a_enable = truefalse(value);
   } else if (MATCH("floppy","floppy_a_write_protect")) {
     if (value) pconfig->floppy_a_write_protect = truefalse(value);
   } else if (MATCH("floppy","floppy_b")) {
     if (value) pconfig->floppy_b = strdup(value);
+  } else if (MATCH("floppy","floppy_b_enable")) {
+    if (value) pconfig->floppy_b_enable = truefalse(value);
   } else if (MATCH("floppy","floppy_b_write_protect")) {
     if (value) pconfig->floppy_b_write_protect = truefalse(value);
   } else if (MATCH("hdd","image")) {
@@ -108,23 +114,64 @@ static int handler(void* user, const char* section, const char* name, const char
   return 1;
 }
 
-void config_load(const char *filename) {
+void config_set_file(const char *filename) {
+  if (config_file) {
+    free((void*)config_file);
+  }
+  config_file = strdup(filename);
+}
+
+void config_load(void) {
   config.mono = 0;
   config.extended_video_modes = 0;
   config.mem_size = CFG_1M;
-  config.wakestate = 3;
+  config.wakestate = 2;
   config.shifter_wakestate = 0;
   config.rom_file = NULL;
   config.flopimg_dir = NULL;
   config.floppy_a = NULL;
+  config.floppy_a_enable = 1;
   config.floppy_a_write_protect = 0;
   config.floppy_b = NULL;
+  config.floppy_b_enable = 0;
   config.floppy_b_write_protect = 0;
   config.hdd_image = NULL;
   config.right_alt_is_altgr = 0;
 
-  if (ini_parse(filename,handler,&config) < 0) {
-    printf("Can't load `%s`\n",filename);
+  if (ini_parse(config_file,handler,&config) < 0) {
+    printf("Can't load `%s`\n",config_file);
     return;
   }
+}
+
+void config_save(void) {
+  FILE *fd = fopen(config_file,"w");
+  if (!fd) {
+    perror(config_file);
+    return;
+  }
+  fprintf(fd,"[main]\n");
+  fprintf(fd,"mono = %s\n",config.mono?"true":"false");
+  fprintf(fd,"extended_video_modes = %s\n",config.extended_video_modes?"on":"off");
+  fprintf(fd,"mem_size = %s\n",memsize_values[config.mem_size]);
+  fprintf(fd,"wakestate = %d\n",config.wakestate+1);
+  fprintf(fd,"shifter_wakestate = %d\n",config.shifter_wakestate);
+  fprintf(fd,"rom_file = %s\n",config.rom_file?config.rom_file:"");
+
+  fprintf(fd,"\n[floppy]\n");
+  fprintf(fd,"flopimg_dir = %s\n",config.flopimg_dir);
+  fprintf(fd,"floppy_a = %s\n",config.floppy_a?config.floppy_a:"");
+  fprintf(fd,"floppy_a_enable = %s\n",config.floppy_a_enable?"true":"false");
+  fprintf(fd,"floppy_a_write_protect = %s\n",config.floppy_a_write_protect?"true":"false");
+  fprintf(fd,"floppy_b = %s\n",config.floppy_b?config.floppy_b:"");
+  fprintf(fd,"floppy_b_enable = %s\n",config.floppy_b_enable?"true":"false");
+  fprintf(fd,"floppy_b_write_protect = %s\n",config.floppy_b_write_protect?"true":"false");
+
+  fprintf(fd,"\n[hdd]\n");
+  fprintf(fd,"image = %s\n",config.hdd_image?config.hdd_image:"");
+
+  fprintf(fd,"\n[keyboard]\n");
+  fprintf(fd,"right_alt_is_altgr = %s\n",config.right_alt_is_altgr?"true":"false");
+
+  fclose(fd);
 }

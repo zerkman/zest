@@ -1,5 +1,5 @@
 /*
- * setup.h - Setup code for PL / Linux on Z-Turn board
+ * setup.h - Setup code for PL / Linux on Zynq board
  *
  * Copyright (c) 2020-2024 Francois Galea <fgalea at free.fr>
  * This program is free software: you can redistribute it and/or modify

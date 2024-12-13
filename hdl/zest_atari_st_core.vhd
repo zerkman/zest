@@ -111,8 +111,12 @@ architecture structure of zest_atari_st_core is
 	signal cfg_extmod	: std_logic;
 	signal cfg_romsize	: std_logic_vector(1 downto 0);
 
+	signal enable0			: std_logic;
+	signal enable1			: std_logic;
 	signal wp0				: std_logic;
 	signal wp1				: std_logic;
+	signal select0			: std_logic;
+	signal select1			: std_logic;
 	signal fdd_read_datan	: std_logic;
 	signal fdd_side0		: std_logic;
 	signal fdd_indexn		: std_logic;
@@ -187,8 +191,8 @@ architecture structure of zest_atari_st_core is
 
 begin
 	soft_resetn <= out_reg0(0);
-	led(1) <= (fdd_drv1_select or not soft_resetn) and not clken_err;
-	led(0) <= fdd_drv0_select or not soft_resetn;
+	led(1) <= (select1 or not soft_resetn) and not clken_err;
+	led(0) <= select0 or not soft_resetn;
 
 	dblpix24 <= dblpix(15 downto 11) & "000" & dblpix(10 downto 5) & "00" & dblpix(4 downto 0) & "000";
 	ram_a <= x"00" & ram_a_23 & '0';
@@ -196,12 +200,14 @@ begin
 	monomon <= out_reg0(2);
 	mem_top <= out_reg0(9 downto 4);
 	sound_vol <= out_reg0(14 downto 10);
-	wp0 <= out_reg0(15);
-	wp1 <= out_reg0(16);
-	cfg_extmod <= out_reg0(17);
-	wakestate <= out_reg0(19 downto 18);
-	cfg_romsize <= out_reg0(21 downto 20);
-	shifter_ws <= out_reg0(22);
+	enable0 <= out_reg0(15);
+	wp0 <= out_reg0(16);
+	enable1 <= out_reg0(17);
+	wp1 <= out_reg0(18);
+	cfg_extmod <= out_reg0(19);
+	wakestate <= out_reg0(21 downto 20);
+	cfg_romsize <= out_reg0(23 downto 22);
+	shifter_ws <= out_reg0(24);
 	in_reg0(31) <= host_r;
 	in_reg0(30) <= host_w;
 	in_reg0(29 downto 21) <= host_addr;
@@ -211,6 +217,8 @@ begin
 	in_reg0(1) <= acsi_intr;
 	in_reg0(0) <= fdd_drq;
 	in_reg1 <= (others => '0');
+	select0 <= fdd_drv0_select or not enable0;
+	select1 <= fdd_drv1_select or not enable1;
 
 	datax: for i in 0 to N_OUTPUTS-1 generate
 		dev_r_datax((2**DATA_WIDTH_BITS)*(i+1)-1 downto (2**DATA_WIDTH_BITS)*i) <= dev_r_data(i);
@@ -350,8 +358,8 @@ begin
 		read_datan => fdd_read_datan,
 		side0 => fdd_side0,
 		indexn => fdd_indexn,
-		drv0_select => fdd_drv0_select,
-		drv1_select => fdd_drv1_select,
+		drv0_select => select0,
+		drv1_select => select1,
 		motor_on => fdd_motor_on,
 		direction => fdd_direction,
 		step => fdd_step,

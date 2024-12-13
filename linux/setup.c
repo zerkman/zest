@@ -42,7 +42,7 @@ void * thread_floppy(void * arg);
 void * thread_ikbd(void * arg);
 
 /* from infomsg.c */
-void * thread_infomsg(void * arg);
+//void * thread_infomsg(void * arg);
 
 #define ST_MEM_ADDR 0x10000000
 #define ST_MEM_SIZE 0x1000000
@@ -79,12 +79,14 @@ static void setup_cfg(unsigned int reset) {
   cfg |= mem_cfg[config.mem_size]<<4;
   if (sound_mute==0)
     cfg |= sound_vol<<10;
-  cfg |= config.floppy_a_write_protect<<15;
-  cfg |= config.floppy_b_write_protect<<16;
-  cfg |= config.extended_video_modes<<17;
-  cfg |= ws_cfg[config.wakestate-1]<<18;
-  cfg |= cfg_romsize<<20;
-  cfg |= config.shifter_wakestate<<22;
+  cfg |= config.floppy_a_enable<<15;
+  cfg |= config.floppy_a_write_protect<<16;
+  cfg |= config.floppy_b_enable<<17;
+  cfg |= config.floppy_b_write_protect<<18;
+  cfg |= config.extended_video_modes<<19;
+  cfg |= ws_cfg[config.wakestate-1]<<20;
+  cfg |= cfg_romsize<<22;
+  cfg |= config.shifter_wakestate<<24;
   parmreg[0] = cfg;
 }
 
@@ -250,14 +252,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  config_load(configfilename);
+  config_set_file(configfilename);
+  config_load();
 
   if (config.rom_file==NULL) {
     printf("Fatal: no ROM file configured in config file\n");
     return 1;
   }
-
-  menu_init();
 
   pl_reset();
 
@@ -270,6 +271,8 @@ int main(int argc, char **argv) {
   for (i=4; i<8; ++i) {
       parmreg[i] = 0xffffffff;
   }
+
+  menu_init();
 
   int memfd = open("/dev/mem",O_RDWR|O_SYNC);
   if (memfd < 0) {
@@ -309,8 +312,8 @@ int main(int argc, char **argv) {
   pthread_create(&kbd_thr,NULL,thread_ikbd,NULL);
   pthread_t floppy_thr;
   pthread_create(&floppy_thr,NULL,thread_floppy,NULL);
-  pthread_t infomsg_thr;
-  pthread_create(&infomsg_thr,NULL,thread_infomsg,NULL);
+  //pthread_t infomsg_thr;
+  //pthread_create(&infomsg_thr,NULL,thread_infomsg,NULL);
 
   struct sigaction sa = {0};
   sa.sa_handler = signal_handler;
@@ -324,7 +327,7 @@ int main(int argc, char **argv) {
   parmreg[0] = 0;
   pthread_join(kbd_thr,NULL);
   pthread_join(floppy_thr,NULL);
-  pthread_join(infomsg_thr,NULL);
+  //pthread_join(infomsg_thr,NULL);
   if (has_sil) {
     hdmi_stop();
   }

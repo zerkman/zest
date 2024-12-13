@@ -37,23 +37,34 @@ extern int parmfd;
 extern volatile int thr_end;
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static char img_name[2][1024];
 static Flopimg *img[2] = {NULL,NULL};
 
 // change or eject the floppy disk
 void change_floppy(const char *filename, int drive) {
+  printf("change_floppy %s\n",filename);
+  if (!filename) filename = "";
+  if (!strncmp(filename,img_name[drive],sizeof img_name[drive])) {
+    // same file - do nothing
+    printf("same file %s\n",filename);
+    return;
+  }
   // critical section so we don't deallocate anything while accessing data
   pthread_mutex_lock(&mutex);
   if (img[drive]!=NULL) {
     flopimg_close(img[drive]);
     img[drive] = NULL;
+    img_name[drive][0] = '\0';
   }
   if (filename!=NULL) {
     img[drive] = flopimg_open(filename,0,3,1);
     if (img[drive]==NULL) {
       printf("Error opening floppy image file: '%s'\n",filename);
     }
+    strncpy(img_name[drive],filename,sizeof img_name[drive]);
   }
   pthread_mutex_unlock(&mutex);
+  printf("change_floppy done\n");
 }
 
 static unsigned int floppy_r;

@@ -26,7 +26,7 @@
 #include "config.h"
 #include "input.h"
 #include "menu.h"
-#include "infomsg.h"
+//#include "infomsg.h"
 
 #define JOY_EMU_LED_FILE "/sys/class/leds/led1/brightness"
 
@@ -219,7 +219,7 @@ void * thread_ikbd(void * arg) {
             case BTN_START:
               menu();
               break;
-            case KEY_MUTE:
+/*            case KEY_MUTE:
               if (evvalue) vol_mute();
               break;
             case KEY_VOLUMEDOWN:
@@ -227,7 +227,7 @@ void * thread_ikbd(void * arg) {
               break;
             case KEY_VOLUMEUP:
               if (evvalue) vol_up();
-              break;
+              break;*/
             case BTN_TOUCH:
               // finger removed from touch pad: stop coordinate tracking
               if (evvalue==0) tp_x = tp_y = -1;

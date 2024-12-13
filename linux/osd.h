@@ -24,14 +24,22 @@
 
 #define MAX_SCANLINES 192
 
+extern uint32_t *osd_bitmap;
+
 // Initialize the OSD system
 int osd_init(void);
 
-// set dimension of OSD (in characters)
-void osd_set_size(int xchars, int ychars);
+// set dimension of OSD in pixels
+// width will be rounded to the closest lower or equal multiple of 16
+// max height is 256
+// max width*height = 28864
+void osd_set_size(int width, int height);
 
 // set X and Y location of OSD (in pixels)
 void osd_set_position(int xpos, int ypos);
+
+// update OSD surface
+void osd_refresh(void);
 
 // show OSD
 void osd_show();
@@ -39,24 +47,12 @@ void osd_show();
 // hide OSD
 void osd_hide();
 
-// clear the OSD display (fill with spaces)
-void osd_clear(int bgc);
+// set colour palette from top to first colour changes (if any)
+void osd_set_palette(const uint32_t palette[4]);
 
-// print string at specified location and colours
-void osd_text(const char *text, int x, int y, int fgc, int bgc);
-
-// print character at specified location and colours
-void osd_putchar(int c, int x, int y, int fgc, int bgc);
-
-// set same colour palette to all scanlines
-void osd_set_palette_all(const uint8_t data[8*3]);
-
-// set colour palettes to a group of scanlines
-void osd_set_palette(int row, int nrows, const uint8_t data[][8*3]);
-
-// calculate a gradient between 2 colours and for a number of steps
-void osd_calculate_gradient(const uint8_t col1[3], const uint8_t col2[3], int steps, uint8_t *output);
-
-void osd_set_palette_with_one_gradient(const uint8_t static_cols[8*3],uint8_t gradient[MAX_SCANLINES][3],int gradient_index);
+// set colour palette changes at scanlines
+// entry format: col_id<<24 | rgb
+// if col_id>=4 no change is done
+void osd_set_palette_changes(const uint32_t *col_chg, int count);
 
 #endif

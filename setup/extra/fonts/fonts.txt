@@ -1,0 +1,5 @@
+This font set has been converted from modified artwiz fonts based on artwiz-aleczapka and artwiz-latin1.
+
+Original files taken from https://github.com/whitelynx/artwiz-fonts-wl
+
+License: GPL-2.0

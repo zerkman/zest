@@ -36,7 +36,7 @@ typedef struct {
   // main
   int mono;                         // 1 if mono, 0 if colour mode
   int extended_video_modes;					// 1:hardware fullscreen enabled, 0:disabled
-  enum cfg_mem_size mem_size;       // memory size
+  int mem_size;                     // memory size
   int wakestate;                    // wakestate (1-4)
   int shifter_wakestate;            // shifter wakestate (0-1)
   const char *rom_file;             // ROM file, full path
@@ -44,8 +44,10 @@ typedef struct {
   // floppy
   const char *flopimg_dir;          // Default directory to open new image files
   const char *floppy_a;             // A: floppy image file, full path
+  int floppy_a_enable;              // A: drive present (1:on, 0:off)
   int floppy_a_write_protect;       // A: write protect (1:on, 0:off)
   const char *floppy_b;             // B: floppy image file, full path
+  int floppy_b_enable;              // B: drive present (1:on, 0:off)
   int floppy_b_write_protect;       // B: write protect (1:on, 0:off)
 
   // hard disk
@@ -57,8 +59,13 @@ typedef struct {
 
 extern ZestConfig config;
 
-// Load config from file
-void config_load(const char *filename);
+// Set config file
+void config_set_file(const char *filename);
 
+// Load config
+void config_load(void);
+
+// Save config
+void config_save(void);
 
 #endif
