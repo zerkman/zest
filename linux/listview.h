@@ -24,6 +24,8 @@
 
 typedef struct listview ListView;
 
+#define LV_FILE_EJECTABLE 0x0001
+
 // must be called once before first call to lv_new
 void lv_init(void);
 
@@ -41,7 +43,10 @@ int lv_add_action(ListView *lv, const char *title);
 int lv_add_choice(ListView *lv, const char *title, int *pselect, int count, ...);
 
 // add entry with a file to select
-int lv_add_file(ListView *lv, const char *title, const char **pfilename, int (*filter)(const struct dirent *));
+// possible flags:
+// - LV_FILE_EJECTABLE: the user can "eject" the file using the Delete/Backspace keys, or appropriate controller button
+// - LV_FILE_DIRECTORY: select a directory instead of a file
+int lv_add_file(ListView *lv, const char *title, const char **pfilename, int flags, int (*filter)(const struct dirent *));
 
 void lv_delete(ListView *lv);
 

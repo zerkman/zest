@@ -41,7 +41,7 @@ setup.o: setup.c config.h setup.h
 
 config.o: config.c config.h
 
-menu.o: menu.c menu.h setup.h osd.h config.h floppy.h setup.h
+menu.o: menu.c listview.h menu.h misc.h config.h setup.h floppy.h hdd.h
 
 osd.o: osd.c osd.h
 

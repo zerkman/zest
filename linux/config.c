@@ -89,8 +89,6 @@ static int handler(void* user, const char* section, const char* name, const char
     }
   } else if (MATCH("main","rom_file")) {
     if (value) pconfig->rom_file = strdup(value);
-  } else if (MATCH("floppy","flopimg_dir")) {
-    if (value) pconfig->flopimg_dir = strdup(value);
   } else if (MATCH("floppy","floppy_a")) {
     if (value) pconfig->floppy_a = strdup(value);
   } else if (MATCH("floppy","floppy_a_enable")) {
@@ -128,7 +126,6 @@ void config_load(void) {
   config.wakestate = 2;
   config.shifter_wakestate = 0;
   config.rom_file = NULL;
-  config.flopimg_dir = NULL;
   config.floppy_a = NULL;
   config.floppy_a_enable = 1;
   config.floppy_a_write_protect = 0;
@@ -159,7 +156,6 @@ void config_save(void) {
   fprintf(fd,"rom_file = %s\n",config.rom_file?config.rom_file:"");
 
   fprintf(fd,"\n[floppy]\n");
-  fprintf(fd,"flopimg_dir = %s\n",config.flopimg_dir);
   fprintf(fd,"floppy_a = %s\n",config.floppy_a?config.floppy_a:"");
   fprintf(fd,"floppy_a_enable = %s\n",config.floppy_a_enable?"true":"false");
   fprintf(fd,"floppy_a_write_protect = %s\n",config.floppy_a_write_protect?"true":"false");

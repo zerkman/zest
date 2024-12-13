@@ -66,6 +66,7 @@ struct lv_choice {
 struct lv_file {
   struct lv_entry e;
   const char **filename;
+  int flags;
   int (*filter)(const struct dirent *);
 };
 
@@ -173,9 +174,13 @@ int lv_add_choice(ListView *lv, const char *title, int *pselect, int count, ...)
 }
 
 // add entry with a file to select
-int lv_add_file(ListView *lv, const char *title, const char **pfilename, int (*filter)(const struct dirent *)) {
+// possible flags:
+// - LV_FILE_EJECTABLE: the user can "eject" the file using the Delete/Backspace keys, or appropriate controller button
+// - LV_FILE_DIRECTORY: select a directory instead of a file
+int lv_add_file(ListView *lv, const char *title, const char **pfilename, int flags, int (*filter)(const struct dirent *)) {
   struct lv_file *fi = malloc(sizeof(struct lv_file));
   fi->filename = pfilename;
+  fi->flags = flags;
   fi->filter = filter;
   return add_entry(lv,LV_ENTRY_FILE,title,(struct lv_entry*)fi);
 }
@@ -200,6 +205,7 @@ static void display_entry(ListView *lv, int line_no) {
     if (filename) {
       const char *sep = strrchr(filename,'/');
       if (sep) filename = sep+1;
+      if (!filename[0]) filename = NULL;
     }
     font_render_text(lv_font,bitmap,raster_count,2,font_height,(raster_count-N_RASTER_FILE)*16,0,e->title);
     font_render_text_centered(lv_font,bitmap+raster_count-N_RASTER_FILE,raster_count,2,font_height,N_RASTER_FILE*16,filename?filename:"<empty>");
@@ -391,13 +397,10 @@ static const char *file_select(int xpos, int ypos, int width, int height, const 
       } else {
         *++p = '\0';
       }
-    } else if (ret>0 && namelist[ret-1]->d_type==DT_DIR) {
+    } else if (ret>0) {
       if (strcmp(directory,"/")) strcat(directory,"/");
       strcat(directory,namelist[ret-1]->d_name);
-      ret = 0;
-    } else if (ret>0) {
-      if (strlen(directory)>1) strcat(directory,"/");
-      strcat(directory,namelist[ret-1]->d_name);
+      if (namelist[ret-1]->d_type==DT_DIR) ret = 0;
     }
 
     for (i=0;i<n;++i) {
@@ -518,6 +521,21 @@ int lv_run(ListView *lv) {
         //case KEY_F2:
         //  osd_screenshot();
         //  break;
+        case KEY_DELETE:
+        case KEY_BACKSPACE:
+          if (e->type==LV_ENTRY_FILE) {
+            const struct lv_file *lf = (struct lv_file*)e;
+            if ((lf->flags&LV_FILE_EJECTABLE) && *lf->filename) {
+              char *p = (char*)strrchr(*lf->filename,'/');
+              if (p) {
+                osd_hide();
+                p[1] = '\0';
+                lv_draw(lv);
+                osd_show();
+              }
+            }
+          }
+          break;
         case KEY_ENTER:
           if (e->type==LV_ENTRY_ACTION) {
             // struct lv_action *a = (struct lv_action*)e;
@@ -525,7 +543,7 @@ int lv_run(ListView *lv) {
             quit = 1;
           }
           else if (e->type==LV_ENTRY_FILE) {
-            const struct lv_file *lf = (struct lv_file*)lv->entries[lv->selected];
+            const struct lv_file *lf = (struct lv_file*)e;
             osd_hide();
             const char *name = file_select(lv->xpos,lv->ypos,lv->width,lv->height,*lf->filename,lf->filter,lv->palette);
             if (name) {

@@ -42,7 +42,6 @@ typedef struct {
   const char *rom_file;             // ROM file, full path
 
   // floppy
-  const char *flopimg_dir;          // Default directory to open new image files
   const char *floppy_a;             // A: floppy image file, full path
   int floppy_a_enable;              // A: drive present (1:on, 0:off)
   int floppy_a_write_protect;       // A: write protect (1:on, 0:off)
