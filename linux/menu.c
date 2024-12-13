@@ -26,6 +26,7 @@
 #include "config.h"
 #include "setup.h"
 #include "floppy.h"
+#include "hdd.h"
 
 #define WIDTH 192
 #define HEIGHT 150
@@ -73,14 +74,14 @@ static int settings(void) {
   lv_set_colour_change(lv,entry_height,1,menu_palette[1]);
   lv_add_choice(lv,"Monitor type",&config.mono,2,"PAL/NTSC","Monochrome");
   lv_add_choice(lv,"RAM size",&config.mem_size,8,"256K","512K","1M","2M","2.5M","4M","8M","14M");
-  lv_add_choice(lv,"Extended modes",&config.extended_video_modes,2,"no","yes");
+  lv_add_choice(lv,"Extended video modes",&config.extended_video_modes,2,"no","yes");
   lv_add_choice(lv,"Wakestate",&config.wakestate,4,"WS1","WS2","WS3","WS4");
   lv_add_choice(lv,"Shifter Wakestate",&config.shifter_wakestate,2,"SWS1","SWS2");
   lv_add_file(lv,"System ROM",&config.rom_file,filter_img);
-  lv_add_choice(lv,"Enable disk A",&config.floppy_a_enable,2,"no","yes");
-  lv_add_choice(lv,"Wr. protect disk A",&config.floppy_a_write_protect,2,"no","yes");
-  lv_add_choice(lv,"Enable disk B",&config.floppy_b_enable,2,"no","yes");
-  lv_add_choice(lv,"Wr. protect disk B",&config.floppy_b_write_protect,2,"no","yes");
+  lv_add_choice(lv,"Enable floppy A",&config.floppy_a_enable,2,"no","yes");
+  lv_add_choice(lv,"Write protect floppy A",&config.floppy_a_write_protect,2,"no","yes");
+  lv_add_choice(lv,"Enable floppy B",&config.floppy_b_enable,2,"no","yes");
+  lv_add_choice(lv,"Write protect floppy B",&config.floppy_b_write_protect,2,"no","yes");
   lv_add_file(lv,"HDD image",&config.hdd_image,filter_img);
   int e_eject_hdd = lv_add_action(lv,"Remove HDD image");
   lv_add_choice(lv,"Right Alt key",&config.right_alt_is_altgr,2,"Alternate","AltGr");
@@ -113,6 +114,7 @@ static int settings(void) {
     load_rom(config.rom_file);
     return 1;
   }
+  hdd_changeimg(config.hdd_image);
   if (hdd_set!=(config.hdd_image!=NULL)) return 1;
   if (hdd_set&&strcmp(config.hdd_image,tmp_hdd)) return 1;
 
@@ -137,12 +139,12 @@ void menu(void) {
     int e_eject_b = -1;
     int e_reset = lv_add_action(lv,"Reset");
     if (config.floppy_a_enable) {
-      lv_add_file(lv,"Disk A",&config.floppy_a,filter_flopimg);
-      e_eject_a = lv_add_action(lv,"Eject Disk A");
+      lv_add_file(lv,"Floppy A",&config.floppy_a,filter_flopimg);
+      e_eject_a = lv_add_action(lv,"Eject Floppy A");
     }
     if (config.floppy_b_enable) {
-      lv_add_file(lv,"Disk B",&config.floppy_b,filter_flopimg);
-      e_eject_b = lv_add_action(lv,"Eject Disk B");
+      lv_add_file(lv,"Floppy B",&config.floppy_b,filter_flopimg);
+      e_eject_b = lv_add_action(lv,"Eject Floppy B");
     }
     int e_settings = lv_add_action(lv,"Settings");
     //lv_add_action(lv,"Tools");
@@ -174,5 +176,4 @@ void menu(void) {
   }
   if (config.floppy_a_enable) change_floppy(config.floppy_a,0);
   if (config.floppy_b_enable) change_floppy(config.floppy_b,1);
-
 }

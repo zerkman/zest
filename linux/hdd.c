@@ -32,14 +32,16 @@ static int img_fd = -1;
 static int img_sectors;
 
 static void openimg(const char *filename) {
-  img_fd = open(filename,O_RDWR);
-  if (img_fd==-1) {
-    printf("could not open HDD image file `%s`\n",filename);
-    return;
+  if (filename) {
+    img_fd = open(filename,O_RDWR);
+    if (img_fd==-1) {
+      printf("could not open HDD image file `%s`\n",filename);
+      return;
+    }
+    off_t size = lseek(img_fd,0,SEEK_END);
+    img_sectors = size/512;
+    lseek(img_fd,0,SEEK_SET);
   }
-  off_t size = lseek(img_fd,0,SEEK_END);
-  img_sectors = size/512;
-  lseek(img_fd,0,SEEK_SET);
 }
 
 static void closeimg(void) {
@@ -49,7 +51,7 @@ static void closeimg(void) {
   img_fd = -1;
 }
 
-void hdd_changeimg(char *full_pathname) {
+void hdd_changeimg(const char *full_pathname) {
   closeimg();
   openimg(full_pathname);
 }

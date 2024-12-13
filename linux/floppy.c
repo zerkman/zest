@@ -42,11 +42,9 @@ static Flopimg *img[2] = {NULL,NULL};
 
 // change or eject the floppy disk
 void change_floppy(const char *filename, int drive) {
-  printf("change_floppy %s\n",filename);
   if (!filename) filename = "";
   if (!strncmp(filename,img_name[drive],sizeof img_name[drive])) {
     // same file - do nothing
-    printf("same file %s\n",filename);
     return;
   }
   // critical section so we don't deallocate anything while accessing data
@@ -64,7 +62,6 @@ void change_floppy(const char *filename, int drive) {
     strncpy(img_name[drive],filename,sizeof img_name[drive]);
   }
   pthread_mutex_unlock(&mutex);
-  printf("change_floppy done\n");
 }
 
 static unsigned int floppy_r;
