@@ -97,10 +97,10 @@ static int add_entry(ListView *lv,int type,const char *title,struct lv_entry *e)
   return lv->n_entries++;
 }
 
-void lv_init(void) {
+void lv_init(const char *font_file_name) {
   input_init();
   osd_init();
-  lv_font = font_new_from_file("/usr/share/fonts/gelly.pcf");
+  lv_font = font_new_from_file(font_file_name);
 }
 
 int lv_entry_height(void) {

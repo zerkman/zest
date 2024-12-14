@@ -40,8 +40,8 @@
 
 static const uint32_t menu_palette[] = {0x000040,0xc0c000,0xc0c000,0x000040};
 
-void menu_init(void) {
-  lv_init();
+void menu_init(const char *font_file_name) {
+  lv_init(font_file_name);
 }
 
 static int filter_flopimg(const struct dirent *e) {

@@ -258,7 +258,7 @@ int main(int argc, char **argv) {
       parmreg[i] = 0xffffffff;
   }
 
-  menu_init();
+  menu_init("/usr/share/fonts/gelly.pcf");
 
   int memfd = open("/dev/mem",O_RDWR|O_SYNC);
   if (memfd < 0) {

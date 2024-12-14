@@ -27,7 +27,7 @@ typedef struct listview ListView;
 #define LV_FILE_EJECTABLE 0x0001
 
 // must be called once before first call to lv_new
-void lv_init(void);
+void lv_init(const char *font_file_name);
 
 // return entry height in pixels
 int lv_entry_height(void);
