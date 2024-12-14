@@ -82,7 +82,7 @@ static int settings(void) {
   lv_add_choice(lv,"Write protect floppy A",&config.floppy_a_write_protect,2,"no","yes");
   lv_add_choice(lv,"Enable floppy B",&config.floppy_b_enable,2,"no","yes");
   lv_add_choice(lv,"Write protect floppy B",&config.floppy_b_write_protect,2,"no","yes");
-  lv_add_file(lv,"HDD image",&config.hdd_image,LV_FILE_EJECTABLE,filter_img);
+  lv_add_file(lv,"Hard disk image",&config.hdd_image,LV_FILE_EJECTABLE,filter_img);
   lv_add_choice(lv,"Right Alt key",&config.right_alt_is_altgr,2,"Alternate","AltGr");
   int e_save_cfg = lv_add_action(lv,"Save config");
 
