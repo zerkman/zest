@@ -52,6 +52,7 @@ int osd_init(void) {
     osdreg = (void*)(((uint8_t*)parmreg)+0x2000);
     osd_bitmap = (uint32_t*)osdreg->bitmap;
   }
+  osdreg->show = 0;
   return 0;
 }
 

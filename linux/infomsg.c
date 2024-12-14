@@ -28,16 +28,19 @@
 #include "font.h"
 #include "infomsg.h"
 #include "misc.h"
+#include "floppy.h"
 
 /* from listview.c */
 extern Font *lv_font;
 
-#define XPOS 250
-#define YPOS 32
+#define XPOS 40
+#define YPOS 10
+#define FLOPPY_STATUS_RASTER_COUNT 4
 
 extern volatile int thr_end;
 
 static int msg_on;
+static int floppy_status_on;
 static uint64_t msg_timeout;
 
 uint64_t gettime(void) {
@@ -46,11 +49,47 @@ uint64_t gettime(void) {
   return tv.tv_sec*1000000 + tv.tv_usec;
 }
 
+static void disable_floppy_status() {
+  if (floppy_status_on) {
+    infomsg_hide();
+  }
+  floppy_status_on = 0;
+}
+
+void switch_floppy_status() {
+  floppy_status_on = !floppy_status_on;
+  if (floppy_status_on) {
+    msg_on = 0;
+    static const uint32_t palette[] = { 0x000000,0xffffff,0x202020,0x80ff80 };
+    osd_set_palette(palette);
+    int height = font_get_height(lv_font);
+    uint32_t changes[height];
+    gradient(changes,height,0x09DE77,0x148C48);
+    int i;
+    for (i=0;i<height;++i) changes[i] = 1<<24 | changes[i];
+    osd_set_palette_changes(changes,height);
+    osd_set_size(FLOPPY_STATUS_RASTER_COUNT*16,height);
+    osd_set_position(XPOS,YPOS);
+    osd_show();
+  } else {
+    osd_hide();
+  }
+}
+
 void * thread_infomsg(void * arg) {
+  int height = font_get_height(lv_font);
   while (thr_end==0) {
-    usleep(1000);
+    usleep(50000);
     if (msg_on && gettime()>=msg_timeout) {
       infomsg_hide();
+    }
+    if (floppy_status_on) {
+      char msg[80];
+      memset(osd_bitmap,0,FLOPPY_STATUS_RASTER_COUNT*height*sizeof(uint32_t));
+      unsigned int r,w,track,side;
+      get_floppy_status(&r,&w,&track,&side);
+      sprintf(msg,"%c T:%u S:%u",w?'W':r?'R':'.',track,side);
+      font_render_text(lv_font,osd_bitmap,FLOPPY_STATUS_RASTER_COUNT,2,height,FLOPPY_STATUS_RASTER_COUNT*16,0,msg);
     }
   }
   return NULL;
@@ -58,18 +97,20 @@ void * thread_infomsg(void * arg) {
 
 void infomsg_hide(void) {
   msg_on = 0;
+  floppy_status_on = 0;
   osd_hide();
 }
 
 static void show(void) {
-  static const uint32_t palette[] = { 0x000000,0xffffff,0x202020,0x80ff80 };
-  osd_set_palette(palette);
   osd_show();
   msg_on = 1;
   msg_timeout = 3000000+gettime();
 }
 
+
 static void infomsg_display(const char* msg) {
+  static const uint32_t palette[] = { 0x000000,0xffffff,0x202020,0x80ff80 };
+  osd_set_palette(palette);
   int width = font_text_width(lv_font,msg);
   int height = font_get_height(lv_font);
   uint32_t changes[height];
@@ -77,7 +118,6 @@ static void infomsg_display(const char* msg) {
   int i;
   for (i=0;i<height;++i) changes[i] = 1<<24 | changes[i];
   osd_set_palette_changes(changes,height);
-
   int raster_count = (width+15)/16;
   osd_set_size(raster_count*16,height);
   osd_set_position(XPOS,YPOS);
@@ -94,6 +134,7 @@ static void show_volume(int vol) {
 }
 
 void vol_mute(void) {
+  disable_floppy_status();
   int mute = !get_sound_mute();
   set_sound_mute(mute);
   if (mute) {
@@ -104,6 +145,7 @@ void vol_mute(void) {
 }
 
 void vol_down(void) {
+  disable_floppy_status();
   int vol = get_sound_vol()-1;
   if (vol>=0) {
     set_sound_vol(vol);
@@ -112,6 +154,7 @@ void vol_down(void) {
 }
 
 void vol_up(void) {
+  disable_floppy_status();
   int vol = get_sound_vol()+1;
   if (vol<32) {
     set_sound_vol(vol);

@@ -22,6 +22,8 @@
 
 void infomsg_hide(void);
 
+void switch_floppy_status();
+
 void vol_mute(void);
 
 void vol_down(void);

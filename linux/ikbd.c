@@ -89,6 +89,11 @@ void * thread_ikbd(void * arg) {
           if (meta) {
             // Meta toggles that do not trigger actual keypresses
             switch (evcode) {
+              case KEY_F:
+                if (evvalue == 1) {
+                  switch_floppy_status();
+                }
+                break;
               case KEY_J:
                 if (evvalue == 1) {
                   set_joy_emu(!joy_emu);
