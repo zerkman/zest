@@ -39,7 +39,7 @@
 #define N_RASTER_CHOICE 4
 #define N_RASTER_FILE 6
 
-static Font *lv_font;
+Font *lv_font;
 
 extern volatile int thr_end;
 

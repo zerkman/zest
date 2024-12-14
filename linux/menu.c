@@ -27,6 +27,7 @@
 #include "setup.h"
 #include "floppy.h"
 #include "hdd.h"
+#include "infomsg.h"
 
 #define WIDTH 192
 #define HEIGHT 150
@@ -116,6 +117,7 @@ static int settings(void) {
 
 void menu(void) {
   int quit = 0;
+  infomsg_hide();
   while (!quit) {
     ListView *lv = lv_new(XPOS,YPOS,WIDTH,HEIGHT,"zeST main menu",menu_palette);
     int entry_height = lv_entry_height();

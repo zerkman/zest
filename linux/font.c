@@ -424,9 +424,16 @@ static int glyph_id(const Font *fnt, int c) {
   const struct encodings *e = &fnt->encodings;
   int byte1 = c>>8;
   int byte2 = c&0xff;
-  int index = byte1*(e->max_char_or_byte2-e->min_char_or_byte2+1)+byte2-e->min_char_or_byte2;
-  int glyph = e->glyphindeces[index];
-  return glyph;
+  int min1 = e->min_byte1;
+  int max1 = e->max_byte1;
+  int min2 = e->min_char_or_byte2;
+  int max2 = e->max_char_or_byte2;
+  if (byte1>=min1 && byte1<=max1 && byte2>=min2 && byte2<=max2) {
+    int index = byte1*(e->max_char_or_byte2-e->min_char_or_byte2+1)+byte2-e->min_char_or_byte2;
+    int glyph = e->glyphindeces[index];
+    return glyph;
+  }
+  return -1;
 }
 
 static int font_render_glyph(const Font *fnt, void *bitmap, int raster_count, int raster_pad, int height, int width, int x, int c) {
@@ -509,7 +516,7 @@ static int font_render_glyph(const Font *fnt, void *bitmap, int raster_count, in
   return m->character_width - m->left_sided_bearing + x_shift;
 }
 
-// return next character in UTF-8 encoding
+// return unicode value of next character from UTF-8-encoded string
 static int next_char(const char **text) {
   int c = 0;
 	const uint8_t *p = (const uint8_t *)*text;
@@ -550,20 +557,21 @@ void font_render_text(const Font *fnt, void *bitmap, int raster_count, int raste
   }
 }
 
-static int character_width(const Font *fnt, int c) {
-  int glyph = glyph_id(fnt,c);
-  if (glyph<=0) return 0;
-  const struct metrics *m = &fnt->metrics[glyph];
-  return m->character_width - m->left_sided_bearing;
+// get text width in pixels of UTF-8-encoded string
+int font_text_width(const Font *fnt, const char *txt) {
+  int w = 0;
+  int c;
+  while ((c=next_char(&txt))>0) {
+    int glyph = glyph_id(fnt,c);
+    if (glyph>0) {
+      const struct metrics *m = &fnt->metrics[glyph];
+      w += m->character_width - m->left_sided_bearing;
+    }
+  }
+  return w;
 }
 
 void font_render_text_centered(const Font *fnt, void *bitmap, int raster_count, int raster_pad, int height, int width, const char *text) {
-  int c;
-  int len = 0;
-  const char *p = text;
-  while ((c=next_char(&p))>0) {
-		len += character_width(fnt,c);
-  }
-  int x = (width-len)/2;
-  font_render_text(fnt,bitmap,raster_count,raster_pad,height,width,x,text);
+  int len = font_text_width(fnt,text);
+  font_render_text(fnt,bitmap,raster_count,raster_pad,height,width,(width-len)/2,text);
 }
