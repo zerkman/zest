@@ -27,6 +27,7 @@
 #include "setup.h"
 #include "font.h"
 #include "infomsg.h"
+#include "misc.h"
 
 /* from listview.c */
 extern Font *lv_font;
@@ -71,6 +72,12 @@ static void show(void) {
 static void infomsg_display(const char* msg) {
   int width = font_text_width(lv_font,msg);
   int height = font_get_height(lv_font);
+  uint32_t changes[height];
+  gradient(changes,height,0xDE7709,0x8C4814);
+  int i;
+  for (i=0;i<height;++i) changes[i] = 1<<24 | changes[i];
+  osd_set_palette_changes(changes,height);
+
   int raster_count = (width+15)/16;
   osd_set_size(raster_count*16,height);
   osd_set_position(XPOS,YPOS);
@@ -80,30 +87,19 @@ static void infomsg_display(const char* msg) {
 }
 
 static void show_volume(int vol) {
-//  int i;
-//  osd_set_size(33,1);
-//  osd_set_position(XPOS,YPOS);
-//  osd_putchar(0x0b,0,0,1,0);
-//  osd_putchar(' ',1,0,1,0);
-//  for (i=0;i<31;++i) {
-//    if (i>=vol) {
-//      osd_putchar(' ',i+2,0,1,2);
-//    } else if (i<=16) {
-//      osd_putchar(' ',i+2,0,1,3);
-//    } else {
-//      osd_putchar(' ',i+2,0,1,4);
-//    }
-//  }
-//  show();
+  char buf[40];
+  int pc = vol*100/16;
+  sprintf(buf,"Vol: %d%%",pc);
+  infomsg_display(buf);
 }
 
 void vol_mute(void) {
   int mute = !get_sound_mute();
   set_sound_mute(mute);
   if (mute) {
-    infomsg_display("♫ off");
+    infomsg_display("Sound off");
   } else {
-    infomsg_display("♫ on");
+    infomsg_display("Sound on");
   }
 }
 
