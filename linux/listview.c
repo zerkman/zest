@@ -135,12 +135,14 @@ void lv_delete(ListView *lv) {
         //struct lv_action *a = (struct lv_action*)e;
         // nothing to free
         break;
-      case LV_ENTRY_CHOICE:
+      case LV_ENTRY_CHOICE: {
         struct lv_choice *ch = (struct lv_choice*)e;
         free(ch->entries);
         break;
+      }
       case LV_ENTRY_FILE:
         //struct lv_file *fl = (struct lv_file*)e;
+        break;
       }
       free((char*)e->title);
       free(e);
@@ -194,12 +196,13 @@ static void display_entry(ListView *lv, int line_no) {
   case LV_ENTRY_ACTION:
     font_render_text(lv_font,bitmap,raster_count,2,font_height,lv->width,0,e->title);
     break;
-  case LV_ENTRY_CHOICE:
+  case LV_ENTRY_CHOICE: {
     const struct lv_choice *ch = (struct lv_choice*)e;
     font_render_text(lv_font,bitmap,raster_count,2,font_height,(raster_count-N_RASTER_CHOICE)*16,0,e->title);
     font_render_text_centered(lv_font,bitmap+raster_count-N_RASTER_CHOICE,raster_count,2,font_height,N_RASTER_CHOICE*16,ch->entries[*ch->selected]);
     break;
-  case LV_ENTRY_FILE:
+  }
+  case LV_ENTRY_FILE: {
     const struct lv_file *fl = (struct lv_file*)e;
     const char *filename = *fl->filename;
     if (filename) {
@@ -209,6 +212,7 @@ static void display_entry(ListView *lv, int line_no) {
     }
     font_render_text(lv_font,bitmap,raster_count,2,font_height,(raster_count-N_RASTER_FILE)*16,0,e->title);
     font_render_text_centered(lv_font,bitmap+raster_count-N_RASTER_FILE,raster_count,2,font_height,N_RASTER_FILE*16,filename?filename:"<empty>");
+  }
   }
 }
 

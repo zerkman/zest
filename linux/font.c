@@ -253,7 +253,7 @@ Font * font_new_from_file(const char *filename) {
       break;
     }
     case PCF_ACCELERATORS:
-    case PCF_BDF_ACCELERATORS:
+    case PCF_BDF_ACCELERATORS: {
       struct accelerator *a;
       if (toc[i].type == PCF_ACCELERATORS) {
         //printf("PCF_ACCELERATORS\n");
@@ -296,8 +296,9 @@ Font * font_new_from_file(const char *filename) {
       // printf("  maxbounds="); print_metrics(&a->maxbounds);
 
       break;
+    }
     case PCF_METRICS:
-    case PCF_INK_METRICS:
+    case PCF_INK_METRICS: {
       int n_metrics;
       struct metrics **pmetrics, *m;
       if (compressed_metrics) {
@@ -323,6 +324,7 @@ Font * font_new_from_file(const char *filename) {
       }
 
       break;
+    }
     case PCF_BITMAPS: {
       //printf("PCF_BITMAPS\n");
       int glyph_count = u32(fd,bigendian);
@@ -352,7 +354,7 @@ Font * font_new_from_file(const char *filename) {
       fread(f->bitmap_data,1,bitmap_size,fd);
       break;
     }
-    case PCF_BDF_ENCODINGS:
+    case PCF_BDF_ENCODINGS: {
       //printf("PCF_BDF_ENCODINGS\n");
       struct encodings *e = &f->encodings;
       e->min_char_or_byte2 = u16(fd,bigendian);
@@ -371,6 +373,7 @@ Font * font_new_from_file(const char *filename) {
         //printf("  [%d]=%d\n",i,e->glyphindeces[i]);
       }
       break;
+    }
     case PCF_SWIDTHS: {
       //printf("PCF_SWIDTHS\n");
       int glyph_count = u32(fd,bigendian);
