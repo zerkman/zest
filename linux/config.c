@@ -105,6 +105,18 @@ static int handler(void* user, const char* section, const char* name, const char
     if (value) pconfig->hdd_image = strdup(value);
   } else if (MATCH("keyboard","right_alt_is_altgr")) {
     if (value) pconfig->right_alt_is_altgr = truefalse(value);
+  } else if (MATCH("jukebox","enabled")) {
+    if (value) pconfig->jukebox_enabled = truefalse(value);
+  } else if (MATCH("jukebox","path")) {
+    if (value) pconfig->jukebox_path = strdup(value);
+  } else if (MATCH("jukebox","timeout")) {
+    uint64_t t = atoi(value);
+    if (t < 1)
+    {
+      printf("Invalid jukebox timeout value '%lld'\n", t);
+    } else {
+      pconfig->jukebox_timeout_duration = t;
+    }
   }
   else {
     return 0;  /* unknown section/name, error */
@@ -134,6 +146,10 @@ void config_load(void) {
   config.floppy_b_write_protect = 0;
   config.hdd_image = NULL;
   config.right_alt_is_altgr = 0;
+  config.jukebox_enabled = 0;
+  config.jukebox_timeout = 0;
+  config.jukebox_timeout_duration = 9000000;
+  config.jukebox_path = NULL;
 
   if (ini_parse(config_file,handler,&config) < 0) {
     printf("Can't load `%s`\n",config_file);

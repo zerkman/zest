@@ -22,6 +22,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <dirent.h>
 
 #include "osd.h"
 #include "setup.h"
@@ -29,9 +30,17 @@
 #include "infomsg.h"
 #include "misc.h"
 #include "floppy.h"
+#include "config.h"
 
 /* from listview.c */
 extern Font *lv_font;
+extern int file_select_compar(const struct dirent **a, const struct dirent **b);
+extern int filter_flopimg(const struct dirent *e);
+/* from infomsg.c */
+extern uint64_t gettime(void);
+/* from setup.c */
+extern volatile int thr_end;
+
 
 #define XPOS 40
 #define YPOS 10
@@ -160,4 +169,42 @@ void vol_up(void) {
     set_sound_vol(vol);
     show_volume(vol);
   }
+}
+
+void * thread_jukebox(void * arg) {
+  while (thr_end == 0) {
+    uint64_t time = gettime();
+    usleep(1000);
+    if (config.jukebox_enabled /*&& !file_selector_running*/) {
+      if (time >= config.jukebox_timeout)
+      {
+        // Read directory
+        struct dirent **namelist;
+        int n = scandir(config.jukebox_path,&namelist,&filter_flopimg,&file_select_compar);
+        if (n<=0)
+        {
+          infomsg_display("Error while reading jukebox directory. Jukebox off.");
+        }
+
+        // Select random image
+        srand(time);
+        char *selected_item;
+        do {
+          int selected_image = rand() % n;
+          selected_item = namelist[selected_image]->d_name;
+        } while (selected_item[strlen(selected_item)-1] == '/'); // Avoid directories - TODO is this needed any more?
+        // Construct image filename
+        char new_disk_image_name[PATH_MAX];
+        strcpy(new_disk_image_name, config.jukebox_path);
+        strcat(new_disk_image_name, selected_item);
+        // Boot the image and set timeout
+        change_floppy(new_disk_image_name,0);
+        //config.mem_size = selected_ram_size;
+        cold_reset();
+        config.jukebox_timeout = config.jukebox_timeout_duration + gettime();
+        infomsg_display(new_disk_image_name);
+      }
+    }
+  }
+  return NULL;
 }

@@ -322,7 +322,7 @@ int lv_select(ListView *lv, int selected) {
   return lv->selected;
 }
 
-static int file_select_compar(const struct dirent **a, const struct dirent **b) {
+int file_select_compar(const struct dirent **a, const struct dirent **b) {
   // directories should come before files
   if ((*a)->d_type==DT_DIR && (*b)->d_type!=DT_DIR) {
     return -1;

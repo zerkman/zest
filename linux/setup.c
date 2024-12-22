@@ -37,6 +37,7 @@
 
 /* from floppy.c */
 void * thread_floppy(void * arg);
+void * thread_jukebox(void * arg);
 
 /* from ikbd.c */
 void * thread_ikbd(void * arg);
@@ -300,6 +301,8 @@ int main(int argc, char **argv) {
   pthread_create(&floppy_thr,NULL,thread_floppy,NULL);
   pthread_t infomsg_thr;
   pthread_create(&infomsg_thr,NULL,thread_infomsg,NULL);
+  pthread_t jukebox_thr;
+  pthread_create(&jukebox_thr,NULL,thread_jukebox,NULL);
 
   struct sigaction sa = {0};
   sa.sa_handler = signal_handler;

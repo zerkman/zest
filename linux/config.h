@@ -19,6 +19,7 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
+#include <stdint.h>
 
 enum cfg_mem_size {
   CFG_256K = 0,
@@ -54,6 +55,12 @@ typedef struct {
 
   // keyboard
   int right_alt_is_altgr;           // right alt = 1:Milan AltGr code, 0:Alternate
+
+  // Jukebox
+  int jukebox_enabled;              // Jukebox (1:on, 0: off)
+  uint64_t jukebox_timeout;         // Jukebox timeout (microseconds (?))
+  uint64_t jukebox_timeout_duration;// How much time to run each image in jukebox mode (microseconds (?))
+  const char *jukebox_path;         // Directory containing disk images for jukebox
 } ZestConfig;
 
 extern ZestConfig config;

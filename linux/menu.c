@@ -44,7 +44,7 @@ void menu_init(const char *font_file_name) {
   lv_init(font_file_name);
 }
 
-static int filter_flopimg(const struct dirent *e) {
+int filter_flopimg(const struct dirent *e) {
   if (e->d_type==DT_DIR) {
     return strcmp(e->d_name,".")&&strcmp(e->d_name,"..");
   }
@@ -140,6 +140,7 @@ void menu(void) {
     int e_settings = lv_add_action(lv,"Settings");
     //lv_add_action(lv,"Tools");
     //lv_add_action(lv,"Shutdown");
+    lv_add_choice(lv,"Jukebox mode",&config.jukebox_enabled,2,"no","yes");
 
     int e = lv_run(lv);
     lv_delete(lv);
