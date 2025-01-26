@@ -138,7 +138,9 @@ static void load_mfm(Flopimg *img) {
       if (sectors<9 || sectors>11 || img->nsides<1 || img->nsides>2) {
         p = NULL;
       } else {
-        img->ntracks = readw(p+0x13)/(sectors*img->nsides);
+        int ntracks = readw(p+0x13)/(sectors*img->nsides);
+        int ntracks2 = size/(6250*img->nsides);
+        img->ntracks = (ntracks2>img->ntracks) ? ntracks2 : ntracks;
       }
     }
     if (p==NULL) {
@@ -151,6 +153,7 @@ static void load_mfm(Flopimg *img) {
       }
     }
   }
+  img->nsectors = sectors;
 }
 
 static void save_mfm(Flopimg *img) {
@@ -162,26 +165,19 @@ static int guess_size(Flopimg *img) {
   if (img->image_size % 512) {
     return 0;
   }
-  int tracks, sectors;
+  int tracks, sectors, sides;
   for (tracks = MAXTRACK;tracks>0;tracks--) {
-    for (sectors = 11; sectors >= 9; sectors--) {
-      if (!(img->image_size%tracks)) {
-        if ((img->image_size%(tracks*sectors*2*512))==0) {
-          if (tracks*2*sectors*512==img->image_size) {
-            img->ntracks=tracks;
-            img->nsides=2;
-            img->nsectors=sectors;
-            printf("Geometry guessed: %d tracks, %d sides, %d sectors\n",tracks,2,sectors);
-            return 1;
-          }
-        }
-        else if ((img->image_size%(tracks*sectors*1*512))==0) {
-          if (tracks*1*sectors*512==img->image_size) {
-            img->ntracks=tracks;
-            img->nsides=1;
-            img->nsectors=sectors;
-            printf("Geometry guessed: %d tracks, %d sides, %d sectors\n",tracks,2,sectors);
-            return 1;
+    if (!(img->image_size%tracks)) {
+      for (sectors = 11; sectors >= 9; sectors--) {
+        for (sides = 2; sides >= 1; sides--) {
+          if ((img->image_size%(tracks*sectors*sides*512))==0) {
+            if (tracks*sides*sectors*512==img->image_size) {
+              img->ntracks=tracks;
+              img->nsides=sides;
+              img->nsectors=sectors;
+              printf("Geometry guessed: %d tracks, %d sides, %d sectors\n",tracks,sides,sectors);
+              return 1;
+            }
           }
         }
       }
@@ -232,6 +228,13 @@ static void load_st_msa(Flopimg *img, int skew, int interleave) {
           return;
         }
       }
+
+      if (img->ntracks*img->nsides*img->nsectors*512 != img->image_size) {
+        printf("geometry in bootsector does not correspond to image size (%u*%u*%u*512!=%u)\n",img->ntracks,img->nsides,img->nsectors,img->image_size);
+        if (!guess_size(img)) {
+          return;
+        }
+      }
     }
   } else {
     // MSA image file format
@@ -254,8 +257,8 @@ static void load_st_msa(Flopimg *img, int skew, int interleave) {
     img->nsectors=readwb(buf+2);
     img->nsides=readwb(buf+4)+1;
     img->ntracks=readwb(buf+8)+1;
-    printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,img->nsectors);
   }
+  printf("tracks:%u sides:%u sectors:%u\n",img->ntracks,img->nsides,img->nsectors);
 
   int gap1,gap2,gap4,gap5;
   if (img->nsectors==11) {
@@ -369,22 +372,39 @@ static void load_st_msa(Flopimg *img, int skew, int interleave) {
 
 }
 
+static void update_geometry(Flopimg *img) {
+  // Read sectors, tracks, sides from the buffer, in case the disk has been reformatted
+  const uint8_t *p = find_sector(img->buf,0,0,1);
+  unsigned int nsectors = readw(p+0x18);
+  unsigned int nsides = readw(p+0x1a);
+  unsigned int ntracks = readw(p+0x13)/(img->nsectors*img->nsides);
+  if (nsectors!=img->nsectors || nsides!=img->nsides) {
+    // disk has been reformatted, update values
+    img->nsectors = nsectors;
+    img->nsides = nsides;
+    img->ntracks = ntracks;
+  }
+  if (ntracks > img->ntracks) {
+    // If the disk has been reformatted with same number of sectors and sides, there is no way
+    // to properly detect the reformat. So by default we keep the number of tracks and only
+    // update it if it is larger than the previously known value.
+    // This way we preserve floppy images with a higher number of tracks than the formatted value.
+    img->ntracks = ntracks;
+  }
+}
+
 static void save_st(Flopimg *img) {
   int track;
   lseek(img->fd,0,SEEK_SET);
 
-  // Read sectors, tracks, sides from the buffer, in case the disk has been reformatted
-  const uint8_t *p = find_sector(img->buf,0,0,1);
-  int sectors = readw(p+0x18);
-  int nsides = readw(p+0x1a);
-  int ntracks = readw(p+0x13)/(sectors*nsides);
+	update_geometry(img);
 
-  for (track=0; track<ntracks; ++track) {
+  for (track=0; track<img->ntracks; ++track) {
     int side;
-    for (side=0; side<nsides; ++side) {
+    for (side=0; side<img->nsides; ++side) {
       int sector;
-      p = flopimg_trackpos(img,track,side);
-      for (sector=0; sector<sectors; ++sector) {
+      const uint8_t *p = flopimg_trackpos(img,track,side);
+      for (sector=0; sector<img->nsectors; ++sector) {
         const uint8_t *sp = find_sector(p,track,side,sector+1);
         if (sp==NULL) {
           printf("sector not found\n");
@@ -427,31 +447,27 @@ static int msa_pack(uint8_t *dest, const uint8_t *src, int len) {
 static void save_msa(Flopimg *img) {
   lseek(img->fd,0,SEEK_SET);
 
-  // Read sectors, tracks, sides from the buffer, in case the disk has been reformatted
-  const uint8_t *p = find_sector(img->buf,0,0,1);
-  int sectors = readw(p+0x18);
-  int nsides = readw(p+0x1a);
-  int ntracks = readw(p+0x13)/(sectors*nsides);
+	update_geometry(img);
 
   // write MSA header
   uint8_t header[10];
   memcpy(header+0,"\x0e\x0f",2);
-  writewb(header+2,sectors);
-  writewb(header+4,nsides-1);
+  writewb(header+2,img->nsectors);
+  writewb(header+4,img->nsides-1);
   writewb(header+6,0);
-  writewb(header+8,ntracks-1);
+  writewb(header+8,img->ntracks-1);
   write(img->fd,header,10);
   off_t length = 10;
 
   int track;
-  for (track=0; track<ntracks; ++track) {
+  for (track=0; track<img->ntracks; ++track) {
     int side;
-    for (side=0; side<nsides; ++side) {
+    for (side=0; side<img->nsides; ++side) {
       int sector;
       uint8_t trbuf[11*512];
-      p = flopimg_trackpos(img,track,side);
+      const uint8_t *p = flopimg_trackpos(img,track,side);
       // copy the sectors in order
-      for (sector=0; sector<sectors; ++sector) {
+      for (sector=0; sector<img->nsectors; ++sector) {
         const uint8_t *sp = find_sector(p,track,side,sector+1);
         if (sp==NULL) {
           printf("sector not found\n");
@@ -461,13 +477,13 @@ static void save_msa(Flopimg *img) {
       }
       // try to compress the track
       uint8_t pkbuf[2+11*512];
-      int pklen = msa_pack(pkbuf+2,trbuf,sectors*512);
+      int pklen = msa_pack(pkbuf+2,trbuf,img->nsectors*512);
       if (pklen<0) {
         // compression failed, writing uncompressed
-        writewb(pkbuf,sectors*512);
+        writewb(pkbuf,img->nsectors*512);
         write(img->fd,pkbuf,2);
-        write(img->fd,trbuf,sectors*512);
-        length += 2+sectors*512;
+        write(img->fd,trbuf,img->nsectors*512);
+        length += 2+img->nsectors*512;
       } else {
         // write the compressed data
         writewb(pkbuf,pklen);
