@@ -76,6 +76,7 @@ architecture behavioral of wd1772 is
 		c3_wrtr,c3_wrtr1,c3_wrtrwip,c3_wrtr_a,c3_wrtr_b,c3_wrtrwb,c3_wrtrwb1,c3_wrtrwf5,c3_wrtrwcrc,
 		c4_init,c4_wip,c4_trig
 	);
+	signal en_amd	: std_logic;	-- enable address mark detector
 	signal amd_dtam	: std_logic;	-- detected address mark
 	signal cmd_st	: cmd_t;
 	signal upd_crc	: std_logic;	-- 1 iff CRC is being updated
@@ -125,6 +126,7 @@ begin
 			INTRQ <= '0';
 			cmd_st <= idle;
 			STEP <= '0';
+			en_amd <= '0';
 			amd_st <= init;
 			amd_dtam <= '0';
 			upd_crc <= '0';
@@ -173,42 +175,46 @@ begin
 				-- a full byte has been read
 				amd_dtam <= '0';
 				-- AM detection state machine
-				case amd_st is
-				when init =>
-					if DSR = x"00" then
-						amd_cnt <= to_unsigned(2,amd_cnt'length);
-						amd_st <= am2;
-					else
-						amd_cnt <= to_unsigned(1,amd_cnt'length);
-					end if;
-				when am2 =>
-					if DSR = x"00" then
-						if amd_cnt > 0 then
-							amd_cnt <= amd_cnt - 1;
+				if en_amd = '1' then
+					case amd_st is
+					when init =>
+						if DSR = x"00" then
+							amd_cnt <= to_unsigned(2,amd_cnt'length);
+							amd_st <= am2;
+						else
+							amd_cnt <= to_unsigned(1,amd_cnt'length);
 						end if;
-					elsif DSR = x"a1" and amd_cnt = 0 then
-						amd_cnt <= to_unsigned(2,amd_cnt'length);
-						amd_st <= am3;
-						if upd_crc = '1' then
-							crc <= x"cdb4";
-						end if;
-					else
-						amd_st <= init;
-					end if;
-				when am3 =>
-					if DSR = x"a1" then
-						if upd_crc = '1' then
-							crc <= x"cdb4";
-						end if;
-						amd_cnt <= amd_cnt - 1;
-						if amd_cnt - 1 = 0 then
-							amd_dtam <= '1';
+					when am2 =>
+						if DSR = x"00" then
+							if amd_cnt > 0 then
+								amd_cnt <= amd_cnt - 1;
+							end if;
+						elsif DSR = x"a1" and amd_cnt = 0 then
+							amd_cnt <= to_unsigned(2,amd_cnt'length);
+							amd_st <= am3;
+							if upd_crc = '1' then
+								crc <= x"cdb4";
+							end if;
+						else
 							amd_st <= init;
 						end if;
-					else
-						amd_st <= init;
-					end if;
-				end case;
+					when am3 =>
+						if DSR = x"a1" then
+							if upd_crc = '1' then
+								crc <= x"cdb4";
+							end if;
+							amd_cnt <= amd_cnt - 1;
+							if amd_cnt - 1 = 0 then
+								amd_dtam <= '1';
+								amd_st <= init;
+							end if;
+						else
+							amd_st <= init;
+						end if;
+					end case;
+				else
+					amd_st <= init;
+				end if;
 			end if;
 
 			-- host access to registers
@@ -255,6 +261,7 @@ begin
 			-- commands state machine
 			case cmd_st is
 			when idle =>
+				en_amd <= '0';
 				if motor_on = '1' then
 					-- motor is on: wait 9 floppy rotations before turning motor off
 					ipcnt <= x"9";
@@ -390,6 +397,7 @@ begin
 				end if;
 			when c1_vlp =>
 				upd_crc <= '1';
+				en_amd <= '1';
 				if ipcnt = x"0" then
 					-- 6 index holes have passed
 					INTRQ <= '1';
@@ -399,6 +407,7 @@ begin
 				elsif amd_dtam = '1' and ds_full = '1' and DSR(7 downto 2) = "111111" then
 					-- DSR value should be 0xfe, but all values between 0xfc and 0xff work
 					-- ID address mark detected
+					en_amd <= '0';
 					cmd_st <= c1_dtr;
 				end if;
 			when c1_dtr =>
@@ -483,6 +492,7 @@ begin
 				end if;
 			when c2_1 =>
 				upd_crc <= '1';
+				en_amd <= '1';
 				if ipcnt = x"0" then
 					-- 5 index holes have passed
 					INTRQ <= '1';
@@ -491,6 +501,7 @@ begin
 					cmd_st <= idle;
 				elsif amd_dtam = '1' and ds_full = '1' and DSR = x"fe" then
 					-- ID address mark detected
+					en_amd <= '0';
 					cmd_st <= c2_1dtr;
 				end if;
 			when c2_1dtr =>
@@ -549,8 +560,10 @@ begin
 				end if;
 			when c2_2 =>
 				upd_crc <= '1';
+				en_amd <= '1';
 				if amd_dtam = '1' and ds_full = '1' then
 					-- Address mark detected and next byte available in DSR
+					en_amd <= '0';
 					if DSR = x"fb" or DSR = x"fa" then
 						-- data address mark
 						status(5) <= '0';	-- record type (S5)
@@ -767,6 +780,7 @@ begin
 				upd_crc <= '1';
 				cmd_st <= c3_rdad1;
 			when c3_rdad1 =>
+				en_amd <= '1';
 				if ipcnt = x"0" then
 					-- 6 index holes have passed
 					INTRQ <= '1';
@@ -776,6 +790,7 @@ begin
 				elsif amd_dtam = '1' and ds_full = '1' and DSR(7 downto 2) = "111111" then
 					-- DSR value should be 0xfe, but all values between 0xfc and 0xff work
 					-- ID address mark detected
+					en_amd <= '0';
 					cmd_st <= c3_rdad2;
 				end if;
 			when c3_rdad2 =>
