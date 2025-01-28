@@ -62,7 +62,8 @@ set_property PACKAGE_PIN R14 [get_ports {LEDS[2]}]
 set_property CFGBVS VCCO [current_design]
 set_property CONFIG_VOLTAGE 3.3 [current_design]
 
-set_output_delay -clock [get_clocks -of_objects [get_pins psd/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT0]] 3.000 [get_ports -filter { NAME =~  "*LCD_*" && DIRECTION == "OUT" }]
+set_output_delay -clock [get_clocks -of_objects [get_pins psd/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT0]] -max 5 [get_ports -filter { NAME =~  "*LCD_*" && DIRECTION == "OUT" }]
+set_output_delay -clock [get_clocks -of_objects [get_pins psd/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT0]] -min 1 [get_ports -filter { NAME =~  "*LCD_*" && DIRECTION == "OUT" }]
 
 set_clock_groups -asynchronous -group [get_clocks clk_fpga_0] -group [get_clocks -of_objects [get_pins psd/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT0]]
 
