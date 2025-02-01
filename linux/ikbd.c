@@ -97,6 +97,11 @@ void * thread_ikbd(void * arg) {
               case KEY_J:
                 if (evvalue == 1) {
                   set_joy_emu(!joy_emu);
+                  if (joy_emu) {
+                    infomsg_display("Joystick emulation on");
+                  } else {
+                    infomsg_display("Joystick emulation off");
+                  }
                 }
                 break;
               case KEY_ENTER:

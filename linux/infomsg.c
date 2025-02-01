@@ -117,7 +117,7 @@ static void show(void) {
 }
 
 
-static void infomsg_display(const char* msg) {
+void infomsg_display(const char* msg) {
   static const uint32_t palette[] = { 0x000000,0xffffff,0x202020,0x80ff80 };
   osd_set_palette(palette);
   int width = font_text_width(lv_font,msg);
