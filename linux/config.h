@@ -58,7 +58,6 @@ typedef struct {
 
   // Jukebox
   int jukebox_enabled;              // Jukebox (1:on, 0: off)
-  uint64_t jukebox_timeout;         // Jukebox timeout (microseconds (?))
   uint64_t jukebox_timeout_duration;// How much time to run each image in jukebox mode (microseconds (?))
   const char *jukebox_path;         // Directory containing disk images for jukebox
 } ZestConfig;

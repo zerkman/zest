@@ -20,6 +20,7 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <ctype.h>
 #include <ini.h>
 
@@ -110,7 +111,7 @@ static int handler(void* user, const char* section, const char* name, const char
   } else if (MATCH("jukebox","path")) {
     if (value) pconfig->jukebox_path = strdup(value);
   } else if (MATCH("jukebox","timeout")) {
-    uint64_t t = atoi(value);
+    uint64_t t = strtoull(value,NULL,10);
     if (t < 1)
     {
       printf("Invalid jukebox timeout value '%lld'\n", t);
@@ -147,7 +148,6 @@ void config_load(void) {
   config.hdd_image = NULL;
   config.right_alt_is_altgr = 0;
   config.jukebox_enabled = 0;
-  config.jukebox_timeout = 0;
   config.jukebox_timeout_duration = 9000000;
   config.jukebox_path = NULL;
 
@@ -184,6 +184,11 @@ void config_save(void) {
 
   fprintf(fd,"\n[keyboard]\n");
   fprintf(fd,"right_alt_is_altgr = %s\n",config.right_alt_is_altgr?"true":"false");
+
+  fprintf(fd,"\n[jukebox]\n");
+  fprintf(fd,"enabled = %s\n",config.jukebox_enabled?"true":"false");
+  fprintf(fd,"path = %s\n",config.jukebox_path?config.jukebox_path:"");
+  fprintf(fd,"timeout = %" PRIu64 "\n",config.jukebox_timeout_duration);
 
   fclose(fd);
 }

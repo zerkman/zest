@@ -115,6 +115,25 @@ static int settings(void) {
   return reset || config.mem_size!=mem_size || config.mono!=mono;
 }
 
+static int tools(void) {
+  ListView *lv = lv_new(XPOS,YPOS,WIDTH,HEIGHT,"zeST tools",menu_palette);
+  int entry_height = lv_entry_height();
+  uint32_t gradient_header[entry_height];
+  gradient(gradient_header,entry_height/2,0x00ff0000,0xffc000);
+  gradient(gradient_header+entry_height/2,entry_height-entry_height/2,0xffc000,0xff0000);
+  int i;
+  for (i=0;i<entry_height;++i) {
+    lv_set_colour_change(lv,i,1,gradient_header[i]);
+  }
+  lv_set_colour_change(lv,entry_height,1,menu_palette[1]);
+
+  lv_add_choice(lv,"Jukebox mode",&config.jukebox_enabled,2,"no","yes");
+  int e = lv_run(lv);
+  lv_delete(lv);
+
+  return 0;
+}
+
 void menu(void) {
   int quit = 0;
   infomsg_hide();
@@ -139,9 +158,8 @@ void menu(void) {
       lv_add_file(lv,"Floppy B",&config.floppy_b,LV_FILE_EJECTABLE,filter_flopimg);
     }
     int e_settings = lv_add_action(lv,"Settings");
-    //lv_add_action(lv,"Tools");
+    int e_tools = lv_add_action(lv,"Tools");
     //lv_add_action(lv,"Shutdown");
-    lv_add_choice(lv,"Jukebox mode",&config.jukebox_enabled,2,"no","yes");
 
     int e = lv_run(lv);
     lv_delete(lv);
@@ -163,6 +181,9 @@ void menu(void) {
       } else {
         setup_update();
       }
+    }
+    else if (e==e_tools) {
+      tools();
     }
   }
   if (config.floppy_a_enable) change_floppy(config.floppy_a,0);

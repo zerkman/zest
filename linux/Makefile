@@ -59,4 +59,4 @@ font.o: font.c font.h
 
 hdd.o: hdd.c hdd.h config.h
 
-infomsg.o: infomsg.c infomsg.h osd.h setup.h font.h
+infomsg.o: infomsg.c infomsg.h osd.h setup.h font.h config.h

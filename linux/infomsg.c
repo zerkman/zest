@@ -171,12 +171,14 @@ void vol_up(void) {
   }
 }
 
+
 void * thread_jukebox(void * arg) {
+  uint64_t jukebox_timeout = 0;
   while (thr_end == 0) {
     uint64_t time = gettime();
     usleep(1000);
-    if (config.jukebox_enabled /*&& !file_selector_running*/) {
-      if (time >= config.jukebox_timeout)
+    if (config.jukebox_enabled && config.jukebox_path /*&& !file_selector_running*/) {
+      if (time >= jukebox_timeout)
       {
         // Read directory
         struct dirent **namelist;
@@ -201,7 +203,7 @@ void * thread_jukebox(void * arg) {
         change_floppy(new_disk_image_name,0);
         //config.mem_size = selected_ram_size;
         cold_reset();
-        config.jukebox_timeout = config.jukebox_timeout_duration + gettime();
+        jukebox_timeout = config.jukebox_timeout_duration + gettime();
         infomsg_display(new_disk_image_name);
       }
     }
