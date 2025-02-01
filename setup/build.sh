@@ -5,7 +5,7 @@ TARGETS="z7lite_7010 z7lite_7020 zynqberry"
 export XILINX_PATH=/opt/Xilinx
 export XILINX_VERSION=2024.1
 export XILINX_KERNEL_VERSION=2023.2
-export BUILDROOT_VERSION=2024.02.9
+export BUILDROOT_VERSION=2024.02.10
 export EMUTOS_VERSION=1.3
 
 # Check dependencies
