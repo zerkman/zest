@@ -160,7 +160,7 @@ void menu(void) {
     ListView *lv = lv_new(XPOS,YPOS,WIDTH,HEIGHT,"zeST main menu",menu_palette);
     int entry_height = lv_entry_height();
     uint32_t gradient_header[entry_height];
-    gradient(gradient_header,entry_height,0x0779DE,0x14488C);
+    gradient(gradient_header,entry_height,0x10C0FF,0x14488C);
     int i;
     for (i=0;i<entry_height;++i) {
       lv_set_colour_change(lv,i,1,gradient_header[i]);
