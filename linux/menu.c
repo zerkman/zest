@@ -130,7 +130,8 @@ void menu(void) {
     // restore initial palette colour after the header
     lv_set_colour_change(lv,entry_height,1,menu_palette[1]);
 
-    int e_reset = lv_add_action(lv,"Reset");
+    int e_reset = lv_add_action(lv,"Reset (warm)");
+    int e_coldreset = lv_add_action(lv,"Reset (cold)");
     if (config.floppy_a_enable) {
       lv_add_file(lv,"Floppy A",&config.floppy_a,LV_FILE_EJECTABLE,filter_flopimg);
     }
@@ -149,6 +150,10 @@ void menu(void) {
     }
     else if (e==e_reset) {
       warm_reset();
+      quit = 1;
+    }
+    else if (e==e_coldreset) {
+      cold_reset();
       quit = 1;
     }
     else if (e==e_settings) {
