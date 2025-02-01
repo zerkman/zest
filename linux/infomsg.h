@@ -20,7 +20,7 @@
 #ifndef __INFOMSG_H__
 #define __INFOMSG_H__
 
-void infomsg_hide(void);
+void infomsg_pause(int pause);
 
 void switch_floppy_status();
 

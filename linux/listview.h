@@ -25,6 +25,7 @@
 typedef struct listview ListView;
 
 #define LV_FILE_EJECTABLE 0x0001
+#define LV_FILE_DIRECTORY 0x0002
 
 // must be called once before first call to lv_new
 void lv_init(const char *font_file_name);
@@ -41,6 +42,9 @@ int lv_add_action(ListView *lv, const char *title);
 
 // add entry with a list of choices
 int lv_add_choice(ListView *lv, const char *title, int *pselect, int count, ...);
+
+// sets if choice is dynamic (menu exits on every change)
+void lv_choice_set_dynamic(ListView *v, int entry, int dynamic);
 
 // add entry with a file to select
 // possible flags:

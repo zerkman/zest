@@ -49,6 +49,7 @@ extern volatile int thr_end;
 extern volatile int thr_end;
 
 static int msg_on;
+static int msg_pause;
 static int floppy_status_on;
 static uint64_t msg_timeout;
 
@@ -60,7 +61,7 @@ uint64_t gettime(void) {
 
 static void disable_floppy_status() {
   if (floppy_status_on) {
-    infomsg_hide();
+    infomsg_pause(1);
   }
   floppy_status_on = 0;
 }
@@ -85,12 +86,31 @@ void switch_floppy_status() {
   }
 }
 
+static void hide(void) {
+  msg_on = 0;
+  floppy_status_on = 0;
+  osd_hide();
+}
+
+static void show(void) {
+  osd_show();
+  msg_on = 1;
+  msg_timeout = 3000000+gettime();
+}
+
+void infomsg_pause(int pause) {
+  msg_pause = pause;
+  if (pause) {
+    hide();
+  }
+}
+
 void * thread_infomsg(void * arg) {
   int height = font_get_height(lv_font);
   while (thr_end==0) {
     usleep(50000);
     if (msg_on && gettime()>=msg_timeout) {
-      infomsg_hide();
+      hide();
     }
     if (floppy_status_on) {
       char msg[80];
@@ -103,19 +123,6 @@ void * thread_infomsg(void * arg) {
   }
   return NULL;
 }
-
-void infomsg_hide(void) {
-  msg_on = 0;
-  floppy_status_on = 0;
-  osd_hide();
-}
-
-static void show(void) {
-  osd_show();
-  msg_on = 1;
-  msg_timeout = 3000000+gettime();
-}
-
 
 void infomsg_display(const char* msg) {
   static const uint32_t palette[] = { 0x000000,0xffffff,0x202020,0x80ff80 };
@@ -171,13 +178,12 @@ void vol_up(void) {
   }
 }
 
-
 void * thread_jukebox(void * arg) {
   uint64_t jukebox_timeout = 0;
   while (thr_end == 0) {
     uint64_t time = gettime();
     usleep(1000);
-    if (config.jukebox_enabled && config.jukebox_path /*&& !file_selector_running*/) {
+    if (msg_pause==0 && config.jukebox_enabled && config.jukebox_path /*&& !file_selector_running*/) {
       if (time >= jukebox_timeout)
       {
         // Read directory
@@ -185,26 +191,33 @@ void * thread_jukebox(void * arg) {
         int n = scandir(config.jukebox_path,&namelist,&filter_flopimg,&file_select_compar);
         if (n<=0)
         {
-          infomsg_display("Error while reading jukebox directory. Jukebox off.");
+          //infomsg_display("Error while reading jukebox directory. Jukebox off.");
+          jukebox_timeout = time + 1000000;
+        } else {
+          // Select random image
+          srand(time);
+          int selected_image;
+          do {
+            selected_image = rand() % n;
+          } while (namelist[selected_image]->d_type==DT_DIR); // Avoid directories
+          // Construct image filename
+          char *selected_item = namelist[selected_image]->d_name;
+          char new_disk_image_name[PATH_MAX];
+          strcpy(new_disk_image_name, config.jukebox_path);
+          strcat(new_disk_image_name, selected_item);
+          // Free item list
+          int i;
+          for (i=0; i<n; ++i) {
+            free(namelist[i]);
+          }
+          free(namelist);
+          // Boot the image and set timeout
+          change_floppy(new_disk_image_name,0);
+          //config.mem_size = selected_ram_size;
+          cold_reset();
+          jukebox_timeout = config.jukebox_timeout_duration + gettime();
+          infomsg_display(new_disk_image_name);
         }
-
-        // Select random image
-        srand(time);
-        char *selected_item;
-        do {
-          int selected_image = rand() % n;
-          selected_item = namelist[selected_image]->d_name;
-        } while (selected_item[strlen(selected_item)-1] == '/'); // Avoid directories - TODO is this needed any more?
-        // Construct image filename
-        char new_disk_image_name[PATH_MAX];
-        strcpy(new_disk_image_name, config.jukebox_path);
-        strcat(new_disk_image_name, selected_item);
-        // Boot the image and set timeout
-        change_floppy(new_disk_image_name,0);
-        //config.mem_size = selected_ram_size;
-        cold_reset();
-        jukebox_timeout = config.jukebox_timeout_duration + gettime();
-        infomsg_display(new_disk_image_name);
       }
     }
   }

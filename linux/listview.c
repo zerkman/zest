@@ -61,6 +61,7 @@ struct lv_choice {
   int n_choices;
   int *selected;
   const char **entries;
+  int dynamic;
 };
 
 struct lv_file {
@@ -164,6 +165,7 @@ int lv_add_choice(ListView *lv, const char *title, int *pselect, int count, ...)
   ch->n_choices = count;
   ch->selected = pselect;
   ch->entries = malloc(count*sizeof(const char*));
+  ch->dynamic = 0;
 
   int i;
   va_list ap;
@@ -173,6 +175,14 @@ int lv_add_choice(ListView *lv, const char *title, int *pselect, int count, ...)
   }
   va_end(ap);
   return add_entry(lv,LV_ENTRY_CHOICE,title,(struct lv_entry*)ch);
+}
+
+void lv_choice_set_dynamic(ListView *lv, int entry, int dynamic) {
+  struct lv_entry *e = lv->entries[entry];
+  if (e->type==LV_ENTRY_CHOICE) {
+    struct lv_choice *ch = (struct lv_choice *)e;
+    ch->dynamic = dynamic;
+  }
 }
 
 // add entry with a file to select
@@ -207,6 +217,9 @@ static void display_entry(ListView *lv, int line_no) {
     const char *filename = *fl->filename;
     if (filename) {
       const char *sep = strrchr(filename,'/');
+      if (sep && fl->flags & LV_FILE_DIRECTORY) {
+        do { --sep; } while (sep>filename && *sep!='/');
+      }
       if (sep) filename = sep+1;
       if (!filename[0]) filename = NULL;
     }
@@ -333,7 +346,7 @@ int file_select_compar(const struct dirent **a, const struct dirent **b) {
   return strcasecmp((*a)->d_name,(*b)->d_name);
 }
 
-static const char *file_select(int xpos, int ypos, int width, int height, const char *init_file, int (*filter)(const struct dirent *), const uint32_t *palette) {
+static const char *file_select(int xpos, int ypos, int width, int height, const char *init_file, int (*filter)(const struct dirent *), const uint32_t *palette, int flags) {
   char directory[1024];
   char init_file_name[256];
   init_file_name[0] = 0;
@@ -389,6 +402,9 @@ static const char *file_select(int xpos, int ypos, int width, int height, const 
         lv_select(fslv,id);
       }
     }
+    if (flags & LV_FILE_DIRECTORY) {
+      lv_add_action(fslv,"<choose this directory>");
+    }
     ret = lv_run(fslv);
     lv_delete(fslv);
 
@@ -401,6 +417,8 @@ static const char *file_select(int xpos, int ypos, int width, int height, const 
       } else {
         *++p = '\0';
       }
+    } else if ((flags&LV_FILE_DIRECTORY) && ret==n+1) {
+      if (strcmp(directory,"/")) strcat(directory,"/");
     } else if (ret>0) {
       if (strcmp(directory,"/")) strcat(directory,"/");
       strcat(directory,namelist[ret-1]->d_name);
@@ -520,6 +538,10 @@ int lv_run(ListView *lv) {
             } else {
               update_choice(lv,(*ch->selected+1)%ch->n_choices);
             }
+            if (ch->dynamic) {
+              funcret = lv->selected;
+              quit = 1;
+            }
           }
           break;
         //case KEY_F2:
@@ -549,7 +571,7 @@ int lv_run(ListView *lv) {
           else if (e->type==LV_ENTRY_FILE) {
             const struct lv_file *lf = (struct lv_file*)e;
             osd_hide();
-            const char *name = file_select(lv->xpos,lv->ypos,lv->width,lv->height,*lf->filename,lf->filter,lv->palette);
+            const char *name = file_select(lv->xpos,lv->ypos,lv->width,lv->height,*lf->filename,lf->filter,lv->palette,lf->flags);
             if (name) {
               free((void*)*lf->filename);
               *lf->filename = name;

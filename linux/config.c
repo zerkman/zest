@@ -148,7 +148,7 @@ void config_load(void) {
   config.hdd_image = NULL;
   config.right_alt_is_altgr = 0;
   config.jukebox_enabled = 0;
-  config.jukebox_timeout_duration = 9000000;
+  config.jukebox_timeout_duration = 90000000;
   config.jukebox_path = NULL;
 
   if (ini_parse(config_file,handler,&config) < 0) {

@@ -62,6 +62,13 @@ static int filter_img(const struct dirent *e) {
   return !strcasecmp(ext,".img");
 }
 
+static int filter_directory(const struct dirent *e) {
+  if (e->d_type==DT_DIR) {
+    return strcmp(e->d_name,".")&&strcmp(e->d_name,"..");
+  }
+  return 0;
+}
+
 static int settings(void) {
   ListView *lv = lv_new(XPOS,YPOS,WIDTH,HEIGHT,"zeST settings",menu_palette);
   int entry_height = lv_entry_height();
@@ -116,27 +123,39 @@ static int settings(void) {
 }
 
 static int tools(void) {
-  ListView *lv = lv_new(XPOS,YPOS,WIDTH,HEIGHT,"zeST tools",menu_palette);
-  int entry_height = lv_entry_height();
-  uint32_t gradient_header[entry_height];
-  gradient(gradient_header,entry_height/2,0x00ff0000,0xffc000);
-  gradient(gradient_header+entry_height/2,entry_height-entry_height/2,0xffc000,0xff0000);
-  int i;
-  for (i=0;i<entry_height;++i) {
-    lv_set_colour_change(lv,i,1,gradient_header[i]);
-  }
-  lv_set_colour_change(lv,entry_height,1,menu_palette[1]);
+  int quit = 0;
+  while (!quit) {
+    ListView *lv = lv_new(XPOS,YPOS,WIDTH,HEIGHT,"zeST tools",menu_palette);
+    int entry_height = lv_entry_height();
+    uint32_t gradient_header[entry_height];
+    gradient(gradient_header,entry_height/2,0x00ff0000,0xffc000);
+    gradient(gradient_header+entry_height/2,entry_height-entry_height/2,0xffc000,0xff0000);
+    int i;
+    for (i=0;i<entry_height;++i) {
+      lv_set_colour_change(lv,i,1,gradient_header[i]);
+    }
+    lv_set_colour_change(lv,entry_height,1,menu_palette[1]);
 
-  lv_add_choice(lv,"Jukebox mode",&config.jukebox_enabled,2,"no","yes");
-  int e = lv_run(lv);
-  lv_delete(lv);
+    int e_jbmode = lv_add_choice(lv,"Jukebox mode",&config.jukebox_enabled,2,"no","yes");
+    if (config.jukebox_enabled) {
+      lv_add_file(lv,"Jukebox directory",&config.jukebox_path,LV_FILE_DIRECTORY,filter_directory);
+    }
+    lv_choice_set_dynamic(lv,e_jbmode,1);
+    int e = lv_run(lv);
+    if (e==e_jbmode) {
+      // do nothing, just have the menu refreshed
+    } else {
+      quit = 1;
+    }
+    lv_delete(lv);
+  }
 
   return 0;
 }
 
 void menu(void) {
   int quit = 0;
-  infomsg_hide();
+  infomsg_pause(1);
   while (!quit) {
     ListView *lv = lv_new(XPOS,YPOS,WIDTH,HEIGHT,"zeST main menu",menu_palette);
     int entry_height = lv_entry_height();
@@ -188,4 +207,5 @@ void menu(void) {
   }
   if (config.floppy_a_enable) change_floppy(config.floppy_a,0);
   if (config.floppy_b_enable) change_floppy(config.floppy_b,1);
+  infomsg_pause(0);
 }
