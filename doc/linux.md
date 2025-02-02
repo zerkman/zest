@@ -52,15 +52,15 @@ Different operations can be done directly on this embedded Linux system.
 Before manipulating files that are being used in zeST (such as the hard disk image file), you need to stop zeST.
 This is done with the command:
 
-    /root/zestboot stop
+    zestboot stop
 
 To start zeST again:
 
-    /root/zestboot start
+    zestboot start
 
 To just restart zeST:
 
-    /root/zestboot restart
+    zestboot restart
 
 Note that the `zestboot` script runs zeST so that it uses the default `/sdcard/zest.cfg` configuration file.
 You can have it use a different configuration file with the command:
