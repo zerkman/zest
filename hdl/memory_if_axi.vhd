@@ -376,7 +376,8 @@ begin
 	r_idx <= to_integer(unsigned(pt_a(4 downto 2)));
 
 	process(m_axi_aclk,m_axi_aresetn)
-		variable pid  : integer range 0 to NUM_PORTS-1;
+		variable pid	: integer range 0 to NUM_PORTS-1;
+		variable v_wrel	: std_logic := '0';
 	begin
 		if m_axi_aresetn = '0' then
 			axi_rready <= '0';
@@ -397,6 +398,7 @@ begin
 			axi_awvalid <= '0';
 			w_done <= (others => '0');
 			pt_id <= 0;
+			v_wrel := '0';
 		elsif rising_edge(m_axi_aclk) then
 			case rd_state is
 				when INIT =>
@@ -479,6 +481,7 @@ begin
 					ir_done(pt_id) <= '1';
 					rd_state <= IDLE;
 				when WRITE_CACHE1 =>
+					v_wrel := '0';
 					c_addr <= (others => '0');
 					c_en <= '0';
 					rd_state <= WRITE_CACHE2;
@@ -508,6 +511,7 @@ begin
 					c_en <= '0';
 					c_we <= '0';
 					if w(pt_id) = '0' then
+						v_wrel := '1';
 						w_done(pt_id) <= '0';
 					end if;
 					if m_axi_awready = '1' then
@@ -523,7 +527,7 @@ begin
 					if m_axi_bvalid = '1' then
 						axi_bready <= '0';
 					end if;
-					if w(pt_id) = '0' and (m_axi_awready = '1' or axi_awvalid = '0') and (m_axi_wready = '1' or axi_wvalid = '0') and (m_axi_bvalid = '1' or axi_bready = '0') then
+					if v_wrel = '1' and (m_axi_awready = '1' or axi_awvalid = '0') and (m_axi_wready = '1' or axi_wvalid = '0') and (m_axi_bvalid = '1' or axi_bready = '0') then
 						rd_state <= IDLE;
 					end if;
 			end case;
