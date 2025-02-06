@@ -30,11 +30,11 @@ entity scan_dbl is
 		clk : in std_logic;
 		resetn : in std_logic;
 		passthru : in std_logic;
-		IN_DATA : in std_logic_vector(15 downto 0);
+		IN_DATA : in std_logic_vector(23 downto 0);
 		IN_VSYNC : in std_logic;
 		IN_HSYNC : in std_logic;
 		IN_DE : in std_logic;
-		OUT_DATA : out std_logic_vector(15 downto 0);
+		OUT_DATA : out std_logic_vector(23 downto 0);
 		OUT_VSYNC : out std_logic;
 		OUT_HSYNC : out std_logic;
 		OUT_DE : out std_logic
@@ -43,7 +43,7 @@ end scan_dbl;
 
 architecture behavioral of scan_dbl is
 
-	type line_t is array (0 to HCOLUMNS-1) of std_logic_vector(15 downto 0);
+	type line_t is array (0 to HCOLUMNS-1) of std_logic_vector(23 downto 0);
 	signal linebuf0	: line_t;			-- pixel buffer
 	signal linebuf1	: line_t;			-- pixel buffer
 	signal lineid	: std_logic;		-- id of line in buffer to write to
@@ -58,7 +58,7 @@ architecture behavioral of scan_dbl is
 	signal ihsync	: std_logic;
 	signal ovsync	: std_logic;
 	signal ode		: std_logic;
-	signal odata	: std_logic_vector(15 downto 0);
+	signal odata	: std_logic_vector(23 downto 0);
 
 begin
 

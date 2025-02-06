@@ -170,6 +170,7 @@ architecture structure of zest_atari_st_core is
 	signal st_vsync		: std_logic;
 	signal st_hsync		: std_logic;
 	signal ppix			: std_logic_vector(15 downto 0);
+	signal ppix24		: std_logic_vector(23 downto 0);
 	signal pvsync		: std_logic;
 	signal phsync		: std_logic;
 	signal pde			: std_logic;
@@ -179,8 +180,7 @@ architecture structure of zest_atari_st_core is
 	signal sound		: std_logic_vector(15 downto 0);
 	signal sound_vol	: std_logic_vector(4 downto 0);
 
-	signal dblpix		: std_logic_vector(15 downto 0);
-	signal dblpix24		: std_logic_vector(23 downto 0);
+	signal dblpix		: std_logic_vector(23 downto 0);
 	signal dblvsync		: std_logic;
 	signal dblhsync		: std_logic;
 	signal dblde		: std_logic;
@@ -194,7 +194,6 @@ begin
 	led(1) <= (select1 or not soft_resetn) and not clken_err;
 	led(0) <= select0 or not soft_resetn;
 
-	dblpix24 <= dblpix(15 downto 11) & "000" & dblpix(10 downto 5) & "00" & dblpix(4 downto 0) & "000";
 	ram_a <= x"00" & ram_a_23 & '0';
 	rom_a <= x"00" & rom_a_23 & '0';
 	monomon <= out_reg0(2);
@@ -281,7 +280,7 @@ begin
 		bridge_w_data => dev_w_data,
 		bridge_w_strb => dev_w_strb,
 		pclk => pclk,
-		idata => dblpix24,
+		idata => dblpix,
 		ivsync => dblvsync,
 		ihsync => dblhsync,
 		ide => dblde,
@@ -443,11 +442,12 @@ begin
 	sound_l <= sound;
 	sound_r <= sound;
 
+	ppix24 <= ppix(15 downto 11) & "000" & ppix(10 downto 5) & "00" & ppix(4 downto 0) & "000";
 	scandbl:entity scan_dbl port map (
 		clk => pclk,
 		resetn => soft_resetn,
 		passthru => monomon,
-		IN_DATA => ppix,
+		IN_DATA => ppix24,
 		IN_VSYNC => pvsync,
 		IN_HSYNC => phsync,
 		IN_DE => pde,
