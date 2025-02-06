@@ -66,28 +66,27 @@ begin
 	OUT_DE <= ode;
 	OUT_DATA <= odata;
 
-	process(clk)
+	process(clk,resetn)
 	begin
-		if rising_edge(clk) then
-			if resetn = '0' then
-				lineid <= '0';
-				ixcnt <= (others => '0');
-				oxcnt <= (others => '0');
-				xres <= (others => '0');
-				ipixcnt <= (others => '0');
-				opixcnt <= (others => '0');
-				idraw <= '0';
-				ivsync <= '0';
-				ihsync <= '0';
-				ovsync <= '0';
-				ode <= '0';
+		if resetn = '0' then
+			lineid <= '0';
+			ixcnt <= (others => '0');
+			oxcnt <= (others => '0');
+			xres <= (others => '0');
+			ipixcnt <= (others => '0');
+			opixcnt <= (others => '0');
+			idraw <= '0';
+			ivsync <= '0';
+			ihsync <= '0';
+			ovsync <= '0';
+			ode <= '0';
+		elsif rising_edge(clk) then
+			if passthru = '1' then
+				odata <= IN_DATA;
+				ovsync <= IN_VSYNC;
+				OUT_HSYNC <= IN_HSYNC;
+				ode <= IN_DE;
 			else
-				if passthru = '1' then
-					odata <= IN_DATA;
-					ovsync <= IN_VSYNC;
-					OUT_HSYNC <= IN_HSYNC;
-					ode <= IN_DE;
-				else
 				ihsync <= IN_HSYNC;
 				if IN_HSYNC = '1' and ihsync = '0' then
 					-- new input line
@@ -133,7 +132,6 @@ begin
 					else
 						OUT_HSYNC <= '0';
 					end if;
-				end if;
 				end if;
 			end if;
 		end if;
