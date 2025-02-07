@@ -40,6 +40,7 @@ typedef struct {
   int mem_size;                     // memory size
   int wakestate;                    // wakestate (0-3 for WS1-WS4)
   int shifter_wakestate;            // shifter wakestate (0-1)
+  int scan_doubler_mode;            // scan doubler mode (0-1)
   const char *rom_file;             // ROM file, full path
 
   // floppy

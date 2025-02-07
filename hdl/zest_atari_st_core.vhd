@@ -98,6 +98,7 @@ architecture structure of zest_atari_st_core is
 	signal mem_top		: std_logic_vector(5 downto 0);
 	signal wakestate	: std_logic_vector(1 downto 0);
 	signal shifter_ws	: std_logic;
+	signal scandbl_mode	: std_logic;
 	signal ikbd_clkren	: std_logic;
 	signal ikbd_clkfen	: std_logic;
 	signal ikbd_clk		: std_logic;
@@ -207,6 +208,7 @@ begin
 	wakestate <= out_reg0(21 downto 20);
 	cfg_romsize <= out_reg0(23 downto 22);
 	shifter_ws <= out_reg0(24);
+	scandbl_mode <= out_reg0(25);
 	in_reg0(31) <= host_r;
 	in_reg0(30) <= host_w;
 	in_reg0(29 downto 21) <= host_addr;
@@ -446,6 +448,7 @@ begin
 	scandbl:entity scan_dbl port map (
 		clk => pclk,
 		resetn => soft_resetn,
+		mode => scandbl_mode,
 		passthru => monomon,
 		IN_DATA => ppix24,
 		IN_VSYNC => pvsync,

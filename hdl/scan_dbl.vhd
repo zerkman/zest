@@ -29,6 +29,7 @@ entity scan_dbl is
 	port (
 		clk : in std_logic;
 		resetn : in std_logic;
+		mode : in std_logic;
 		passthru : in std_logic;
 		IN_DATA : in std_logic_vector(23 downto 0);
 		IN_VSYNC : in std_logic;
@@ -47,6 +48,7 @@ architecture behavioral of scan_dbl is
 	signal linebuf0	: line_t;			-- pixel buffer
 	signal linebuf1	: line_t;			-- pixel buffer
 	signal lineid	: std_logic;		-- id of line in buffer to write to
+	signal oycnt	: std_logic;		-- output line counter
 	signal ixcnt	: unsigned(11 downto 0);	-- cycles counter since latest hsync
 	signal oxcnt	: unsigned(11 downto 0);	-- cycles counter since latest hsync
 	signal xres		: unsigned(11 downto 0);	-- number of cycles between two latest hsync
@@ -67,6 +69,14 @@ begin
 	OUT_DATA <= odata;
 
 	process(clk,resetn)
+		variable p0 : std_logic_vector(23 downto 0);
+		variable p1 : std_logic_vector(23 downto 0);
+		variable r0 : integer range 0 to 255;
+		variable g0 : integer range 0 to 255;
+		variable b0 : integer range 0 to 255;
+		variable r1 : integer range 0 to 255;
+		variable g1 : integer range 0 to 255;
+		variable b1 : integer range 0 to 255;
 	begin
 		if resetn = '0' then
 			lineid <= '0';
@@ -80,6 +90,7 @@ begin
 			ihsync <= '0';
 			ovsync <= '0';
 			ode <= '0';
+			oycnt <= '0';
 		elsif rising_edge(clk) then
 			if passthru = '1' then
 				odata <= IN_DATA;
@@ -113,14 +124,27 @@ begin
 				if (IN_HSYNC = '1' and ihsync = '0') or ixcnt = xres/2-1 then
 					oxcnt <= (others => '0');
 					opixcnt <= (others => '0');
+					oycnt <= not oycnt;
 					OUT_HSYNC <= '1';
 				else
 					if odraw = '1' and oxcnt+1 >= HBORDER and oxcnt+1 < HBORDER+HCOLUMNS then
 						ode <= '1';
-						if lineid = '0' then
-							odata <= linebuf1(to_integer(opixcnt));
+						if oycnt = '0' or mode = '0' then
+							if lineid = '0' then
+								odata <= linebuf1(to_integer(opixcnt));
+							else
+								odata <= linebuf0(to_integer(opixcnt));
+							end if;
 						else
-							odata <= linebuf0(to_integer(opixcnt));
+							p0 := linebuf0(to_integer(opixcnt));
+							p1 := linebuf1(to_integer(opixcnt));
+							r0 := to_integer(unsigned(p0(23 downto 16)));
+							g0 := to_integer(unsigned(p0(15 downto 8)));
+							b0 := to_integer(unsigned(p0(7 downto 0)));
+							r1 := to_integer(unsigned(p1(23 downto 16)));
+							g1 := to_integer(unsigned(p1(15 downto 8)));
+							b1 := to_integer(unsigned(p1(7 downto 0)));
+							odata <= std_logic_vector(to_unsigned((r0+r1)/4,8)) & std_logic_vector(to_unsigned((g0+g1)/4,8)) & std_logic_vector(to_unsigned((b0+b1)/4,8));
 						end if;
 						opixcnt <= opixcnt + 1;
 					else

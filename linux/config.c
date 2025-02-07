@@ -88,6 +88,13 @@ static int handler(void* user, const char* section, const char* name, const char
     } else {
       pconfig->shifter_wakestate = ws;
     }
+  } else if (MATCH("main", "scan_doubler_mode")) {
+    int mode = atoi(value);
+    if (mode<0 || mode>1) {
+      printf("invalid scan doubler mode value `%d`\n",mode);
+    } else {
+      pconfig->scan_doubler_mode = mode;
+    }
   } else if (MATCH("main","rom_file")) {
     if (value) pconfig->rom_file = strdup(value);
   } else if (MATCH("floppy","floppy_a")) {
@@ -138,6 +145,7 @@ void config_load(void) {
   config.mem_size = CFG_1M;
   config.wakestate = 2;
   config.shifter_wakestate = 0;
+  config.scan_doubler_mode = 0;
   config.rom_file = NULL;
   config.floppy_a = NULL;
   config.floppy_a_enable = 1;
@@ -169,6 +177,7 @@ void config_save(void) {
   fprintf(fd,"mem_size = %s\n",memsize_values[config.mem_size]);
   fprintf(fd,"wakestate = %d\n",config.wakestate+1);
   fprintf(fd,"shifter_wakestate = %d\n",config.shifter_wakestate);
+  fprintf(fd,"scan_doubler_mode = %d\n",config.scan_doubler_mode);
   fprintf(fd,"rom_file = %s\n",config.rom_file?config.rom_file:"");
 
   fprintf(fd,"\n[floppy]\n");

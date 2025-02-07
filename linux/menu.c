@@ -83,6 +83,7 @@ static int settings(void) {
   lv_add_choice(lv,"Monitor type",&config.mono,2,"PAL/NTSC","Monochrome");
   lv_add_choice(lv,"RAM size",&config.mem_size,8,"256K","512K","1M","2M","2.5M","4M","8M","14M");
   lv_add_choice(lv,"Extended video modes",&config.extended_video_modes,2,"no","yes");
+  lv_add_choice(lv,"Scan doubler mode",&config.scan_doubler_mode,2,"VGA","CRT");
   lv_add_choice(lv,"Wakestate",&config.wakestate,4,"WS1","WS2","WS3","WS4");
   lv_add_choice(lv,"Shifter Wakestate",&config.shifter_wakestate,2,"SWS1","SWS2");
   lv_add_file(lv,"System ROM",&config.rom_file,0,filter_img);
