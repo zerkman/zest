@@ -144,7 +144,7 @@ begin
 							r1 := to_integer(unsigned(p1(23 downto 16)));
 							g1 := to_integer(unsigned(p1(15 downto 8)));
 							b1 := to_integer(unsigned(p1(7 downto 0)));
-							odata <= std_logic_vector(to_unsigned((r0+r1)/4,8)) & std_logic_vector(to_unsigned((g0+g1)/4,8)) & std_logic_vector(to_unsigned((b0+b1)/4,8));
+							odata <= std_logic_vector(to_unsigned((r0+r1)*3/8,8)) & std_logic_vector(to_unsigned((g0+g1)*3/8,8)) & std_logic_vector(to_unsigned((b0+b1)*3/8,8));
 						end if;
 						opixcnt <= opixcnt + 1;
 					else
