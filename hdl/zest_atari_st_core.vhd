@@ -442,7 +442,7 @@ begin
 	sound_l <= sound;
 	sound_r <= sound;
 
-	ppix24 <= ppix(8 downto 6) & "00000" & ppix(5 downto 3) & "00000" & ppix(2 downto 0) & "00000";
+	ppix24 <= ppix(8 downto 6) & ppix(8 downto 6) & ppix(8 downto 7) & ppix(5 downto 3) & ppix(5 downto 3) & ppix(5 downto 4) & ppix(2 downto 0) & ppix(2 downto 0) & ppix(2 downto 1);
 	scandbl:entity scan_dbl port map (
 		clk => pclk,
 		resetn => soft_resetn,
