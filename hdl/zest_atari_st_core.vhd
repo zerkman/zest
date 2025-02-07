@@ -167,10 +167,9 @@ architecture structure of zest_atari_st_core is
 
 	signal pclken		: std_logic;
 	signal st_de		: std_logic;
-	signal pix			: std_logic_vector(15 downto 0);
 	signal st_vsync		: std_logic;
 	signal st_hsync		: std_logic;
-	signal ppix			: std_logic_vector(15 downto 0);
+	signal ppix			: std_logic_vector(8 downto 0);
 	signal ppix24		: std_logic_vector(23 downto 0);
 	signal pvsync		: std_logic;
 	signal phsync		: std_logic;
@@ -422,7 +421,6 @@ begin
 		k => ikbd_k
 	);
 
-	pix <= st_rgb(8 downto 6) & "00" & st_rgb(5 downto 3) & "000" & st_rgb(2 downto 0) & "00";
 	clkconv:entity vclkconvert port map(
 		clk => clk,
 		clken => pclken,
@@ -431,7 +429,7 @@ begin
 		ivsync => st_vsync,
 		ihsync => st_hsync,
 		ide => st_de,
-		ipix => pix,
+		ipix => st_rgb,
 		isndck => isound_clk,
 		isound => isound,
 		ovsync => pvsync,
@@ -444,7 +442,7 @@ begin
 	sound_l <= sound;
 	sound_r <= sound;
 
-	ppix24 <= ppix(15 downto 11) & "000" & ppix(10 downto 5) & "00" & ppix(4 downto 0) & "000";
+	ppix24 <= ppix(8 downto 6) & "00000" & ppix(5 downto 3) & "00000" & ppix(2 downto 0) & "00000";
 	scandbl:entity scan_dbl port map (
 		clk => pclk,
 		resetn => soft_resetn,

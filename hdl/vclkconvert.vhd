@@ -28,14 +28,14 @@ entity vclkconvert is
 		ivsync   : in std_logic;
 		ihsync   : in std_logic;
 		ide      : in std_logic;
-		ipix     : in std_logic_vector(15 downto 0);
+		ipix     : in std_logic_vector(8 downto 0);
 		isndck   : in std_logic;
 		isound   : in std_logic_vector(15 downto 0);
 
 		ovsync   : out std_logic;
 		ohsync   : out std_logic;
 		ode      : out std_logic;
-		opix     : out std_logic_vector(15 downto 0);
+		opix     : out std_logic_vector(8 downto 0);
 		osndck   : out std_logic;
 		osound   : out std_logic_vector(15 downto 0)
 	);
@@ -63,7 +63,7 @@ architecture behavioral of vclkconvert is
 		);
 	end component;
 
-	constant DATA_WIDTH : integer := 36;
+	constant DATA_WIDTH : integer := 29;
 	constant fifo_depth : integer := 11;
 
 	signal initcnt : unsigned(fifo_depth-1 downto 0);
@@ -79,12 +79,12 @@ architecture behavioral of vclkconvert is
 
 begin
 	idata <= isndck & isound & ivsync & ihsync & ide & ipix;
-	osndck <= odata(35);
-	osound <= odata(34 downto 19);
-	ovsync <= odata(18);
-	ohsync <= odata(17);
-	ode <= odata(16);
-	opix <= odata(15 downto 0);
+	osndck <= odata(28);
+	osound <= odata(27 downto 12);
+	ovsync <= odata(11);
+	ohsync <= odata(10);
+	ode <= odata(9);
+	opix <= odata(8 downto 0);
 
 	fifo:aFifo
 	generic map (DATA_WIDTH => DATA_WIDTH, ADDR_WIDTH => fifo_depth)
