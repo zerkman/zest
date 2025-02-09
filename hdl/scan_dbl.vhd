@@ -19,13 +19,6 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity scan_dbl is
-	generic (
-		-- 288p50
-		CLKFREQ : integer := 32000000;
-		HSWIDTH : integer := 22;
-		HBORDER : integer := 96;
-		HCOLUMNS : integer := 832
-	);
 	port (
 		clk : in std_logic;
 		resetn : in std_logic;
@@ -43,6 +36,11 @@ entity scan_dbl is
 end scan_dbl;
 
 architecture behavioral of scan_dbl is
+
+	constant CLKFREQ : integer := 32000000;
+	constant HSWIDTH : integer := 22;
+	constant HBORDER : integer := 96;
+	constant HCOLUMNS : integer := 832;
 
 	type line_t is array (0 to HCOLUMNS-1) of std_logic_vector(23 downto 0);
 	signal linebuf0	: line_t;			-- pixel buffer
