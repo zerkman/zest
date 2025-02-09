@@ -66,7 +66,7 @@ end mmu;
 architecture behavioral of mmu is
 	-- ST RAM management simulation
 	signal ramcfg			: std_logic_vector(3 downto 0);	-- physical RAM, 2x2 bits: 00:128k 01:512k 10:2M 11:unused
-	signal memcfg			: std_logic_vector(3 downto 0);	-- MMU config ($ff8001), 2x2 bits
+	signal memcfg			: std_logic_vector(3 downto 0) := "0000";	-- MMU config ($ff8001), 2x2 bits
 	signal memcfg_top		: unsigned(23 downto 0);
 	signal log_adr			: std_logic_vector(23 downto 1);
 	signal phys_adr			: std_logic_vector(23 downto 1);
@@ -306,7 +306,7 @@ begin
 		oD <= x"ff";
 		screen_adr <= (others => '0');
 		video_ptr <= (others => '0');
-		memcfg <= (others => '0');
+		-- memcfg <= (others => '0');
 		dma_ptr <= (others => '0');
 		sde <= '0';
 		loadn <= '1';
