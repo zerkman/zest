@@ -131,13 +131,20 @@ int usage(const char *progname) {
 static uint8_t *mem_array;
 
 void cold_reset() {
+  // "press" the reset button
   setup_cfg(2); // Bit 0 clear=reset
+  // clear memory
   memset(mem_array+8,0,0xe00000-8);
+  // reset the FPGA logic (invalidates the RAM cache)
+  pl_reset();
+  // release the reset button
   setup_cfg(3); // end reset
 }
 
 void warm_reset() {
+  // "press" the reset button
   setup_cfg(2); // Bit 0 clear=reset
+  // release the reset button
   setup_cfg(3); // |3="end reset"
 }
 
