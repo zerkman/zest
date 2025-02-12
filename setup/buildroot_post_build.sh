@@ -42,29 +42,36 @@ if test ! -d $TARGET/usr/share/fonts ; then
     cp -a $SRCDIR/setup/extra/fonts/* $TARGET/usr/share/fonts
 fi
 
-if test ! -f $TARGET/usr/bin/zestinit.sh ; then
-    cat <<EOF > $TARGET/usr/bin/zestinit.sh
-#/bin/sh
-mount -t proc proc /proc
-mount -tvfat -oflush,dirsync,noatime,noexec,nodev,fmask=0133,dmask=0022 /dev/mmcblk0p1 /sdcard
-if [ ! -f /sdcard/overlay.bin ] ; then
-    /bin/dd of=/sdcard/overlay.bin bs=1M seek=2 count=0
-    /sbin/mke2fs -F /sdcard/overlay.bin
-    chmod -w /sdcard/overlay.bin
-fi
-mkdir -p /var/overlay
-mount -oloop,sync -text2 /sdcard/overlay.bin /var/overlay
-mkdir -p /var/overlay/work /var/overlay/etc
-mount -t overlay overlay -olowerdir=/etc,upperdir=/var/overlay/etc,workdir=/var/overlay/work /etc
-exec /sbin/init $*
+if test ! -f $TARGET/etc/init.d/S01zestoverlay ; then
+    cat <<EOF > $TARGET/etc/init.d/S01zestoverlay
+#!/bin/sh
+case "\$1" in
+  start)
+        printf "Configuring the zeST overlay filesystem: "
+        if [ ! -f /sdcard/overlay.bin ] ; then
+            /bin/dd of=/sdcard/overlay.bin bs=1M seek=2 count=0
+            /sbin/mke2fs -F /sdcard/overlay.bin
+            chmod -w /sdcard/overlay.bin
+        fi
+        mkdir -p /var/overlay
+        mount -oloop,sync -text2 /sdcard/overlay.bin /var/overlay
+        mkdir -p /var/overlay/work /var/overlay/etc
+        mount -t overlay overlay -olowerdir=/etc,upperdir=/var/overlay/etc,workdir=/var/overlay/work /etc
+        [ \$? = 0 ] && echo "OK" || echo "FAIL"
+        ;;
+  stop)
+        printf "Deactivating the zeST overlay filesystem: "
+        umount /etc
+        umount /var/overlay
+        ;;
+  restart|reload)
+        ;;
+  *)
+        echo "Usage: \$0 {start|stop|restart}"
+        exit 1
+esac
 EOF
-    chmod +x $TARGET/usr/bin/zestinit.sh
-fi
-
-if test ! -d $TARGET/var/overlay ; then
-    mkdir -p $TARGET/var/overlay
-    echo "/sdcard/overlay.bin /var/overlay ext2 loop,sync,noatime 0 2" >> $TARGET/etc/fstab
-    echo "overlay /etc overlay lowerdir=/etc,upperdir=/var/overlay/etc,workdir=/var/overlay/work 0 2" >> $TARGET/etc/fstab
+    chmod +x $TARGET/etc/init.d/S01zestoverlay
 fi
 
 mkdir -p $TARGET/etc/bluetooth/var
