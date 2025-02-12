@@ -489,6 +489,16 @@ int lv_run(ListView *lv) {
       continue;
     }
 
+    if (evtype == EV_ABS && joyid != -1 && evvalue != 0) {
+      // convert joystick direction to arrow key press
+      if (evcode==0) {
+        evcode = evvalue>0?KEY_RIGHT:KEY_LEFT;
+      } else if (evcode==1) {
+        evcode = evvalue>0?KEY_DOWN:KEY_UP;
+      }
+      evtype = EV_KEY;
+      evvalue = 1;
+    }
     if (evtype == EV_KEY) {
       //printf("evtype=EV_KEY evcode=%d evvalue=%d\n",evcode,evvalue);
       // keyboard event, key is pressed
@@ -497,6 +507,8 @@ int lv_run(ListView *lv) {
         struct lv_entry *e = lv->entries[lv->selected];
         switch (evcode) {
         case KEY_ESC:
+        case BTN_START:
+        case BTN_EAST:
           quit = 1;
           break;
         case KEY_DOWN:
@@ -549,6 +561,7 @@ int lv_run(ListView *lv) {
         //  break;
         case KEY_DELETE:
         case KEY_BACKSPACE:
+        case BTN_WEST:
           if (e->type==LV_ENTRY_FILE) {
             const struct lv_file *lf = (struct lv_file*)e;
             if ((lf->flags&LV_FILE_EJECTABLE) && *lf->filename) {
@@ -563,6 +576,7 @@ int lv_run(ListView *lv) {
           }
           break;
         case KEY_ENTER:
+        case BTN_SOUTH:
           if (e->type==LV_ENTRY_ACTION) {
             // struct lv_action *a = (struct lv_action*)e;
             funcret = lv->selected;
