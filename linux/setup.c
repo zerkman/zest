@@ -301,7 +301,10 @@ int main(int argc, char **argv) {
   }
 
   memset(mem_array+0xfa0000,0xff,0x20000);
-  if (load_rom(config.rom_file)!=0) return 1;
+  if (load_rom(config.rom_file)!=0) {
+    // in case the ROM could not be loaded, fall back to default ROM
+    if (load_rom("/usr/share/zest/rom.img")!=0) return 1;
+  }
 
   pthread_t kbd_thr;
   pthread_create(&kbd_thr,NULL,thread_ikbd,NULL);

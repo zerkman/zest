@@ -85,3 +85,5 @@ AutoEnable=true
 EOF
 
 cp -a $SRCDIR/linux/zeST $TARGET/usr/bin
+mkdir -p $TARGET/usr/share/zest
+cp -a $SRCDIR/setup/output/src/rom.img $TARGET/usr/share/zest

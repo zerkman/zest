@@ -30,8 +30,16 @@ make || exit $1
 cd $ZEST_PATH/linux
 PATH=$ZEST_SETUP/output/src/${buildroot}/output/host/bin:$PATH make || exit $?
 
+if [ ! -f $ZEST_SETUP/output/src/rom.img ] ; then
+    if [ ! -f $ZEST_SETUP/output/src/emutos-256k-$EMUTOS_VERSION.zip ] ; then
+        wget -P $ZEST_SETUP/output/src https://sourceforge.net/projects/emutos/files/emutos/$EMUTOS_VERSION/emutos-256k-$EMUTOS_VERSION.zip
+    fi
+    unzip -p $ZEST_SETUP/output/src/emutos-256k-$EMUTOS_VERSION.zip emutos-256k-$EMUTOS_VERSION/etos256uk.img > $ZEST_SETUP/output/src/rom.img || exit $?
+fi
+
 cd $ZEST_SETUP/output/src/${buildroot}
 sh $ZEST_SETUP/buildroot_post_build.sh || exit $1
+
 make || exit $1
 cp output/images/rootfs.cpio.uboot $ZEST_SETUP/output/rootfs.ub
 cp output/images/uImage $ZEST_SETUP/output/uImage
