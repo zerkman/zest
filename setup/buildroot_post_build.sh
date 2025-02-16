@@ -74,8 +74,9 @@ EOF
     chmod +x $TARGET/etc/init.d/S01zestoverlay
 fi
 
+# bluetooth setup
 mkdir -p $TARGET/etc/bluetooth/var
-ln -s /etc/bluetooth/var $TARGET/var/lib/bluetooth
+ln -sf /etc/bluetooth/var $TARGET/var/lib/bluetooth
 cat <<EOF > $TARGET/etc/bluetooth/main.conf
 [General]
 Name = zeST
@@ -84,6 +85,9 @@ Name = zeST
 AutoEnable=true
 EOF
 
+# zeST binary
 cp -a $SRCDIR/linux/zeST $TARGET/usr/bin
+
+# default ROM image
 mkdir -p $TARGET/usr/share/zest
 cp -a $SRCDIR/setup/output/src/rom.img $TARGET/usr/share/zest
