@@ -53,16 +53,20 @@ case "\$1" in
             /sbin/mke2fs -F /sdcard/overlay.bin
             chmod -w /sdcard/overlay.bin
         fi
-        mkdir -p /var/overlay
-        mount -oloop,sync -text2 /sdcard/overlay.bin /var/overlay
-        mkdir -p /var/overlay/work /var/overlay/etc
-        mount -t overlay overlay -olowerdir=/etc,upperdir=/var/overlay/etc,workdir=/var/overlay/work /etc
+        mkdir -p /overlay
+        mount -oloop,sync -text2 /sdcard/overlay.bin /overlay
+        mkdir -p /overlay/work1 /overlay/work2 /overlay/work3 /overlay/etc /overlay/var /overlay/root
+        mount -t overlay overlay -olowerdir=/etc,upperdir=/overlay/etc,workdir=/overlay/work1 /etc
+        mount -t overlay overlay -olowerdir=/var,upperdir=/overlay/var,workdir=/overlay/work2 /var
+        mount -t overlay overlay -olowerdir=/root,upperdir=/overlay/root,workdir=/overlay/work3 /root
         [ \$? = 0 ] && echo "OK" || echo "FAIL"
         ;;
   stop)
         printf "Deactivating the zeST overlay filesystem: "
+        umount /root
+        umount /var
         umount /etc
-        umount /var/overlay
+        umount /overlay
         ;;
   restart|reload)
         ;;
@@ -75,8 +79,8 @@ EOF
 fi
 
 # bluetooth setup
-mkdir -p $TARGET/etc/bluetooth/var
-ln -sf /etc/bluetooth/var $TARGET/var/lib/bluetooth
+#mkdir -p $TARGET/etc/bluetooth/var
+#ln -sf /etc/bluetooth/var $TARGET/var/lib/bluetooth
 cat <<EOF > $TARGET/etc/bluetooth/main.conf
 [General]
 Name = zeST
