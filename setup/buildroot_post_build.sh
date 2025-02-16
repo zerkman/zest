@@ -34,7 +34,7 @@ case "\$1" in
 esac
 EOF
   chmod 755 $TARGET/usr/bin/zestboot
-  ln -s ../../usr/bin/zestboot $TARGET/etc/init.d/S99zest
+  ln -s ../../usr/bin/zestboot $TARGET/etc/init.d/S30zest
 fi
 
 if test ! -d $TARGET/usr/share/fonts ; then
