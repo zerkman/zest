@@ -4,7 +4,6 @@ TARGETS="z7lite_7010 z7lite_7020 zynqberry"
 
 export XILINX_PATH=/opt/Xilinx
 export XILINX_VERSION=2024.1
-export XILINX_KERNEL_VERSION=2023.2
 export BUILDROOT_VERSION=2024.02.10
 export EMUTOS_VERSION=1.3
 
@@ -43,14 +42,9 @@ fi
 # TODO
 
 
-# Root filesystem
-if [ ! -f output/rootfs.ub ] ; then
+# Root filesystem and kernel
+if [ ! -f output/rootfs.ub -o ! -f output/uImage ] ; then
     recipes/rootfs.sh
-fi
-
-# Linux kernel
-if [ ! -f output/uImage ] ; then
-    recipes/kernel.sh
 fi
 
 # boot.scr

@@ -20,13 +20,12 @@ if [ ! -d $buildroot ] ; then
         wget https://buildroot.org/downloads/${buildroot}.tar.xz || exit $?
     fi
     tar xf ${buildroot}.tar.xz
-    rm -f ${buildroot}
 fi
 
 cd ${buildroot}
-cp $ZEST_SETUP/defconfig/buildroot configs/zest_defconfig
-make zest_defconfig
-make
+sed -e "s@\(BR2_LINUX_KERNEL_CUSTOM_CONFIG_FILE\).*@\1=\"$ZEST_SETUP/defconfig/linux\"@" $ZEST_SETUP/defconfig/buildroot > configs/zest_defconfig
+make zest_defconfig || exit $1
+make || exit $1
 
 cd $ZEST_PATH/linux
 PATH=$ZEST_SETUP/output/src/${buildroot}/output/host/bin:$PATH make || exit $?
@@ -35,3 +34,4 @@ cd $ZEST_SETUP/output/src/${buildroot}
 sh $ZEST_SETUP/buildroot_post_build.sh || exit $1
 make || exit $1
 cp output/images/rootfs.cpio.uboot $ZEST_SETUP/output/rootfs.ub
+cp output/images/uImage $ZEST_SETUP/output/uImage
