@@ -180,6 +180,14 @@ architecture structure of zest_atari_st_core is
 	signal sound		: std_logic_vector(15 downto 0);
 	signal sound_vol	: std_logic_vector(4 downto 0);
 
+	signal midi_cs		: std_logic;
+	signal midi_addr	: std_logic;
+	signal midi_rw		: std_logic;
+	signal midi_id		: std_logic_vector(7 downto 0);
+	signal midi_od		: std_logic_vector(7 downto 0);
+	signal midi_irq		: std_logic;
+	signal conf_intr	: std_logic;
+
 	signal dblpix		: std_logic_vector(23 downto 0);
 	signal dblvsync		: std_logic;
 	signal dblhsync		: std_logic;
@@ -213,7 +221,8 @@ begin
 	in_reg0(29 downto 21) <= host_addr;
 	in_reg0(20 downto 13) <= host_track;
 	in_reg0(12) <= host_drv;
-	in_reg0(11 downto 2) <= (others => '0');
+	in_reg0(11 downto 3) <= (others => '0');
+	in_reg0(2) <= conf_intr;
 	in_reg0(1) <= acsi_intr;
 	in_reg0(0) <= fdd_drq;
 	in_reg1 <= (others => '0');
@@ -257,6 +266,13 @@ begin
 		bridge_w_data => dev_w_data,
 		bridge_w_strb => dev_w_strb,
 		fdd_ack => fdd_ack,
+		midi_cs => midi_cs,
+		midi_addr => midi_addr,
+		midi_rw => midi_rw,
+		midi_id => midi_id,
+		midi_od => midi_od,
+		midi_irq => midi_irq,
+		host_intr => conf_intr,
 		out_reg0 => out_reg0,
 		out_reg1 => out_reg1,
 		out_reg2 => out_reg2,
@@ -308,6 +324,12 @@ begin
 		hsync => st_hsync,
 		vsync => st_vsync,
 		rgb => st_rgb,
+		midi_cs => midi_cs,
+		midi_addr => midi_addr,
+		midi_rw => midi_rw,
+		midi_id => midi_id,
+		midi_od => midi_od,
+		midi_irq => midi_irq,
 		sound_vol => sound_vol,
 		sound_clk => isound_clk,
 		sound => isound,
@@ -382,7 +404,7 @@ begin
 		host_addr => host_addr,
 		host_track => host_track
 	);
-	irq <= fdd_drq or acsi_intr;
+	irq <= fdd_drq or acsi_intr or conf_intr;
 
 	acsi:entity acsi_drive port map (
 		clk => clk,

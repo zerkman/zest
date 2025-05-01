@@ -41,6 +41,13 @@ entity atarist_mb is
 		vsync			: out std_logic;
 		rgb				: out std_logic_vector(8 downto 0);
 
+		midi_cs			: out std_logic;
+		midi_addr		: out std_logic;
+		midi_rw			: out std_logic;
+		midi_id			: out std_logic_vector(7 downto 0);
+		midi_od			: in std_logic_vector(7 downto 0);
+		midi_irq		: in std_logic;
+
 		sound_vol		: in std_logic_vector(4 downto 0);
 		sound_clk		: out std_logic;
 		sound			: out std_logic_vector(15 downto 0);
@@ -253,14 +260,7 @@ architecture structure of atarist_mb is
 	signal acia_ikbd_dcd_n	: std_logic;
 	signal acia_ikbd_cts_n	: std_logic;
 	signal acia_ikbd_rts_n	: std_logic;
-	signal acia_midi_cs		: std_logic;
-	signal acia_midi_od		: std_logic_vector(7 downto 0);
-	signal acia_midi_irq	: std_logic;
-	signal acia_midi_rxd	: std_logic;
-	signal acia_midi_txd	: std_logic;
-	signal acia_midi_dcd_n	: std_logic;
-	signal acia_midi_cts_n	: std_logic;
-	signal acia_midi_rts_n	: std_logic;
+	signal midi_cs_r		: std_logic;
 	signal acia_irq			: std_logic;
 
 	signal dma_fcsn			: std_logic;
@@ -321,8 +321,8 @@ begin
 		glue_d => glue_oD,
 		acia_ikbd_d => acia_ikbd_od,
 		acia_ikbd_e => acia_ikbd_cs,
-		acia_midi_d => acia_midi_od,
-		acia_midi_e => acia_midi_cs,
+		acia_midi_d => midi_od,
+		acia_midi_e => midi_cs_r,
 		dma_d => dma_oD,
 		psg_d => psg_od,
 		psg_e => psg_csn,
@@ -615,28 +615,13 @@ begin
 	acia_ikbd_dcd_n <= '0';
 	acia_ikbd_cts_n <= '0';
 
-	acia_midi1:entity acia6850 port map (
-		clk => clk,
-		rst => reset,
-		cs => acia_midi_cs,
-		addr => bus_A(1),
-		rw => bus_RWn,
-		data_in => bus_D(15 downto 8),
-		data_out => acia_midi_od,
-		irq => acia_midi_irq,
-		RxC => ck05,
-		TxC => ck05,
-		RxD => acia_midi_rxd,
-		TxD => acia_midi_txd,
-		DCD_n => acia_midi_dcd_n,
-		CTS_n => acia_midi_cts_n,
-		RTS_n => acia_midi_rts_n
-	);
-	acia_midi_cs <= cs6850 and bus_A(2);
-	acia_midi_rxd <= '1';
-	acia_midi_dcd_n <= '0';
-	acia_midi_cts_n <= '0';
-	acia_irq <= acia_ikbd_irq nor acia_midi_irq;
+	midi_cs_r <= cs6850 and bus_A(2);
+	midi_cs <= midi_cs_r;
+	midi_addr <= bus_A(1);
+	midi_rw <= bus_RWn;
+	midi_id <= bus_D(15 downto 8);
+
+	acia_irq <= acia_ikbd_irq nor midi_irq;
 
 	dma1:entity dma_controller port map (
 		clk => clk,

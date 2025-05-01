@@ -31,6 +31,7 @@
 #include "config.h"
 #include "floppy_img.h"
 #include "hdd.h"
+#include "midi.h"
 
 extern volatile uint32_t *parmreg;
 extern int parmfd;
@@ -179,17 +180,21 @@ void * thread_floppy(void * arg) {
 
     // read host values
     uint32_t in = parmreg[0];
-    if ((in&0xffc)!=0) {
+    if ((in&0xff8)!=0) {
       printf("parmreg read error: in=%08x\n",in);
       fflush(stdout);
     }
-    int hdd_drq = in>>1&1;
+    int midi_intr = in&4;
+    int hdd_drq = in&2;
     int floppy_intr = in&1;
     if (floppy_intr) {
       floppy_interrupt(in);
     }
     if (hdd_drq) {
       hdd_interrupt();
+    }
+    if (midi_intr) {
+      midi_interrupt();
     }
   }
 

@@ -42,6 +42,9 @@ void * thread_jukebox(void * arg);
 /* from ikbd.c */
 void * thread_ikbd(void * arg);
 
+/* from midi.c */
+void * thread_midi(void * arg);
+
 /* from infomsg.c */
 void * thread_infomsg(void * arg);
 
@@ -310,6 +313,8 @@ int main(int argc, char **argv) {
   pthread_create(&kbd_thr,NULL,thread_ikbd,NULL);
   pthread_t floppy_thr;
   pthread_create(&floppy_thr,NULL,thread_floppy,NULL);
+  pthread_t midi_thr;
+  pthread_create(&midi_thr,NULL,thread_midi,NULL);
   pthread_t infomsg_thr;
   pthread_create(&infomsg_thr,NULL,thread_infomsg,NULL);
   pthread_t jukebox_thr;
@@ -327,6 +332,7 @@ int main(int argc, char **argv) {
   parmreg[0] = 0;
   pthread_join(kbd_thr,NULL);
   pthread_join(floppy_thr,NULL);
+  pthread_join(midi_thr,NULL);
   pthread_join(infomsg_thr,NULL);
   if (has_sil) {
     hdmi_stop();

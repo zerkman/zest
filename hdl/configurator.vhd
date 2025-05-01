@@ -21,7 +21,8 @@ use ieee.numeric_std.all;
 entity configurator is
 	generic (
 		DATA_WIDTH_BITS	: integer := 5;		-- log2(width of data bus)
-		ADDR_WIDTH		: integer := 6		-- Width of address bus
+		ADDR_WIDTH		: integer := 6;		-- Width of address bus
+		N_REGISTERS		: integer := 12		-- number of registers
 	);
 	port (
 		clk			: in std_logic;
@@ -35,6 +36,16 @@ entity configurator is
 		bridge_w_strb	: in std_logic_vector(2**(DATA_WIDTH_BITS-3)-1 downto 0);
 
 		fdd_ack		: out std_logic;
+
+		-- ACIA signals for MIDI
+		midi_cs		: in std_logic;
+		midi_addr	: in std_logic;
+		midi_rw		: in std_logic;
+		midi_id		: in std_logic_vector(7 downto 0);
+		midi_od		: out std_logic_vector(7 downto 0);
+		midi_irq	: out std_logic;
+
+		host_intr	: out std_logic;
 
 		out_reg0	: out std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
 		out_reg1	: out std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
@@ -64,14 +75,33 @@ architecture arch_imp of configurator is
 	constant ADDR_MSB	: integer := ADDR_WIDTH-1;
 
 	-- register space
-	type out_reg_t is array (0 to 2**(ADDR_MSB-ADDR_LSB+1)-1) of std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+	type out_reg_t is array (0 to N_REGISTERS-1) of std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
 	signal out_reg : out_reg_t;
 
 	-- Input register array
-	type in_reg_t is array (0 to 2**(ADDR_MSB-ADDR_LSB+1)-1) of std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
+	type in_reg_t is array (0 to N_REGISTERS-1) of std_logic_vector(2**DATA_WIDTH_BITS-1 downto 0);
 	signal in_reg : in_reg_t;
 
+	signal b_addr : integer range 0 to 12;
+
+	-- midi signals
+	signal midi_txd			: std_logic_vector(7 downto 0);
+	signal midi_txd_full	: std_logic;
+	signal midi_tx_intr_en	: std_logic;
+	signal midi_rxd			: std_logic_vector(7 downto 0);
+	signal midi_rxd_full	: std_logic;
+	signal midi_rxd_full0	: std_logic;
+	signal midi_rx_intr_en	: std_logic;
+	signal midi_irq_r		: std_logic;
+	signal midi_cs1			: std_logic;
+
+	signal midi_host_intr	: std_logic;
+
 begin
+	b_addr <= to_integer(unsigned(bridge_addr));
+	host_intr <= midi_host_intr and not midi_cs;
+	midi_irq <= midi_irq_r;
+
 	-- I/O Connections assignments
 	out_reg0 <= out_reg(0);
 	out_reg1 <= out_reg(1);
@@ -94,23 +124,93 @@ begin
 	in_reg(9) <= in_reg8_11(63 downto 32);
 	in_reg(10) <= in_reg8_11(95 downto 64);
 	in_reg(11) <= in_reg8_11(127 downto 96);
-	in_reg(12) <= out_reg(12);
-	in_reg(13) <= out_reg(13);
-	in_reg(14) <= out_reg(14);
-	in_reg(15) <= out_reg(15);
 
-	process(clk)
+	process(clk,resetn)
 	begin
-		if rising_edge(clk) then
+		if resetn = '0' then
+			midi_txd_full <= '0';
+			midi_rxd_full <= '0';
+			midi_irq_r <= '0';
+			midi_tx_intr_en <= '0';
+			midi_rx_intr_en <= '0';
+			midi_host_intr <= '0';
+			midi_cs1 <= '0';
+			midi_od <= x"ff";
+		elsif rising_edge(clk) then
 			fdd_ack <= '0';
+			-- bridge bus
 			if bridge_w = '1' then
-				out_reg(to_integer(unsigned(bridge_addr))) <= bridge_w_data;
+				if b_addr < N_REGISTERS then
+					-- out registers
+					out_reg(b_addr) <= bridge_w_data;
+				elsif b_addr = 12 then
+					-- MIDI host access
+					midi_rxd <= bridge_w_data(7 downto 0);
+					midi_rxd_full <= '1';
+					if midi_rxd_full = '0' and midi_rx_intr_en = '1' then
+						midi_irq_r <= '1';
+					end if;
+				end if;
 			end if;
 			if bridge_r = '1' then
-				bridge_r_data <= in_reg(to_integer(unsigned(bridge_addr)));
-				if unsigned(bridge_addr) = 0 then
-					fdd_ack <= '1';
+				if b_addr < N_REGISTERS then
+					bridge_r_data <= in_reg(b_addr);
+					if b_addr = 0 then
+						fdd_ack <= '1';
+					end if;
+				elsif b_addr = 12 then
+					-- MIDI host access
+					bridge_r_data <= (31 downto 10 => '0') & midi_txd_full & midi_rxd_full & midi_txd;
+					if midi_txd_full = '1' and midi_tx_intr_en = '1' then
+						midi_irq_r <= '1';
+					end if;
+					midi_txd_full <= '0';
+					midi_host_intr <= '0';
 				end if;
+			end if;
+
+			-- MIDI ACIA interface
+			midi_cs1 <= midi_cs;
+			if midi_cs = '1' and midi_cs1 = '0' then
+				midi_rxd_full0 <= midi_rxd_full;
+				if midi_rw = '1' then
+					-- read from MIDI port
+					if midi_addr = '0' then
+						-- status reg
+						midi_od <= midi_irq_r & "00000" & not midi_txd_full & midi_rxd_full;
+					else
+						-- data reg
+						midi_od <= midi_rxd;
+						midi_rxd_full0 <= '0';
+						midi_irq_r <= '0';
+						midi_host_intr <= '1';
+					end if;
+				else
+					-- write to MIDI port
+					if midi_addr = '0' then
+						-- control reg
+						midi_rx_intr_en <= midi_id(7);
+						midi_tx_intr_en <= midi_id(5) and not midi_id(6);
+						if midi_id(1 downto 0) = "11" then
+							-- reset: clear state
+							midi_txd_full <= '0';
+							midi_rxd_full0 <= '0';
+							midi_irq_r <= '0';
+						end if;
+					else
+						-- data reg
+						if midi_txd_full = '0' then
+							midi_txd <= midi_id;
+							midi_txd_full <= '1';
+							midi_host_intr <= '1';
+						end if;
+						midi_irq_r <= '0';
+					end if;
+				end if;
+			end if;
+			if midi_cs = '0' and midi_cs1 = '1' then
+				midi_rxd_full <= midi_rxd_full0;
+				midi_od <= x"ff";
 			end if;
 		end if;
 	end process;
